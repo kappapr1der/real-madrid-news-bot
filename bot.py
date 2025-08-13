@@ -1,5 +1,6 @@
 import os
 import requests
+import feedparser
 from flask import Flask, request
 from telegram import Bot, Update
 from telegram.ext import Application, CommandHandler
@@ -14,21 +15,26 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 app = Flask(__name__)
 bot = Bot(token=TOKEN)
 
-# Получение новостей (здесь несколько источников)
-def get_latest_news():
+# Получение новостей из нескольких RSS-источников
+def get_latest_news(limit=5):
     sources = [
-        "https://onefootball.com/ru/team/real-madrid-26/news",
         "https://www.realmadrid.com/en/news/rss",
-        "https://www.marca.com/rss/futbol/real-madrid.xml"
+        "https://www.marca.com/rss/futbol/real-madrid.xml",
+        "https://www.espn.com/espn/rss/football/news"
     ]
+    
     news_list = []
     for url in sources:
         try:
-            r = requests.get(url, timeout=5)
-            news_list.append(f"{url} — {len(r.text)} символов получено")
-        except:
-            news_list.append(f"Ошибка получения {url}")
-    return "\n".join(news_list)
+            feed = feedparser.parse(url)
+            for entry in feed.entries[:limit]:
+                title = entry.title
+                link = entry.link
+                news_list.append(f"🔹 {title}\n{link}")
+        except Exception as e:
+            news_list.append(f"Ошибка при получении {url}: {e}")
+    
+    return "\n\n".join(news_list)
 
 # /start
 async def start(update, context):
@@ -37,7 +43,7 @@ async def start(update, context):
 # /news — постинг свежих новостей
 async def news(update, context):
     latest = get_latest_news()
-    await update.message.reply_text(f"Последние новости:\n{latest}")
+    await update.message.reply_text(f"📰 Последние новости:\n\n{latest}")
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
