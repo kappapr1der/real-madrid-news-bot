@@ -61,6 +61,7 @@ docker run --env-file config.env real-madrid-bot
 📂 Структура проекта
 
 real-madrid-news-bot/
+
 ├── bot.py
 
 ├── requirements.txt
@@ -79,6 +80,7 @@ real-madrid-news-bot/
 
 🏆 Автор kappapr1der
 Разработано с ❤️ для болельщиков Реал Мадрид.
+
 
 
 
