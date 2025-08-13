@@ -62,17 +62,24 @@ docker run --env-file config.env real-madrid-bot
 
 real-madrid-news-bot/
 ├── bot.py
+
 ├── requirements.txt
+
 ├── Procfile
+
 ├── Dockerfile
+
 ├── README.md
+
 ├── config.env.example
+
 └── data/
     └── posted_links.json
 
 
 🏆 Автор kappapr1der
 Разработано с ❤️ для болельщиков Реал Мадрид.
+
 
 
 
