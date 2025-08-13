@@ -1,106 +1,66 @@
 import os
-import json
 import feedparser
-import logging
 import requests
 import schedule
 import time
-from datetime import datetime
+from dotenv import load_dotenv
 from telegram import Bot
-from telegram.ext import Updater, CommandHandler
+from openai import OpenAI
 
-# ------------------ НАСТРОЙКА ЛОГОВ ------------------
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Загружаем переменные окружения из .env
+load_dotenv()
 
-# ------------------ ЧТЕНИЕ ТОКЕНОВ ------------------
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+CHAT_ID = os.getenv("CHAT_ID")
 
-# ------------------ НАСТРОЙКА БОТА ------------------
 bot = Bot(token=TELEGRAM_TOKEN)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ------------------ ФАЙЛ ДЛЯ ССЫЛОК ------------------
-DATA_FILE = "data/posted_links.json"
+RSS_URL = "https://www.realmadrid.com/en/football/rss"
 
-if not os.path.exists("data"):
-    os.makedirs("data")
+def fetch_news():
+    """Получаем последние новости из RSS"""
+    feed = feedparser.parse(RSS_URL)
+    if not feed.entries:
+        print("Новостей нет")
+        return None
 
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump([], f)
+    latest = feed.entries[0]
+    title = latest.title
+    link = latest.link
 
-# ------------------ СПИСОК RSS-ЛЕНТ ------------------
-RSS_FEEDS = [
-    "https://www.realmadrid.com/StaticFiles/RealMadrid/Feeds/es/Rss/News_rss.xml",
-    "https://www.marca.com/en/rss/real-madrid.xml",
-    "https://as.com/rss/futbol/real_madrid.xml"
-]
+    return f"{title}\n{link}"
 
-# ------------------ КОМАНДА /id ------------------
-def get_chat_id(update, context):
-    update.message.reply_text(f"Твой Chat ID: {update.effective_chat.id}")
+def summarize_text(text):
+    """Делаем краткое резюме через OpenAI"""
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Ты футбольный новостной редактор."},
+                {"role": "user", "content": f"Сделай краткое резюме новости: {text}"}
+            ],
+            max_tokens=100
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Ошибка OpenAI: {e}")
+        return text
 
-# ------------------ ЗАГРУЗКА ПРОЧИТАННЫХ ССЫЛОК ------------------
-def load_posted_links():
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-# ------------------ СОХРАНЕНИЕ ССЫЛОК ------------------
-def save_posted_links(links):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(links, f, ensure_ascii=False, indent=2)
-
-# ------------------ ПОЛУЧЕНИЕ НОВОСТЕЙ ------------------
-def get_latest_news():
-    posted_links = load_posted_links()
-    new_posts = []
-
-    for url in RSS_FEEDS:
-        feed = feedparser.parse(url)
-        for entry in feed.entries:
-            if entry.link not in posted_links:
-                new_posts.append({
-                    "title": entry.title,
-                    "link": entry.link
-                })
-                posted_links.append(entry.link)
-
-    save_posted_links(posted_links)
-    return new_posts
-
-# ------------------ ОТПРАВКА НОВОСТЕЙ ------------------
 def send_news():
-    news_items = get_latest_news()
-    if news_items:
-        for item in news_items:
-            text = f"📰 {item['title']}\n{item['link']}\n\n#RealMadrid #Новости"
-            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=text)
-    else:
-        logging.info("Новых новостей нет.")
+    news = fetch_news()
+    if news:
+        summary = summarize_text(news)
+        bot.send_message(chat_id=CHAT_ID, text=summary)
+        print("Новость отправлена!")
 
-# ------------------ ОСНОВНОЙ ЗАПУСК ------------------
-def main():
-    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-
-    # Команда для получения Chat ID
-    dispatcher.add_handler(CommandHandler("id", get_chat_id))
-
-    # Запуск бота
-    updater.start_polling()
-
-    # Планировщик — каждые 2 часа
-    schedule.every(2).hours.do(send_news)
-
-    logging.info("Бот запущен. Ожидаем новости...")
-
-    while True:
-        schedule.run_pending()
-        time.sleep(30)
+# Запускаем проверку каждые 60 минут
+schedule.every(60).minutes.do(send_news)
 
 if __name__ == "__main__":
-    main()
+    print("Бот запущен...")
+    send_news()  # сразу отправим при старте
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
