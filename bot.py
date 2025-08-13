@@ -2,39 +2,50 @@ import os
 import requests
 import schedule
 import time
-from dotenv import load_dotenv
 from telegram import Bot
+from dotenv import load_dotenv
 
 # Загружаем переменные окружения
 load_dotenv()
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-bot = Bot(token=BOT_TOKEN)
+if not TOKEN or not CHAT_ID:
+    print("❌ Ошибка: Нет TOKEN или CHAT_ID. Проверь переменные окружения.")
+    exit()
 
-# Функция для получения новостей
-def get_news():
-    url = "https://api.sportsdata.io/v4/soccer/scores/json/NewsByTeam/REA"  # пример API
-    headers = {"Ocp-Apim-Subscription-Key": os.getenv("SPORTS_API_KEY")}
-    
+bot = Bot(token=TOKEN)
+
+# Функция получения новостей (пример с Google News RSS)
+def get_real_madrid_news():
+    url = "https://news.google.com/rss/search?q=Real+Madrid&hl=ru&gl=RU&ceid=RU:ru"
     try:
-        response = requests.get(url, headers=headers)
-        data = response.json()
-        if data:
-            latest = data[0]
-            title = latest.get("Title", "")
-            content = latest.get("Content", "")
-            message = f"⚽ {title}\n\n{content}\n\n#RealMadrid #Новости"
-            bot.send_message(chat_id=CHAT_ID, text=message)
+        response = requests.get(url)
+        response.raise_for_status()
+        from xml.etree import ElementTree as ET
+        root = ET.fromstring(response.content)
+        items = root.findall(".//item")
+        news_list = []
+        for item in items[:3]:  # последние 3 новости
+            title = item.find("title").text
+            link = item.find("link").text
+            news_list.append(f"⚽ {title}\n{link}")
+        return "\n\n".join(news_list)
     except Exception as e:
-        print(f"Ошибка получения новостей: {e}")
+        return f"Ошибка получения новостей: {e}"
 
-# Планировщик
-schedule.every(30).minutes.do(get_news)
+# Функция отправки новости
+def send_news():
+    news = get_real_madrid_news()
+    bot.send_message(chat_id=CHAT_ID, text=news)
+    print("✅ Новости отправлены")
 
-if __name__ == "__main__":
-    get_news()  # отправим сразу при старте
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+# Запускаем каждые 6 часов
+schedule.every(6).hours.do(send_news)
+
+print("🤖 Бот запущен и ждет следующей отправки...")
+send_news()  # отправляем сразу при старте
+
+while True:
+    schedule.run_pending()
+    time.sleep(60)
