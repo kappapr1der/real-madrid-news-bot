@@ -1,51 +1,38 @@
 import os
-import requests
-import schedule
-import time
-from telegram import Bot
-from dotenv import load_dotenv
+from flask import Flask, request
+from telegram import Update
+from telegram.ext import Application
 
-# Загружаем переменные окружения
-load_dotenv()
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
-if not TOKEN or not CHAT_ID:
-    print("❌ Ошибка: Нет TOKEN или CHAT_ID. Проверь переменные окружения.")
-    exit()
+if not TOKEN:
+    raise ValueError("❌ TOKEN не найден. Укажи его в переменных окружения Render.")
 
-bot = Bot(token=TOKEN)
+app = Flask(__name__)
 
-# Функция получения новостей (пример с Google News RSS)
-def get_real_madrid_news():
-    url = "https://news.google.com/rss/search?q=Real+Madrid&hl=ru&gl=RU&ceid=RU:ru"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        from xml.etree import ElementTree as ET
-        root = ET.fromstring(response.content)
-        items = root.findall(".//item")
-        news_list = []
-        for item in items[:3]:  # последние 3 новости
-            title = item.find("title").text
-            link = item.find("link").text
-            news_list.append(f"⚽ {title}\n{link}")
-        return "\n\n".join(news_list)
-    except Exception as e:
-        return f"Ошибка получения новостей: {e}"
+telegram_app = Application.builder().token(TOKEN).build()
 
-# Функция отправки новости
-def send_news():
-    news = get_real_madrid_news()
-    bot.send_message(chat_id=CHAT_ID, text=news)
-    print("✅ Новости отправлены")
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
+    telegram_app.update_queue.put_nowait(update)
+    return "OK"
 
-# Запускаем каждые 6 часов
-schedule.every(6).hours.do(send_news)
+@app.route("/")
+def home():
+    return "Real Madrid Bot работает через webhook 🚀"
 
-print("🤖 Бот запущен и ждет следующей отправки...")
-send_news()  # отправляем сразу при старте
+async def send_news():
+    await telegram_app.bot.send_message(
+        chat_id=CHAT_ID,
+        text="⚽ Свежие новости Реал Мадрид!"
+    )
 
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+if __name__ == "__main__":
+    # Устанавливаем webhook
+    import asyncio
+    from telegram import Bot
+    bot = Bot(TOKEN)
+    asyncio.run(bot.set_webhook("https://YOUR-APP-NAME.onrender.com/" + TOKEN))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
