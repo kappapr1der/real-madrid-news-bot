@@ -73,12 +73,14 @@ real-madrid-news-bot/
 ├── config.env.example
 
 └── data/
+
     └── posted_links.json
 
 
 🏆 Автор kappapr1der
 
 Разработано с ❤️ для болельщиков Реал Мадрид.
+
 
 
 
