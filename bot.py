@@ -1,60 +1,54 @@
 import os
-import requests
-import xml.etree.ElementTree as ET
-from datetime import datetime
-from telegram import Bot
-from dotenv import load_dotenv
-import schedule
+import threading
 import time
+import feedparser
+import schedule
+from telegram import Bot
+from flask import Flask
 
 # Загружаем переменные
-load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 bot = Bot(token=TELEGRAM_TOKEN)
 
-# RSS-ленты
+# Новости о Реал Мадрид
 RSS_FEEDS = [
-    "https://www.realmadrid.com/en/football/news/rss",
-    "https://www.marca.com/en/football/real-madrid/rss.xml"
+    "https://www.realmadrid.com/en/rss",
+    "https://www.marca.com/en/football/real-madrid/rss.html",
+    "https://www.managingmadrid.com/rss/index.xml"
 ]
 
-# Файл с уже отправленными ссылками
-SENT_FILE = "sent_news.txt"
-if not os.path.exists(SENT_FILE):
-    open(SENT_FILE, "w").close()
-
-def get_sent_links():
-    with open(SENT_FILE, "r") as f:
-        return set(line.strip() for line in f)
-
-def save_sent_link(link):
-    with open(SENT_FILE, "a") as f:
-        f.write(link + "\n")
-
-def fetch_rss(url):
-    resp = requests.get(url)
-    root = ET.fromstring(resp.content)
-    for item in root.findall("./channel/item"):
-        title = item.find("title").text
-        link = item.find("link").text
-        yield {"title": title, "link": link}
-
+# Функция отправки новостей
 def send_news():
-    sent_links = get_sent_links()
-    for feed in RSS_FEEDS:
-        for news in fetch_rss(feed):
-            if news["link"] not in sent_links:
-                hashtags = "#RealMadrid #HalaMadrid #LaLiga"
-                message = f"{news['title']}\n{news['link']}\n\n{hashtags}"
-                bot.send_message(chat_id=CHAT_ID, text=message)
-                save_sent_link(news["link"])
+    for url in RSS_FEEDS:
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:3]:
+            message = f"{entry.title}\n{entry.link}\n#RealMadrid #HalaMadrid"
+            bot.send_message(chat_id=CHAT_ID, text=message)
+    print("Новости отправлены!")
 
-# Запускаем каждую пятницу в 10:00
-schedule.every().friday.at("10:00").do(send_news)
+# Планировщик — каждую пятницу в 12:00
+schedule.every().friday.at("12:00").do(send_news)
 
-print("Бот запущен...")
-while True:
-    schedule.run_pending()
-    time.sleep(60)
+# Фоновая задача для планировщика
+def scheduler_thread():
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
+
+# Flask для Render
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Real Madrid bot is running!"
+
+if __name__ == "__main__":
+    # Запускаем планировщик в отдельном потоке
+    t = threading.Thread(target=scheduler_thread)
+    t.start()
+
+    # Запускаем веб-сервер (Render будет проверять этот порт)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
