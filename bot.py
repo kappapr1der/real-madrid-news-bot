@@ -1,5 +1,6 @@
 import os
-import requests
+import asyncio
+import datetime
 import feedparser
 from flask import Flask, request
 from telegram import Bot, Update
@@ -15,7 +16,7 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 app = Flask(__name__)
 bot = Bot(token=TOKEN)
 
-# Получение новостей из нескольких RSS-источников
+# Получение новостей
 def get_latest_news(limit=5):
     sources = [
         "https://www.realmadrid.com/en/news/rss",
@@ -40,10 +41,25 @@ def get_latest_news(limit=5):
 async def start(update, context):
     await update.message.reply_text("Привет! Я Real Madrid News Bot.")
 
-# /news — постинг свежих новостей
+# /news — выдает свежие новости
 async def news(update, context):
     latest = get_latest_news()
     await update.message.reply_text(f"📰 Последние новости:\n\n{latest}")
+
+# Ежедневный автопостинг
+async def daily_news():
+    await asyncio.sleep(5)  # даем время на запуск
+    while True:
+        now = datetime.datetime.now()
+        # 10:00 по Москве (UTC+3 → в UTC это 07:00)
+        if now.hour == 7 and now.minute == 0:
+            latest = get_latest_news()
+            try:
+                await bot.send_message(chat_id=CHAT_ID, text=f"📰 Свежие новости:\n\n{latest}")
+            except Exception as e:
+                print(f"Ошибка отправки: {e}")
+            await asyncio.sleep(60)  # ждём 1 мин, чтобы не спамить
+        await asyncio.sleep(30)  # проверяем время каждые 30 секунд
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -56,6 +72,9 @@ if __name__ == '__main__':
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("news", news))
+
+    # Запускаем задачу автопостинга
+    application.job_queue.run_once(lambda ctx: asyncio.create_task(daily_news()), 0)
 
     # Устанавливаем вебхук
     bot.delete_webhook()
