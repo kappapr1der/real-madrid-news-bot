@@ -1,66 +1,78 @@
 import os
 import json
 import feedparser
+import logging
 import requests
 import schedule
 import time
-from dotenv import load_dotenv
 from datetime import datetime
+from telegram import Bot
+from telegram.ext import Updater, CommandHandler
 
-# Загружаем переменные окружения
-if os.path.exists("config.env"):
-    load_dotenv("config.env")
+# ------------------ НАСТРОЙКА ЛОГОВ ------------------
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
+# ------------------ ЧТЕНИЕ ТОКЕНОВ ------------------
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
 
-# Пути
-DATA_DIR = "data"
-POSTED_FILE = os.path.join(DATA_DIR, "posted_links.json")
+# ------------------ НАСТРОЙКА БОТА ------------------
+bot = Bot(token=TELEGRAM_TOKEN)
 
-# Создаём папку и файл, если их нет
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
+# ------------------ ФАЙЛ ДЛЯ ССЫЛОК ------------------
+DATA_FILE = "data/posted_links.json"
 
-if not os.path.exists(POSTED_FILE):
-    with open(POSTED_FILE, "w", encoding="utf-8") as f:
+if not os.path.exists("data"):
+    os.makedirs("data")
+
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump([], f)
 
-# Загружаем уже опубликованные ссылки
-with open(POSTED_FILE, "r", encoding="utf-8") as f:
-    try:
-        posted_links = json.load(f)
-    except json.JSONDecodeError:
-        posted_links = []
-
-# Источники новостей про Реал Мадрид
+# ------------------ СПИСОК RSS-ЛЕНТ ------------------
 RSS_FEEDS = [
-    "https://www.realmadrid.com/en/football/rss",
-    "https://www.marca.com/en/football/real-madrid/rss",
-    "https://as.com/rss/real-madrid/portada.xml",
-    "https://www.uefa.com/rss/real-madrid.xml"
+    "https://www.realmadrid.com/StaticFiles/RealMadrid/Feeds/es/Rss/News_rss.xml",
+    "https://www.marca.com/en/rss/real-madrid.xml",
+    "https://as.com/rss/futbol/real_madrid.xml"
 ]
 
-# Хэштеги для постов
-HASHTAGS = "#RealMadrid #HalaMadrid #LaLiga #UCL #Football"
+# ------------------ КОМАНДА /id ------------------
+def get_chat_id(update, context):
+    update.message.reply_text(f"Твой Chat ID: {update.effective_chat.id}")
 
+# ------------------ ЗАГРУЗКА ПРОЧИТАННЫХ ССЫЛОК ------------------
+def load_posted_links():
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+# ------------------ СОХРАНЕНИЕ ССЫЛОК ------------------
+def save_posted_links(links):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(links, f, ensure_ascii=False, indent=2)
+
+# ------------------ ПОЛУЧЕНИЕ НОВОСТЕЙ ------------------
 def get_latest_news():
-    news_items = []
-    for feed_url in RSS_FEEDS:
-        feed = feedparser.parse(feed_url)
-        for entry in feed.entries:
-            link = entry.link
-            title = entry.title
-            if link not in posted_links:
-                news_items.append({
-                    "title": title,
-                    "link": link
-                })
-    return news_items
+    posted_links = load_posted_links()
+    new_posts = []
 
-def send_to_telegram(text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
-        "di
+    for url in RSS_FEEDS:
+        feed = feedparser.parse(url)
+        for entry in feed.entries:
+            if entry.link not in posted_links:
+                new_posts.append({
+                    "title": entry.title,
+                    "link": entry.link
+                })
+                posted_links.append(entry.link)
+
+    save_posted_links(posted_links)
+    return new_posts
+
+# ------------------ ОТПРАВКА НОВОСТЕЙ ------------------
+def send_news():
+    news_items = get_latest_news()
+    if new
