@@ -2,6 +2,8 @@ import os
 import json
 import feedparser
 import requests
+import schedule
+import time
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -33,10 +35,10 @@ with open(POSTED_FILE, "r", encoding="utf-8") as f:
 
 # Источники новостей про Реал Мадрид
 RSS_FEEDS = [
-    "https://www.realmadrid.com/en/football/rss",       # официальный сайт
-    "https://www.marca.com/en/football/real-madrid/rss", # Marca
-    "https://as.com/rss/real-madrid/portada.xml",        # AS
-    "https://www.uefa.com/rss/real-madrid.xml"           # UEFA
+    "https://www.realmadrid.com/en/football/rss",
+    "https://www.marca.com/en/football/real-madrid/rss",
+    "https://as.com/rss/real-madrid/portada.xml",
+    "https://www.uefa.com/rss/real-madrid.xml"
 ]
 
 # Хэштеги для постов
@@ -61,28 +63,4 @@ def send_to_telegram(text):
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text,
-        "disable_web_page_preview": False,
-        "parse_mode": "HTML"
-    }
-    requests.post(url, data=payload)
-
-def main():
-    new_posts = get_latest_news()
-    if not new_posts:
-        print(f"[{datetime.now()}] Новостей нет.")
-        return
-
-    for post in new_posts:
-        message = f"<b>{post['title']}</b>\n{post['link']}\n\n{HASHTAGS}"
-        send_to_telegram(message)
-        posted_links.append(post["link"])
-
-    # Сохраняем обновлённый список
-    with open(POSTED_FILE, "w", encoding="utf-8") as f:
-        json.dump(posted_links, f, ensure_ascii=False, indent=2)
-
-    print(f"[{datetime.now()}] Опубликовано {len(new_posts)} новостей.")
-
-if __name__ == "__main__":
-    main()
-
+        "di
