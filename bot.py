@@ -75,4 +75,32 @@ def get_latest_news():
 # ------------------ ОТПРАВКА НОВОСТЕЙ ------------------
 def send_news():
     news_items = get_latest_news()
-    if new
+    if news_items:
+        for item in news_items:
+            text = f"📰 {item['title']}\n{item['link']}\n\n#RealMadrid #Новости"
+            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=text)
+    else:
+        logging.info("Новых новостей нет.")
+
+# ------------------ ОСНОВНОЙ ЗАПУСК ------------------
+def main():
+    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+
+    # Команда для получения Chat ID
+    dispatcher.add_handler(CommandHandler("id", get_chat_id))
+
+    # Запуск бота
+    updater.start_polling()
+
+    # Планировщик — каждые 2 часа
+    schedule.every(2).hours.do(send_news)
+
+    logging.info("Бот запущен. Ожидаем новости...")
+
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
+
+if __name__ == "__main__":
+    main()
