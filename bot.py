@@ -1,57 +1,59 @@
 import os
-import feedparser
 import requests
-import schedule
-import time
-from datetime import datetime
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Application, CommandHandler
 from dotenv import load_dotenv
 
 load_dotenv()
 
-TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")  # например @my_channel или -100123456789
-RSS_FEEDS = [
-    "https://www.realmadrid.com/en/rss/news",
-    "https://www.marca.com/en/rss/futbol/real-madrid.xml",
-    "https://as.com/rss/futbol/real_madrid.xml"
-]
-POSTED_FILE = "posted.txt"
+TOKEN = os.getenv("TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
-# Загружаем список уже отправленных новостей
-if os.path.exists(POSTED_FILE):
-    with open(POSTED_FILE, "r", encoding="utf-8") as f:
-        posted_links = set(f.read().splitlines())
-else:
-    posted_links = set()
+app = Flask(__name__)
+bot = Bot(token=TOKEN)
 
-def send_message(text):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": CHANNEL_ID, "text": text, "parse_mode": "HTML"}
-    requests.post(url, data=payload)
+# Получение новостей (здесь несколько источников)
+def get_latest_news():
+    sources = [
+        "https://onefootball.com/ru/team/real-madrid-26/news",
+        "https://www.realmadrid.com/en/news/rss",
+        "https://www.marca.com/rss/futbol/real-madrid.xml"
+    ]
+    news_list = []
+    for url in sources:
+        try:
+            r = requests.get(url, timeout=5)
+            news_list.append(f"{url} — {len(r.text)} символов получено")
+        except:
+            news_list.append(f"Ошибка получения {url}")
+    return "\n".join(news_list)
 
-def check_news():
-    global posted_links
-    new_posts = []
-    for feed_url in RSS_FEEDS:
-        feed = feedparser.parse(feed_url)
-        for entry in feed.entries:
-            if entry.link not in posted_links:
-                post_text = f"<b>{entry.title}</b>\n{entry.link}\n\n#RealMadrid #Новости"
-                send_message(post_text)
-                posted_links.add(entry.link)
-                new_posts.append(entry.link)
-    if new_posts:
-        with open(POSTED_FILE, "a", encoding="utf-8") as f:
-            for link in new_posts:
-                f.write(link + "\n")
-        print(f"[{datetime.now()}] Отправлено {len(new_posts)} новостей.")
-    else:
-        print(f"[{datetime.now()}] Новостей нет.")
+# /start
+async def start(update, context):
+    await update.message.reply_text("Привет! Я Real Madrid News Bot.")
 
-# Запуск в 10:00 по UTC (можно поменять)
-schedule.every().day.at("10:00").do(check_news)
+# /news — постинг свежих новостей
+async def news(update, context):
+    latest = get_latest_news()
+    await update.message.reply_text(f"Последние новости:\n{latest}")
 
-print("Бот запущен. Ожидаю расписания...")
-while True:
-    schedule.run_pending()
-    time.sleep(30)
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.get_json(force=True)
+    update = Update.de_json(data, bot)
+    application.update_queue.put_nowait(update)
+    return "OK", 200
+
+if __name__ == '__main__':
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("news", news))
+
+    # Устанавливаем вебхук
+    bot.delete_webhook()
+    bot.set_webhook(url=WEBHOOK_URL)
+
+    # Flask-приложение для Render
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
