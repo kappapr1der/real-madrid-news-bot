@@ -1,0 +1,22 @@
+SOURCES_INTERNATIONAL = [
+    {"url": "https://www.espn.com/espn/rss/soccer/news", "label": "ESPN FC"},
+    {"url": "https://www.skysports.com/rss/12040", "label": "Sky Sports Football"},
+    {"url": "https://www.skysports.com/rss/12037", "label": "Sky Sports Tennis"},
+    {"url": "https://www.skysports.com/rss/12038", "label": "Sky Sports Racing"},
+    {"url": "https://www.football-espana.net/feed", "label": "Football España"},
+    {"url": "https://onefootball.com/en/home/rss", "label": "OneFootball"},
+    {"url": "https://www.marca.com/en/rss/futbol/real-madrid.xml", "label": "Marca (EN)"},
+    {"url": "https://www.realmadrid.com/en/football/rss/news", "label": "Real Madrid (official, EN)"},
+    {"url": "https://www.as.com/rss/futbol/international.xml", "label": "AS (International)"},
+    {"url": "https://feeds.bbci.co.uk/sport/football/rss.xml", "label": "BBC Sport Football"},
+    {"url": "https://www.theguardian.com/football/rss", "label": "Guardian Football"},
+    {"url": "https://www.independent.co.uk/sport/football/rss", "label": "Independent Football"},
+    {"url": "https://rss.nytimes.com/services/xml/rss/nyt/Soccer.xml", "label": "NY Times Soccer"},
+    {"url": "https://www.reutersagency.com/feed/?best-sectors=sports&post_type=best", "label": "Reuters Sports"},
+    {"url": "https://www.goal.com/feeds/en/news", "label": "Goal.com"},
+    {"url": "https://www.kickoff.com/rss", "label": "KickOff"},
+    {"url": "https://www.si.com/rss/football", "label": "Sports Illustrated"},
+    {"url": "https://www.fourfourtwo.com/feeds/all", "label": "FourFourTwo"},
+    {"url": "https://www.eurosport.com/rss.xml", "label": "Eurosport"},
+    {"url": "https://theathletic.com/feed/football/", "label": "The Athletic Football"}
+]

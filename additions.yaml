@@ -1,0 +1,216 @@
+names:
+  Trent Alexander-Arnold: Трент Александр-Арнольд
+  Eberechi Eze: Эберечи Эзэ
+  Xabi Alonso: Хаби Алонсо
+  Florentino Perez: Флорентино Перес
+  Raphinha: Рафинья
+  Alexander Isak: Александер Исак
+  Isak: Исак
+  Adam Wharton: Адам Уортон
+  Wharton: Уортон
+  Real Oviedo: Овьедо
+  Dani Ceballos: Дани Себальос
+  Ceballos: Себальос
+  Endrick: Эндрик
+  Franco Mastantuono: Франко Мастантуоно
+  Pedri: Педри
+
+terms:
+  premier league: АПЛ
+  starting xi: стартовый состав
+  xi: состав
+  squad: состав
+  squad spot: место в составе
+  final squad spot: последнее место в заявке
+  roster: состав
+  transfer fee: сумма трансфера
+  sell-on clause: процент от перепродажи
+  resale clause: процент от перепродажи
+  future fee: будущая сумма трансфера
+  bid: предложение
+  bids: предложения
+  outlay: траты
+  star: звезда
+
+phrases:
+  # ESPN / окно
+  "what we're hearing in the transfer window": "что слышим по трансферному рынку"
+  "what we are hearing in the transfer window": "что слышим по трансферному рынку"
+  "what we're hearing": "что слышим"
+  "what we are hearing": "что слышим"
+  "to move for": "нацелен на трансфер"
+  "move for": "попытка подписать"
+  "transfer window": "трансферное окно"
+  "window": "трансферное окно"
+
+  # Transfer request / sell-on / income
+  "transfer request": "запрос на трансфер"
+  "makes transfer request": "подаёт запрос на трансфер"
+  "hands in transfer request": "подаёт запрос на трансфер"
+  "submits transfer request": "подаёт запрос на трансфер"
+  "significant income from transfer": "значительный доход от трансфера"
+  "income from transfer": "доход от трансфера"
+  "percentage of future transfer": "процент от будущего трансфера"
+  "percentage of a future transfer": "процент от будущего трансфера"
+  "percentage of resale": "процент от перепродажи"
+  "sell-on percentage": "процент от перепродажи"
+
+  # Spell / XI / состав
+  "six games into .* spell": "спустя шесть матчей в период"
+  "games into .* spell": "матчей в период"
+  "youngest xi": "самый молодой состав"
+  "youngest xis": "самые молодые составы"
+  "starting xi": "стартовый состав"
+
+  # Cashing in / starter
+  "cashing in": "продажа"
+  "to cash in on": "продать ради выгоды"
+  "cash in on": "продать ради выгоды"
+  "cash in": "продажа"
+  "certain starter": "игрок основы"
+  "guaranteed starter": "железный игрок стартового состава"
+
+  # Weighing up / considering / targeting
+  "weighing up a move": "рассматривает трансфер"
+  "considering a move": "рассматривает трансфер"
+  "considering a move for": "рассматривает трансфер"
+  "considering signing": "рассматривает трансфер"
+  "possibility of signing": "возможность подписания"
+  "possibility of move": "возможность трансфера"
+  "eyeing a move": "нацелен на трансфер"
+  "targeting a move": "нацелен на трансфер"
+  "set sights on": "наметил"
+  "sets sights on": "наметил"
+  "setting sights on": "намечает"
+  "targeting": "намерен подписать"
+  "targeted by": "стал целью для"
+
+  # Squad spot
+  "reserve their final squad spot": "оставить последнее место в заявке"
+  "final squad spot": "последнее место в заявке"
+  "last squad spot": "последнее место в заявке"
+
+  # In talks / alternative / world-class
+  "in talks with": "в переговорах с"
+  "alternative to": "как альтернатива"
+  "as an alternative to": "как альтернатива"
+  "real madrid star": "звезда Реала"
+  "world-class": "топ-уровня"
+  "world class": "топ-уровня"
+
+  # Drop out of race / race for / amounts
+  "drop out of the race": "вышел из гонки"
+  "drops out of the race": "выходит из гонки"
+  "out of the race": "вышел из гонки"
+  "race for .* star": "гонка за звезду"
+  "race for": "гонка за"
+  "€20m": "€20 млн"
+  "e20m": "€20 млн"
+  "€63m": "€63 млн"
+  "e63m": "€63 млн"
+  "€80m": "€80 млн"
+  "e80m": "€80 млн"
+
+  # Legend / contract demand
+  "real madrid legend": "легенда Реала"
+  "makes contract demand": "выдвигает требования по контракту"
+  "make contract demands": "выдвигает требования по контракту"
+  "contract demand": "требования по контракту"
+  "contract demands": "требования по контракту"
+
+  # Oviedo signing / clash
+  "sign": "подписал"
+  "signs": "подписал"
+  "clash": "матч"
+  "ahead of clash with": "перед матчем с"
+  "before clash with": "перед матчем с"
+  "clash with": "матч против"
+
+  # La Liga expert / dropped
+  "la liga expert": "эксперт Ла Лиги"
+  "could be dropped to real madrid": "может перейти в Реал"
+  "dropped to real madrid": "перешёл в Реал"
+  "dropped from squad": "исключён из заявки"
+  "dropped": "не попал в состав"
+
+  # FIFA investigation / abuse
+  "fifa investigation": "ФИФА расследует"
+  "fifa investigate": "ФИФА расследует"
+  "racist abuse": "расистские оскорбления"
+  "abuse towards": "оскорбления в адрес"
+  "abuse of": "оскорбления в адрес"
+
+  # Not worried / compared to
+  "not worried about": "не беспокоится о"
+  "not concerned about": "не беспокоится о"
+  "compared to real madrid": "в сравнении с Реалом"
+  "compared with real madrid": "в сравнении с Реалом"
+
+  # Predicted XIs / Osasuna win
+  "predicted xi": "прогнозируемый состав"
+  "predicted xis": "прогнозируемые составы"
+  "planning no changes": "не планирует изменений"
+  "from osasuna win": "после победы над Осасуной"
+  "after osasuna win": "после победы над Осасуной"
+  "osasuna win": "победа над Осасуной"
+
+  # Brazil squad / omits
+  "real madrid stars": "звёзд Реала"
+  "omits .* from brazil squad": "не вызвал звёзд Реала в состав сборной Бразилии"
+  "omits from brazil squad": "не вызвал в состав сборной Бразилии"
+  "left out of brazil squad": "не вызван в состав сборной Бразилии"
+  "left out of the brazil squad": "не вызван в состав сборной Бразилии"
+  "brazil squad": "состав сборной Бразилии"
+
+  # Manager reaction / criticism / speculation
+  "real madrid manager": "тренер Реала"
+  "manager of real madrid": "тренер Реала"
+  "reaction to criticism": "ответил на критику"
+  "reacts to criticism": "ответил на критику"
+  "criticism of": "критика в адрес"
+  "speculation about": "слухи вокруг"
+  "amid speculation": "на фоне слухов"
+  "amid speculation about": "на фоне слухов вокруг"
+
+  # First start / €63m signing
+  "first start": "первый матч в основе"
+  "makes first start": "дебютирует в основе"
+  "handed first start": "получил первый матч в основе"
+  "€63m signing": "новичок за €63 млн"
+  "63m signing": "новичок за €63 млн"
+  "signing worth €63m": "подписание за €63 млн"
+
+  # Injury updates / ahead of schedule
+  "injury update": "новости о восстановлении"
+  "ahead of schedule": "раньше срока"
+  "return from injury": "вернётся после травмы"
+  "set to return from injury": "готов вернуться после травмы"
+  "recover from injury": "восстановился после травмы"
+  "back from injury ahead of schedule": "восстановился после травмы раньше срока"
+
+  # How to watch / streams / TV
+  "how to watch": "как смотреть"
+  "live stream": "онлайн-трансляция"
+  "live streams": "онлайн-трансляции"
+  "streaming details": "детали трансляции"
+  "tv details": "тв-детали"
+  "tv info": "тв-трансляция"
+  "la liga clash": "матч Ла Лиги"
+  "vs": "–"
+
+  # Sources deny interest / amounts
+  "real madrid sources deny": "источники в Реале отрицают"
+  "sources at real madrid deny": "источники в Реале отрицают"
+  "sources close to real madrid deny": "источники в Реале отрицают"
+  "deny interest in": "отрицают интерес к"
+  "deny transfer interest": "отрицают интерес к трансферу"
+  "deny interest": "отрицают интерес"
+  "premier league star": "звезда АПЛ"
+
+typos:
+  Chijak: перехват
+  Hijak: перехват
+  tranfer: трансфер
+  trasfer: трансфер
+  Ezeh: Эзэ
+  Rodryo: Родриго
