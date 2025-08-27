@@ -1,0 +1,10 @@
+# Подключить после получения ru_text (после Deep Translator / MyMemory)
+from utils.textfix import apply_translation_fixes
+# ...
+ru_text = apply_translation_fixes(ru_text)
+# При желании — фанатский стиль для заголовков:
+# from utils.textfix import _load_yaml_files
+# rules = _load_yaml_files(["patches/terms_increment_2025-08-27.yaml"])
+# tpls = rules.get("translation_fixes", {}).get("fan_style_templates", [])
+# if is_headline and tpls:
+#     ru_text = random.choice(tpls).format(name="Тчуамени")
