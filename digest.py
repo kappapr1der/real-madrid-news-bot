@@ -13,6 +13,9 @@ from sources_ru import SOURCES_RU
 from text_cleaner import clean_text
 from filters import passes_filters
 from translator import translate_text  # ✅ наш словарный переводчик
+from utils.source_map import map_source
+from utils.time_labels import digest_label
+from utils.title_extractor import extract_title
 
 load_dotenv()
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -136,3 +139,24 @@ if __name__ == "__main__":
     import sys
     arg = sys.argv[1] if len(sys.argv) > 1 else "default"
     send_digest(arg)
+
+
+def _safe_title(item) -> str:
+    t = (item.get('title') or '').strip()
+    if not t:
+        fetched = extract_title(item['url'])
+        if fetched:
+            t = fetched
+    return t or 'Без заголовка'
+
+
+def _safe_source(item) -> str:
+    s = (item.get('source') or '').strip()
+    return s or map_source(item['url'])
+
+
+def _format_entry(idx, item):
+    title = _safe_title(item).replace('"Реал"', '«Реал»')
+    url = item['url']
+    source = _safe_source(item)
+    return f"{idx}\uFE0F\u20E3 {title}\n🔗 {url}\nИсточник: {source}"

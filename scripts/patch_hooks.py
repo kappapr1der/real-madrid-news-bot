@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-import re, sys, shutil, os
+import re, shutil
 from pathlib import Path
 
-ROOT = Path(".")
 FILES = ["translator.py", "digest.py"]
 
 def backup(p: Path):
-    if not p.exists(): 
+    if not p.exists():
         print(f"[skip] {p} not found")
         return False
     b = p.with_suffix(p.suffix + ".bak")
@@ -23,10 +22,11 @@ def patch_translator(p: Path):
 
     # 1) импорт постпроцессора
     if "from utils.textfix import apply_translation_fixes" not in s:
-        # вставим после первого import-блока
-        s = re.sub(r"(^\s*import[^\n]*\n(?:^\s*from[^\n]*\n|\s*import[^\n]*\n)*)",
-                   r"\1from utils.textfix import apply_translation_fixes\n",
-                   s, count=1, flags=re.M)
+        s = re.sub(
+            r"(^\s*(?:import|from)\b[^\n]*\n(?:^\s*(?:import|from)\b[^\n]*\n)*)",
+            r"\1from utils.textfix import apply_translation_fixes\n",
+            s, count=1, flags=re.M
+        )
         print("[ok ] translator: добавлен импорт apply_translation_fixes")
     else:
         print("[ok ] translator: импорт уже есть")
@@ -40,7 +40,8 @@ def patch_translator(p: Path):
             r"        ru_text = apply_translation_fixes(ru_text)\n"
             r"    except Exception as e:\n"
             r"        print(f\"[translator] apply_translation_fixes failed: {e}\")\n\n",
-            s, count=1)
+            s, count=1
+        )
         print("[ok ] translator: добавлен вызов apply_translation_fixes")
     else:
         print("[ok ] translator: вызов уже есть")
@@ -48,13 +49,15 @@ def patch_translator(p: Path):
     p.write_text(s, encoding="utf-8")
 
 def ensure_helpers_in_digest(s: str) -> str:
-    # добавим импорты при отсутствии
+    # Импорты
     if "from utils.source_map import map_source" not in s:
-        s = re.sub(r"(^\s*import[^\n]*\n(?:^\s*from[^\n]*\n|\s*import[^\n]*\n)*)",
-                   r"\1from utils.source_map import map_source\nfrom utils.time_labels import digest_label\nfrom utils.title_extractor import extract_title\n",
-                   s, count=1, flags=re.M)
+        s = re.sub(
+            r"(^\s*(?:import|from)\b[^\n]*\n(?:^\s*(?:import|from)\b[^\n]*\n)*)",
+            r"\1from utils.source_map import map_source\nfrom utils.time_labels import digest_label\nfrom utils.title_extractor import extract_title\n",
+            s, count=1, flags=re.M
+        )
 
-    # хелперы _safe_title/_safe_source и форматтер
+    # Хелперы
     if "_safe_title(" not in s:
         s += (
             "\n\ndef _safe_title(item) -> str:\n"
@@ -71,18 +74,23 @@ def ensure_helpers_in_digest(s: str) -> str:
             "    s = (item.get('source') or '').strip()\n"
             "    return s or map_source(item['url'])\n"
         )
-    # заменим _format_entry на наш вариант
-    s = re.sub(
-        r"def\s+_format_entry\([^\)]*\):[\s\S]*?(?=\n\n|\Z)",
+
+    # Замена _format_entry при помощи функции-заменителя (не строка!)
+    pattern = r"def\s+_format_entry\([^\)]*\):[\s\S]*?(?=\n\n|\Z)"
+    repl_code = (
         "def _format_entry(idx, item):\n"
         "    title = _safe_title(item).replace('\"Реал\"', '«Реал»')\n"
         "    url = item['url']\n"
         "    source = _safe_source(item)\n"
-        "    return f\"{idx}\\uFE0F\\u20E3 {title}\\n🔗 {url}\\nИсточник: {source}\"",
-        s, count=1
+        "    return f\"{idx}\\uFE0F\\u20E3 {title}\\n🔗 {url}\\nИсточник: {source}\""
     )
+    if re.search(pattern, s):
+        s = re.sub(pattern, lambda m: repl_code, s, count=1)
+    else:
+        # если у тебя нет _format_entry — просто добавим в конец
+        s += "\n\n" + repl_code + "\n"
 
-    # заголовок дайджеста — на digest_label()
+    # Заголовок дайджеста по времени
     s = re.sub(
         r'header\s*=\s*"(?:Вечерние|Дневные|Утренние|Ночные)[^"]*"',
         "header = digest_label()",
@@ -101,22 +109,11 @@ def patch_digest(p: Path):
         print("[ok ] digest: изменений не требовалось")
 
 def main():
-    # быстрые проверки наличия утилит (чтобы не было ImportError)
-    must = [
-        "utils/source_map.py", "utils/time_labels.py",
-        "utils/title_extractor.py", "utils/textfix.py",
-        "patches/source_mapping.yaml",
-        "patches/terms_increment_2025-08-27.yaml",
-        "patches/terms_increment_transfers_2025-08-27.yaml",
-    ]
-    missing = [m for m in must if not Path(m).exists()]
-    if missing:
-        print("[warn] отсутствуют файлы:", ", ".join(missing))
-        print("       Сначала запусти мой предыдущий «пакет» с mkdir -p utils patches ...")
-    for f in FILES:
-        p = Path(f)
+    # просто пытаемся пропатчить оба файла
+    for name in FILES:
+        p = Path(name)
         if not p.exists():
-            print(f"[skip] {f} не найден — пропускаю")
+            print(f"[skip] {name} не найден — пропускаю")
             continue
         if p.name == "translator.py":
             patch_translator(p)
