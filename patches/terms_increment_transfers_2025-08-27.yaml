@@ -62,3 +62,27 @@ translation_fixes:
       replace: "\\1 млрд"
     - pattern: "(?i)on loan"
       replace: "в аренде"
+translation_fixes:
+  phrases_exact:
+    "live blog": "LIVE-блог"
+    "Live blog": "LIVE-блог"
+    "live updates": "прямые обновления"
+    "latest updates": "последние обновления"
+    "match report": "отчёт о матче"
+    "report": "репортаж"
+  regex_rules:
+    # Хвосты типа " – Live updates and latest …" срежем
+    - pattern: "(?i)\\s[-–|]\\s(live\\s+blog|live\\s+updates?|latest\\s+updates?|breaking\\s+news|gossip).*?$"
+      replace: ""
+    # FourFourTwo/Independent/KickOff/РИА — убираем «— Имя сайта» в <title>
+    - pattern: "(?i)\\s[-–|]\\s(FourFourTwo|The Independent|KickOff|РИА\\sНовости\\sСпорт).*?$"
+      replace: ""
+    # e70m / e15m → €70m / €15m (далее твои правила переведут m→млн)
+    - pattern: "(?i)\\be\\s?(\\d+)(m|M)\\b"
+      replace: "€\\1\\2"
+    # евро без символа, типа EUR 70m → €70m
+    - pattern: "(?i)\\bEUR\\s?(\\d+)(m|M)\\b"
+      replace: "€\\1\\2"
+    # фунты в словах → £
+    - pattern: "(?i)\\bGBP\\s?(\\d+)(m|M)\\b"
+      replace: "£\\1\\2"

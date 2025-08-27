@@ -17,3 +17,12 @@ source_mapping:
 
   # Запасной дефолт — если ничего не совпало
   "__default__": "Unknown Source"
+  "independent.co.uk/sport/football/": "The Independent"
+  "independent.co.uk/": "The Independent"
+
+  "fourfourtwo.com/news/": "FourFourTwo"
+  "fourfourtwo.com/": "FourFourTwo"
+
+  "kickoff.co.za/": "KickOff"
+
+  "rsport.ria.ru/": "РИА Новости Спорт"

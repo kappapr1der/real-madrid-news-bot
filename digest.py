@@ -156,7 +156,13 @@ def _safe_source(item) -> str:
 
 
 def _format_entry(idx, item):
-    title = _safe_title(item).replace('"Реал"', '«Реал»')
+    _t = _safe_title(item).replace('\"Реал\"', '«Реал»')
+    title = _truncate_title(_t)
     url = item['url']
     source = _safe_source(item)
     return f"{idx}\uFE0F\u20E3 {title}\n🔗 {url}\nИсточник: {source}"
+
+
+def _truncate_title(t: str, maxlen: int = 120) -> str:
+    t = t.strip()
+    return t if len(t) <= maxlen else t[:maxlen-1].rstrip() + "…"
