@@ -1,0 +1,12 @@
+# Logs
+logs/
+*.log
+
+# State
+sent_links.txt
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
