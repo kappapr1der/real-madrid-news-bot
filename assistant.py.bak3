@@ -114,6 +114,7 @@ class Assistant:
                     temperature=self.temperature,
                     max_output_tokens=max_tokens,
                 )
+                # Нормализация ответа
                 if getattr(r, "output_text", None):
                     text = (r.output_text or "").strip()
                     if text:
