@@ -1,0 +1,9 @@
+# OpenAI keys
+regex:\bsk-[a-z0-9]{32,512}\b==>***REMOVED***
+regex:\bsk-proj-[a-z0-9_\-]{24,512}\b==>***REMOVED***
+# GitHub PAT
+regex:\bgh[pousr]_[A-Za-z0-9]{36,}\b==>***REMOVED***
+# Telegram bot token
+regex:\b[0-9]{6,12}:[A-Za-z0-9_\-]{30,}\b==>***REMOVED***
+# query token fallback
+regex:(token=)[A-Za-z0-9_\-]{16,}==>\1***REMOVED***
