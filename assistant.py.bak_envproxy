@@ -60,18 +60,32 @@ SYSTEM_FAN = (
 
 def _make_openai_client() -> OpenAI:
     """
-    Создаёт OpenAI-клиент и полагается на переменные окружения (HTTPS_PROXY/HTTP_PROXY).
-    Без кастомного httpx-клиента — чтобы исключить ошибки транспорта.
+    Создаёт OpenAI-клиент с httpx и прокси.
+    Работает с версиями httpx, где нет параметра `proxies` в Client.__init__.
     """
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY не задан")
-    return OpenAI(
-        api_key=OPENAI_API_KEY,
-        base_url=OPENAI_API_BASE.rstrip("/"),
+
+    # Берём прокси из ENV (HTTPS_PROXY приоритетнее)
+    proxy = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+
+    # Транспорт с прокси (если задан) — это гарантировано работает в разных версиях httpx
+    transport = httpx.HTTPTransport(proxy=proxy) if proxy else httpx.HTTPTransport()
+
+    http_client = httpx.Client(
+        timeout=TIMEOUT,
+        transport=transport,
+        headers={"User-Agent": "coffee-bot-assistant/1.0"},
     )
 
+    client = OpenAI(
+        api_key=OPENAI_API_KEY,
+        base_url=OPENAI_API_BASE.rstrip("/"),
+        http_client=http_client,
+    )
+    return client
+
 class Assistant:
-:
     def __init__(self, model: str = DEFAULT_MODEL, temperature: float = 0.2):
         self.client = _make_openai_client()
         self.model = model
