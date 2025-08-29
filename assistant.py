@@ -39,7 +39,6 @@ logger.setLevel(logging.INFO)
 # ===== Конфиг через ENV =====
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 MAX_RETRIES = int(os.getenv("OPENAI_RETRIES", "4"))
-# Таймаут в секундах для HTTP-клиента OpenAI
 TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "30"))
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -48,14 +47,6 @@ OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
 # Локальный прокси от sing-box (VLESS Reality). Можно переопределить через ENV.
 HTTP_PROXY = os.getenv("HTTP_PROXY", "http://127.0.0.1:8080")
 HTTPS_PROXY = os.getenv("HTTPS_PROXY", "http://127.0.0.1:8080")
-
-# Если хочешь полностью выключить прокси — задай обе переменные пустыми строками.
-PROXIES: Optional[dict] = None
-if HTTP_PROXY or HTTPS_PROXY:
-    PROXIES = {
-        "http://": HTTP_PROXY,
-        "https://": HTTPS_PROXY,
-    }
 
 SYSTEM_NEWS = (
     "Ты редактор новостного канала болельщиков Реала Мадрид «Кофе со сливками». "
@@ -70,7 +61,7 @@ SYSTEM_FAN = (
 def _make_openai_client() -> OpenAI:
     """
     Создаёт OpenAI-клиент с httpx и прокси.
-    Совместимо с httpx, где нет параметра proxies в Client.__init__.
+    Работает с версиями httpx, где нет параметра `proxies` в Client.__init__.
     """
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY не задан")
@@ -78,10 +69,9 @@ def _make_openai_client() -> OpenAI:
     # Берём прокси из ENV (HTTPS_PROXY приоритетнее)
     proxy = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
 
-    # Транспорт с прокси (если есть)
+    # Транспорт с прокси (если задан) — это гарантировано работает в разных версиях httpx
     transport = httpx.HTTPTransport(proxy=proxy) if proxy else httpx.HTTPTransport()
 
-    # Прокси задаём через transport
     http_client = httpx.Client(
         timeout=TIMEOUT,
         transport=transport,
@@ -94,68 +84,70 @@ def _make_openai_client() -> OpenAI:
         http_client=http_client,
     )
     return client
+
+class Assistant:
     def __init__(self, model: str = DEFAULT_MODEL, temperature: float = 0.2):
         self.client = _make_openai_client()
         self.model = model
         self.temperature = temperature
 
-    def _call(self, messages: list[dict[str, str]], max_tokens: int = 800) -> str:
-    """
-    Унифицированный вызов Responses API с ретраями (без .with_options).
-    Таймаут задаётся в httpx.Client при создании клиента.
-    """
-    err: Exception | None = None
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            r = self.client.responses.create(
-                model=self.model,
-                input=messages,
-                temperature=self.temperature,
-                max_output_tokens=max_tokens,
-            )
-            # Нормализация ответа
-            if getattr(r, "output_text", None):
-                text = (r.output_text or "").strip()
-                if text:
-                    return text
-
-            output = getattr(r, "output", None) or []
-            for item in output:
-                if getattr(item, "type", "") == "message":
-                    for c in getattr(item, "content", []) or []:
-                        if getattr(c, "type", "") == "output_text":
-                            text = (getattr(c, "text", "") or "").strip()
-                            if text:
-                                return text
-
-            raise RuntimeError("Empty response")
-        except (RateLimitError, APIStatusError, APIConnectionError, APITimeoutError) as e:
-            err = e
-            emsg = str(e)
-            if "unsupported_country_region_territory" in emsg.lower():
-                logger.error(
-                    "OpenAI блокирует по региону (unsupported_country_region_territory). "
-                    "Проверь VLESS-прокси (sing-box) и переменные HTTP(S)_PROXY."
+    def _call(self, messages: List[Dict[str, str]], max_tokens: int = 800) -> str:
+        """
+        Унифицированный вызов Responses API с ретраями (без .with_options).
+        Таймаут задаётся в httpx.Client при создании клиента.
+        """
+        err: Optional[Exception] = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                r = self.client.responses.create(
+                    model=self.model,
+                    input=messages,
+                    temperature=self.temperature,
+                    max_output_tokens=max_tokens,
                 )
-            if attempt < MAX_RETRIES:
-                sleep_s = 1.25 * attempt
-                logger.warning("Retry %d/%d после ошибки: %s (sleep %.1fs)",
-                               attempt, MAX_RETRIES, e, sleep_s)
-                time.sleep(sleep_s)
-                continue
-        except Exception as e:
-            err = e
-            if attempt < MAX_RETRIES:
-                sleep_s = 1.25 * attempt
-                logger.warning("Retry %d/%d: %s (sleep %.1fs)",
-                               attempt, MAX_RETRIES, e, sleep_s)
-                time.sleep(sleep_s)
-                continue
-        break
-    raise RuntimeError(f"OpenAI error: {err}")
+                # Нормализация ответа
+                if getattr(r, "output_text", None):
+                    text = (r.output_text or "").strip()
+                    if text:
+                        return text
+
+                output = getattr(r, "output", None) or []
+                for item in output:
+                    if getattr(item, "type", "") == "message":
+                        for c in getattr(item, "content", []) or []:
+                            if getattr(c, "type", "") == "output_text":
+                                text = (getattr(c, "text", "") or "").strip()
+                                if text:
+                                    return text
+
+                raise RuntimeError("Empty response")
+            except (RateLimitError, APIStatusError, APIConnectionError, APITimeoutError) as e:
+                err = e
+                emsg = str(e)
+                if "unsupported_country_region_territory" in emsg.lower():
+                    logger.error(
+                        "OpenAI блокирует по региону (unsupported_country_region_territory). "
+                        "Проверь VLESS-прокси (sing-box) и переменные HTTP(S)_PROXY: "
+                        "HTTP_PROXY=%s HTTPS_PROXY=%s", HTTP_PROXY, HTTPS_PROXY
+                    )
+                if attempt < MAX_RETRIES:
+                    sleep_s = 1.25 * attempt
+                    logger.warning("Retry %d/%d после ошибки: %s (sleep %.1fs)",
+                                   attempt, MAX_RETRIES, e, sleep_s)
+                    time.sleep(sleep_s)
+                    continue
+            except Exception as e:
+                err = e
+                if attempt < MAX_RETRIES:
+                    sleep_s = 1.25 * attempt
+                    logger.warning("Retry %d/%d: %s (sleep %.1fs)",
+                                   attempt, MAX_RETRIES, e, sleep_s)
+                    time.sleep(sleep_s)
+                    continue
+            break
+        raise RuntimeError(f"OpenAI error: {err}")
 
     def ask(self, prompt: str, system: Optional[str] = None, max_tokens: int = 800) -> str:
-self, prompt: str, system: Optional[str] = None, max_tokens: int = 800) -> str:
         sys = {"role": "system", "content": system or SYSTEM_NEWS}
         usr = {"role": "user", "content": prompt}
         return self._call([sys, usr], max_tokens=max_tokens)
