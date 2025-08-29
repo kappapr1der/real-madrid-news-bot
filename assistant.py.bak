@@ -70,22 +70,17 @@ SYSTEM_FAN = (
 def _make_openai_client() -> OpenAI:
     """
     Создаёт OpenAI-клиент с httpx и прокси.
-    Совместимо с httpx, где нет параметра proxies в Client.__init__.
     """
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY не задан")
 
-    # Берём прокси из ENV (HTTPS_PROXY приоритетнее)
-    proxy = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
-
-    # Транспорт с прокси (если есть)
-    transport = httpx.HTTPTransport(proxy=proxy) if proxy else httpx.HTTPTransport()
-
-    # Важно: прокси задаём через transport, а не через Client(proxies=...)
+    # httpx-клиент с прокси и таймаутом
     http_client = httpx.Client(
+        proxies=PROXIES,
         timeout=TIMEOUT,
-        transport=transport,
-        headers={"User-Agent": "coffee-bot-assistant/1.0"},
+        # Чтобы DNS резолвился через прокси при необходимости
+        transport=httpx.HTTPTransport(retries=0),
+        headers={"User-Agent": "coffee-bot-assistant/1.0"}
     )
 
     client = OpenAI(
@@ -94,6 +89,7 @@ def _make_openai_client() -> OpenAI:
         http_client=http_client,
     )
     return client
+
 class Assistant:
     def __init__(self, model: str = DEFAULT_MODEL, temperature: float = 0.2):
         self.client = _make_openai_client()
