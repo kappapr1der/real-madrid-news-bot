@@ -11,9 +11,10 @@ assistant.py — расширенный «мозг» для Coffee Bot.
 - Генерация коротких алертов
 - Проверка на смысловые дубли
 
-Дополнительно:
-- Прямая работа с OpenAI через локальный HTTP-прокси (VLESS Reality → sing-box)
-- Ретраи на 429/5xx, понятные ошибки, конфиг через ENV
+Технически:
+- Работает с OpenAI через официальный SDK.
+- Прокси задаётся через переменные окружения: HTTPS_PROXY/HTTP_PROXY (например, http://127.0.0.1:8080 для VLESS Reality через sing-box).
+- Таймаут и ретраи на 429/5xx.
 """
 
 from __future__ import annotations
@@ -23,7 +24,6 @@ import json
 import logging
 from typing import List, Dict, Optional
 
-import httpx
 from openai import OpenAI
 from openai._exceptions import (
     APIStatusError, APIConnectionError, APITimeoutError, RateLimitError
@@ -44,10 +44,6 @@ TIMEOUT = float(os.getenv("OPENAI_TIMEOUT", "30"))
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_API_BASE = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
 
-# Локальный прокси от sing-box (VLESS Reality). Можно переопределить через ENV.
-HTTP_PROXY = os.getenv("HTTP_PROXY", "http://127.0.0.1:8080")
-HTTPS_PROXY = os.getenv("HTTPS_PROXY", "http://127.0.0.1:8080")
-
 SYSTEM_NEWS = (
     "Ты редактор новостного канала болельщиков Реала Мадрид «Кофе со сливками». "
     "Пиши на русском, чётко и без кликбейта. Сохраняй атмосферу клуба."
@@ -60,8 +56,8 @@ SYSTEM_FAN = (
 
 def _make_openai_client() -> OpenAI:
     """
-    Создаёт OpenAI-клиент и полагается на переменные окружения (HTTPS_PROXY/HTTP_PROXY).
-    Без кастомного httpx-клиента — чтобы исключить ошибки транспорта.
+    Создаёт OpenAI-клиент.
+    SDK сам использует HTTPS_PROXY/HTTP_PROXY из окружения (если заданы).
     """
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY не задан")
@@ -71,7 +67,6 @@ def _make_openai_client() -> OpenAI:
     )
 
 class Assistant:
-:
     def __init__(self, model: str = DEFAULT_MODEL, temperature: float = 0.2):
         self.client = _make_openai_client()
         self.model = model
@@ -80,7 +75,7 @@ class Assistant:
     def _call(self, messages: List[Dict[str, str]], max_tokens: int = 800) -> str:
         """
         Унифицированный вызов Responses API с ретраями (без .with_options).
-        Таймаут задаётся в httpx.Client при создании клиента.
+        Таймаут задаётся конфигом SDK/HTTP по умолчанию; при сетевых сбоях делаем ретраи.
         """
         err: Optional[Exception] = None
         for attempt in range(1, MAX_RETRIES + 1):
@@ -113,8 +108,7 @@ class Assistant:
                 if "unsupported_country_region_territory" in emsg.lower():
                     logger.error(
                         "OpenAI блокирует по региону (unsupported_country_region_territory). "
-                        "Проверь VLESS-прокси (sing-box) и переменные HTTP(S)_PROXY: "
-                        "HTTP_PROXY=%s HTTPS_PROXY=%s", HTTP_PROXY, HTTPS_PROXY
+                        "Убедись, что запросы идут через твой прокси (HTTPS_PROXY/HTTP_PROXY)."
                     )
                 if attempt < MAX_RETRIES:
                     sleep_s = 1.25 * attempt
