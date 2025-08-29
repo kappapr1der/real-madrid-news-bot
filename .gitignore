@@ -1,12 +1,9 @@
-# Logs
+.env
+sessions.jsonl
 logs/
 *.log
-
-# State
-sent_links.txt
-.env
-
-# Python
+publisher_dedup.db
 __pycache__/
 *.pyc
+.venv/
 venv/
