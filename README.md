@@ -24,7 +24,9 @@
 - Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху.
 - Автоматический тип дайджеста по времени: утренний, дневной, вечерний или ночной.
 - Расписание дайджестов настраивается через `.env` и работает в `DIGEST_TIMEZONE`, а не в случайной таймзоне VPS.
-- Матч-день: отдельный процесс для превью/старта/перерыва/финального свистка и будущих live-событий.
+- Матч-день для матчей Реала в Ла Лиге, Лиге чемпионов и любых других турнирах из `config/matches.json`.
+- Автопосты матча: превью, старт, перерыв, финальный свист.
+- Опциональные автоматические live-события через API-FOOTBALL: голы, карточки, замены и VAR.
 - Дайджесты автоматически пропускаются в матчевое окно, чтобы не перекрывать матч.
 - Breaking-мониторинг каждые 120 секунд.
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
@@ -69,7 +71,7 @@ LIVE_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #Live #Ма
 
 ## Матч-день
 
-Матчевый режим пока не привязан к платному live API. Он использует локальный календарь `config/matches.json` и готов к подключению внешнего провайдера событий позже.
+Матчевый режим использует локальный календарь `config/matches.json`. В него можно добавлять матчи Реала в Ла Лиге, Лиге чемпионов, Кубке, Суперкубке или товарищеских турнирах. Дайджесты блокируются вокруг любого матча из календаря.
 
 Создать календарь на сервере:
 
@@ -81,16 +83,19 @@ cp config/matches.example.json config/matches.json
 
 ```json
 {
-  "id": "laliga-2026-08-23-real-madrid-opponent",
-  "competition": "La Liga",
-  "round": "Matchday 1",
+  "id": "ucl-2026-09-15-real-madrid-opponent",
+  "competition": "UEFA Champions League",
+  "round": "League phase",
   "home": "Real Madrid",
   "away": "Opponent",
-  "kickoff": "2026-08-23T21:00:00+02:00",
+  "kickoff": "2026-09-15T21:00:00+02:00",
   "venue": "Santiago Bernabeu",
-  "broadcast": ""
+  "broadcast": "",
+  "api_football_fixture_id": ""
 }
 ```
+
+`api_football_fixture_id` можно оставить пустым. Если заполнить его fixture-id из API-FOOTBALL, live-провайдер будет точнее связывать события с матчем.
 
 Проверить ближайшие матчи:
 
@@ -107,7 +112,7 @@ DRY_RUN=true python matchday.py --once
 Отправить ручное или будущее live-событие:
 
 ```bash
-DRY_RUN=true python matchday.py --match-id laliga-2026-08-23-real-madrid-opponent --minute 23 --kind goal --score 1:0 --event-text "Беллингем открывает счет после передачи Винисиуса"
+DRY_RUN=true python matchday.py --match-id ucl-2026-09-15-real-madrid-opponent --minute 23 --kind goal --score 1:0 --event-text "Беллингем открывает счет после передачи Винисиуса"
 ```
 
 `main.py` запускает `matchday.py` отдельным процессом, если `MATCHDAY_ENABLED=true`. Автопосты сейчас такие:
@@ -118,6 +123,41 @@ DRY_RUN=true python matchday.py --match-id laliga-2026-08-23-real-madrid-opponen
 - финальный свист примерно через `MATCHDAY_FULLTIME_MINUTES` минут.
 
 Дайджесты не публикуются в матчевое окно: по умолчанию за `3` часа до kickoff и `2` часа после. Если нужен полный режим “в день матча без дайджестов”, включи `MATCHDAY_BLOCK_ALL_DAY=true`.
+
+## Автоматический live
+
+Автоматический live выключен по умолчанию. Без ключа API бот продолжит работать как раньше: автопосты матча плюс ручной `--event-text`.
+
+Чтобы включить автоматические live-события через API-FOOTBALL:
+
+```env
+MATCHDAY_LIVE_ENABLED=true
+MATCHDAY_LIVE_PROVIDER=api-football
+API_FOOTBALL_KEY=replace_me
+API_FOOTBALL_TEAM_ID=541
+API_FOOTBALL_LEAGUE_IDS=140,2
+MATCHDAY_LIVE_POLL_SECONDS=180
+MATCHDAY_LIVE_EVENT_TYPES=Goal,Card,subst,Var
+```
+
+По умолчанию `API_FOOTBALL_LEAGUE_IDS=140,2`: Ла Лига и Лига чемпионов. Если позже нужны Кубок Испании или Суперкубок, добавь ID лиги через запятую.
+
+Live-провайдер работает только в окне вокруг матчей из `config/matches.json`: за `MATCHDAY_LIVE_BEFORE_MINUTES` минут до kickoff и до `MATCHDAY_FULLTIME_MINUTES + MATCHDAY_LIVE_AFTER_MINUTES` минут после kickoff. Это экономит бесплатные запросы.
+
+Проверить один live-полл:
+
+```bash
+DRY_RUN=true python matchday.py --live-once
+```
+
+Бот берет структурированные события провайдера и сам пишет короткий фанатский текст без GPT:
+
+```text
+<b>72' · Гол · 2:1 | Real Madrid - Opponent</b>
+Винисиус забивает за Мадрид. Счет 2:1. Сливочные получают важный импульс.
+
+#RealMadrid #HalaMadrid #КофеСоСливками #Live #МатчДень
+```
 
 ## Источники
 
@@ -167,9 +207,10 @@ main.py                                # менеджер процессов
 runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста и матч-дня
 feed_utils.py                          # общий RSS fetch helper с timeout/User-Agent
 post_utils.py                          # общий формат хэштегов для Telegram-постов
+live_providers.py                      # API-FOOTBALL live-события для матчей Реала
 match_calendar.py                      # календарь матчей и guard для дайджеста
-matchday.py                            # матчевые автопосты и заготовка live-событий
-config/matches.example.json            # пример календаря матчей
+matchday.py                            # матчевые автопосты, ручные и автоматические live-события
+config/matches.example.json            # пример календаря матчей Ла Лиги и ЛЧ
 heartbeat.py                           # HTTP heartbeat
 breaking.py                            # breaking-мониторинг RSS
 digest.py                              # разовый запуск дайджеста
@@ -239,7 +280,7 @@ DIGEST_EVENING_LOOKBACK_HOURS=8
 DIGEST_NIGHT_LOOKBACK_HOURS=8
 DIGEST_INCLUDE_UNDATED=false
 
-# Матч-день и заготовка текстовых трансляций.
+# Матч-день и текстовые трансляции.
 MATCHDAY_ENABLED=true
 MATCH_SCHEDULE_FILE=config/matches.json
 MATCHDAY_BLOCK_BEFORE_HOURS=3
@@ -250,6 +291,19 @@ MATCHDAY_HALFTIME_MINUTES=50
 MATCHDAY_FULLTIME_MINUTES=125
 MATCHDAY_POST_TOLERANCE_MINUTES=20
 MATCHDAY_POLL_SECONDS=60
+MATCHDAY_LIVE_ENABLED=false
+MATCHDAY_LIVE_PROVIDER=api-football
+MATCHDAY_LIVE_POLL_SECONDS=180
+MATCHDAY_LIVE_BEFORE_MINUTES=15
+MATCHDAY_LIVE_AFTER_MINUTES=30
+MATCHDAY_LIVE_EVENT_TYPES=Goal,Card,subst,Var
+
+# API-FOOTBALL / API-SPORTS. По умолчанию: Real Madrid, La Liga, Champions League.
+API_FOOTBALL_KEY=
+API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+API_FOOTBALL_TEAM_ID=541
+API_FOOTBALL_LEAGUE_IDS=140,2
+API_FOOTBALL_REQUEST_TIMEOUT_SECONDS=10
 ```
 
 Если настоящий Telegram-токен когда-либо попадал в репозиторий, перевыпусти его в BotFather перед деплоем.
@@ -273,6 +327,7 @@ python scripts/check_sources.py
 ```bash
 python matchday.py --list
 DRY_RUN=true python matchday.py --once
+DRY_RUN=true python matchday.py --live-once
 ```
 
 Собрать дайджест без отправки в Telegram. Без аргумента бот сам выберет утро, день, вечер или ночь по текущему времени:
@@ -332,6 +387,8 @@ DRY_RUN=false
 
 Без этого бот не будет публиковать сообщения в Telegram. Это сделано специально, чтобы случайный локальный запуск не стрелял в канал.
 
+Автоматический live отдельно включается через `MATCHDAY_LIVE_ENABLED=true` и требует `API_FOOTBALL_KEY`. Если live выключен, ручные события через `--event-text` остаются доступными.
+
 ## Systemd на VPS
 
 В репозитории есть шаблон:
@@ -374,4 +431,4 @@ sudo systemctl status coffee-bot.service
 - Для бесплатного режима не нужны `OPENAI_API_KEY`, `OPENROUTER_API_KEY` или другие LLM-ключи.
 - Для лучшего перевода можно добавить бесплатный `DEEPL_API_KEY`; без него бот продолжит работать через текущие fallback-переводчики.
 - Если RSS-источник часто не отдает дату публикации, можно временно поставить `DIGEST_INCLUDE_UNDATED=true`, но для настоящего “свежака” лучше держать `false`.
-- Для настоящей автоматической текстовой трансляции нужен live-events provider; текущий `matchday.py` уже дает место, куда его подключить.
+- API-FOOTBALL free plan ограничен по запросам в день, поэтому `MATCHDAY_LIVE_POLL_SECONDS=180` лучше не снижать без необходимости.
