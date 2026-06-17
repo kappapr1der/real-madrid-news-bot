@@ -1,7 +1,10 @@
 .env
 sessions.jsonl
 logs/
+state/
 *.log
+sent_links.txt
+sent_breaking.txt
 publisher_dedup.db
 __pycache__/
 *.pyc
