@@ -117,7 +117,7 @@ REAL_SOURCE_MARKERS = [
     "marca - real madrid",
     "defensa central",
     "bernabeu digital",
-    "bernébeu digital",
+    "bernabéu digital",
     "mundo deportivo - real madrid",
     "sport - real madrid",
 ]
