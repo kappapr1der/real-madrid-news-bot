@@ -17,7 +17,9 @@
 - Фильтр релевантности по Real Madrid, игрокам, турнирам, профильным источникам и стоп-словам.
 - Перевод через DeepL API Free, если задан `DEEPL_API_KEY`; иначе fallback на `deep-translator` / MyMemory.
 - Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
-- Компактные HTML-дайджесты без сырых URL и без огромных link preview.
+- Компактные HTML-дайджесты и breaking-посты без сырых URL и без огромных link preview.
+- Длинные Telegram-сообщения режутся на части до `TELEGRAM_MESSAGE_LIMIT`.
+- RSS читается через HTTP timeout и `HTTP_USER_AGENT`, чтобы плохой источник не подвешивал процесс.
 - Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху.
 - Автоматический тип дайджеста по времени: утренний, дневной, вечерний или ночной.
 - Расписание дайджестов настраивается через `.env` и работает в `DIGEST_TIMEZONE`, а не в случайной таймзоне VPS.
@@ -25,6 +27,7 @@
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
 - One-shot проверка breaking-цикла через `python breaking.py --once`.
 - Проверка RSS-источников через `python scripts/check_sources.py`.
+- `preflight.py` проверяет синтаксис, зависимости и базовую валидность `.env`.
 - Heartbeat HTTP-сервис для мониторинга.
 - Логи в каталоге `logs/`, runtime-состояние в `state/`.
 
@@ -91,6 +94,7 @@ DRY_RUN=true python digest.py ночного
 ```text
 main.py                                # менеджер процессов
 runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста
+feed_utils.py                          # общий RSS fetch helper с timeout/User-Agent
 heartbeat.py                           # HTTP heartbeat
 breaking.py                            # breaking-мониторинг RSS
 digest.py                              # разовый запуск дайджеста
@@ -99,7 +103,7 @@ text_cleaner.py                        # очистка текста после 
 translator.py                          # перевод + словарные замены
 sources_international.py               # международные источники
 sources_ru.py                          # русскоязычные источники
-scripts/preflight.py                   # проверка синтаксиса и зависимостей
+scripts/preflight.py                   # проверка синтаксиса, зависимостей и .env
 scripts/check_sources.py               # проверка доступности RSS-источников
 deploy/systemd/coffee-bot.service.example # systemd-шаблон для VPS
 requirements.txt                       # зависимости
@@ -132,6 +136,12 @@ LOG_DIR=logs
 BREAKING_INTERVAL_SECONDS=120
 HEARTBEAT_PORT=8000
 
+# HTTP и Telegram-лимиты.
+HTTP_USER_AGENT=CoffeeBot/1.0 (+https://t.me/slivochniyfootball)
+RSS_TIMEOUT_SECONDS=15
+TELEGRAM_TIMEOUT_SECONDS=10
+TELEGRAM_MESSAGE_LIMIT=3900
+
 # Свежесть, расписание и формат дайджестов.
 DIGEST_TIMEZONE=Europe/Moscow
 DIGEST_MORNING_TIME=09:00
@@ -151,7 +161,7 @@ DIGEST_INCLUDE_UNDATED=false
 
 ## Проверка до сервера
 
-Проверить синтаксис основных модулей и наличие зависимостей:
+Проверить синтаксис основных модулей, зависимости и `.env`:
 
 ```bash
 python scripts/preflight.py
@@ -207,7 +217,7 @@ python digest.py дневного
 python digest.py вечернего
 ```
 
-`main.py` запускает `heartbeat.py` и `breaking.py`, а также планирует дайджесты по настройкам `DIGEST_MORNING_TIME`, `DIGEST_DAY_TIME`, `DIGEST_EVENING_TIME` в таймзоне `DIGEST_TIMEZONE`. По умолчанию это `09:00`, `15:00`, `21:00` по Москве.
+`main.py` запускает `heartbeat.py` и `breaking.py` как процессы с рестартом, а `digest.py` — как одноразовую задачу без автоперезапуска после успешного завершения. Дайджесты планируются по настройкам `DIGEST_MORNING_TIME`, `DIGEST_DAY_TIME`, `DIGEST_EVENING_TIME` в таймзоне `DIGEST_TIMEZONE`. По умолчанию это `09:00`, `15:00`, `21:00` по Москве.
 
 ## Live-режим
 
