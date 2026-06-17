@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = [
     "runtime_config.py",
     "feed_utils.py",
+    "match_calendar.py",
+    "matchday.py",
     "main.py",
     "heartbeat.py",
     "breaking.py",
@@ -93,6 +95,11 @@ def validate_int(config: dict, name: str, default: str, minimum: int, errors: li
     return value
 
 
+def resolve_repo_path(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else ROOT / path
+
+
 def check_env():
     from dotenv import dotenv_values
 
@@ -103,10 +110,19 @@ def check_env():
 
     config = dotenv_values(env_path)
     errors: list[str] = []
+    warnings: list[str] = []
 
-    raw_dry_run = (config.get("DRY_RUN") or "true").strip().lower()
-    if raw_dry_run not in BOOL_VALUES:
-        errors.append("DRY_RUN must be true or false")
+    bool_rules = {
+        "DRY_RUN": "true",
+        "DIGEST_INCLUDE_UNDATED": "false",
+        "MATCHDAY_ENABLED": "true",
+        "MATCHDAY_BLOCK_ALL_DAY": "false",
+    }
+    for name, default in bool_rules.items():
+        raw = (config.get(name) or default).strip().lower()
+        if raw not in BOOL_VALUES:
+            errors.append(f"{name} must be true or false")
+
     dry_run = env_bool_value(config, "DRY_RUN", "true")
 
     if not dry_run:
@@ -133,6 +149,13 @@ def check_env():
         "DIGEST_DAY_LOOKBACK_HOURS": ("8", 1),
         "DIGEST_EVENING_LOOKBACK_HOURS": ("8", 1),
         "DIGEST_NIGHT_LOOKBACK_HOURS": ("8", 1),
+        "MATCHDAY_BLOCK_BEFORE_HOURS": ("3", 0),
+        "MATCHDAY_BLOCK_AFTER_HOURS": ("2", 0),
+        "MATCHDAY_PREVIEW_MINUTES": ("60", 0),
+        "MATCHDAY_HALFTIME_MINUTES": ("50", 1),
+        "MATCHDAY_FULLTIME_MINUTES": ("125", 1),
+        "MATCHDAY_POST_TOLERANCE_MINUTES": ("20", 1),
+        "MATCHDAY_POLL_SECONDS": ("60", 10),
     }
     parsed_values = {}
     for name, (default, minimum) in int_rules.items():
@@ -142,9 +165,17 @@ def check_env():
     if message_limit is not None and message_limit > 4096:
         errors.append("TELEGRAM_MESSAGE_LIMIT must be <= 4096")
 
+    matchday_enabled = env_bool_value(config, "MATCHDAY_ENABLED", "true")
+    schedule_file = resolve_repo_path(config.get("MATCH_SCHEDULE_FILE") or "config/matches.json")
+    if matchday_enabled and not schedule_file.exists():
+        warnings.append(f"MATCH_SCHEDULE_FILE not found: {schedule_file}")
+
     if errors:
         joined = "\n- ".join(errors)
         raise RuntimeError(f"Env validation failed:\n- {joined}")
+
+    for warning in warnings:
+        print(f"WARN {warning}")
 
     mode = "DRY_RUN" if dry_run else "LIVE"
     print(f"OK .env exists ({mode})")
