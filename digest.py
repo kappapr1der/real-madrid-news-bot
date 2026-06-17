@@ -1,99 +1,111 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
 import logging
 import random
+
 import requests
 import feedparser
-from dotenv import load_dotenv
 
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
-from text_cleaner import clean_text
 from filters import passes_filters
-from translator import translate_text  # ✅ наш словарный переводчик
-from utils.source_map import map_source
-from utils.time_labels import digest_label
-from utils.title_extractor import extract_title
-
-load_dotenv()
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TARGET_CHAT_ID")
-
-LOG_FILE = "logs/digest.log"
-os.makedirs("logs", exist_ok=True)
-logging.basicConfig(
-    filename=LOG_FILE,
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    encoding="utf-8"
+from translator import translate_text
+from runtime_config import (
+    DRY_RUN,
+    TELEGRAM_BOT_TOKEN,
+    TARGET_CHAT_ID,
+    get_log_file,
+    get_state_file,
+    telegram_configured,
 )
 
-SENT_FILE = "sent_links.txt"
+LOG_FILE = get_log_file("digest.log")
+logging.basicConfig(
+    filename=str(LOG_FILE),
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    encoding="utf-8",
+)
+
+SENT_FILE = get_state_file("sent_links.txt")
+
 
 def load_sent_links():
-    if not os.path.exists(SENT_FILE):
+    if not SENT_FILE.exists():
         return set()
-    with open(SENT_FILE, "r", encoding="utf-8") as f:
+    with SENT_FILE.open("r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
+
 def save_sent_links(links):
-    with open(SENT_FILE, "w", encoding="utf-8") as f:
+    with SENT_FILE.open("w", encoding="utf-8") as f:
         for link in sorted(links):
             f.write(link + "\n")
+
 
 sent_digest = load_sent_links()
 
 TEMPLATES = {
     "утреннего": [
         "☕️ Утренний сливочный дайджест\n\n{news}",
-        "🌅 Доброе утро, мадридисты!\n\n{news}"
+        "🌅 Доброе утро, мадридисты!\n\n{news}",
     ],
     "дневного": [
         "⚪️ Дневная подборка от «Кофе со сливками»\n\n{news}",
-        "📋 Всё самое важное днём:\n\n{news}"
+        "📋 Всё самое важное днём:\n\n{news}",
     ],
     "вечернего": [
         "🌙 Вечерние сливки дня\n\n{news}",
-        "📰 Вечерний дайджест Реала:\n\n{news}"
+        "📰 Вечерний дайджест Реала:\n\n{news}",
     ],
     "ночного": [
         "🌌 Ночной сливочный дайджест\n\n{news}",
-        "💤 Пока вы спите, у нас новости:\n\n{news}"
+        "💤 Пока вы спите, у нас новости:\n\n{news}",
     ],
     "default": [
         "📋 Дайджест Реала:\n\n{news}",
-        "📰 Всё самое важное:\n\n{news}"
-    ]
+        "📰 Всё самое важное:\n\n{news}",
+    ],
 }
+
 
 def format_news_entry(i: int, text: str, link: str, source: str) -> str:
     return f"{i}️⃣ {text}\n🔗 {link}\nИсточник: {source}"
 
+
 def fetch_digest(sources, limit=10):
-    global sent_digest
+    seen_links = set(sent_digest)
+    new_links = set()
     news_items = []
 
     for src in sources:
+        url = src.get("url")
+        label = src.get("label", url or "Неизвестный источник")
+        if not url:
+            logging.warning(f"Источник без URL пропущен: {src!r}")
+            continue
+
         try:
-            feed = feedparser.parse(src["url"])
+            feed = feedparser.parse(url)
             if not feed.entries:
                 continue
 
             for entry in feed.entries[:3]:
                 link = entry.get("link")
-                if not link or link in sent_digest:
+                if not link or link in seen_links:
                     continue
 
                 title = entry.get("title", "").strip()
-                if not title or not passes_filters(title):
+                summary = entry.get("summary", "")
+                if not title or not passes_filters(title, summary=summary, source=label):
                     continue
 
-                cleaned = translate_text(title)  # ✅ словарный перевод
-                formatted = format_news_entry(len(news_items) + 1, cleaned, link, src["label"])
+                cleaned = translate_text(title)
+                formatted = format_news_entry(len(news_items) + 1, cleaned, link, label)
                 news_items.append(formatted)
-                sent_digest.add(link)
+                seen_links.add(link)
+                new_links.add(link)
 
                 if len(news_items) >= limit:
                     break
@@ -102,14 +114,16 @@ def fetch_digest(sources, limit=10):
                 break
 
         except Exception as e:
-            logging.error(f"Ошибка при парсинге {src['url']}: {e}")
+            logging.error(f"Ошибка при парсинге {url}: {e}")
 
-    save_sent_links(sent_digest)
-    return news_items
+    return news_items, new_links
+
 
 def send_digest(label: str = "default"):
+    global sent_digest
+
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
-    news_items = fetch_digest(sources, limit=10)
+    news_items, new_links = fetch_digest(sources, limit=10)
 
     if not news_items:
         logging.info(f"Нет новостей для {label} дайджеста")
@@ -119,50 +133,36 @@ def send_digest(label: str = "default"):
     templates = TEMPLATES.get(label, TEMPLATES["default"])
     message = random.choice(templates).format(news=joined_news)
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    if DRY_RUN:
+        logging.info(f"DRY_RUN {label} дайджест: {len(news_items)} новостей")
+        print(f"[DRY RUN DIGEST: {label}]\n{message}")
+        return
+
+    if not telegram_configured():
+        logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
+        return
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
-        "chat_id": CHAT_ID,
+        "chat_id": TARGET_CHAT_ID,
         "text": message,
-        "disable_web_page_preview": False
+        "disable_web_page_preview": False,
     }
 
     try:
         r = requests.post(url, data=payload, timeout=10)
         if r.status_code == 200:
+            sent_digest.update(new_links)
+            save_sent_links(sent_digest)
             logging.info(f"Опубликован {label} дайджест")
         else:
             logging.error(f"Ошибка Telegram API: {r.status_code} {r.text}")
     except Exception as e:
         logging.error(f"Ошибка при отправке дайджеста: {e}")
 
+
 if __name__ == "__main__":
     import sys
+
     arg = sys.argv[1] if len(sys.argv) > 1 else "default"
     send_digest(arg)
-
-
-def _safe_title(item) -> str:
-    t = (item.get('title') or '').strip()
-    if not t:
-        fetched = extract_title(item['url'])
-        if fetched:
-            t = fetched
-    return t or 'Без заголовка'
-
-
-def _safe_source(item) -> str:
-    s = (item.get('source') or '').strip()
-    return s or map_source(item['url'])
-
-
-def _format_entry(idx, item):
-    _t = _safe_title(item).replace('\"Реал\"', '«Реал»')
-    title = _truncate_title(_t)
-    url = item['url']
-    source = _safe_source(item)
-    return f"{idx}\uFE0F\u20E3 {title}\n🔗 {url}\nИсточник: {source}"
-
-
-def _truncate_title(t: str, maxlen: int = 120) -> str:
-    t = t.strip()
-    return t if len(t) <= maxlen else t[:maxlen-1].rstrip() + "…"
