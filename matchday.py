@@ -12,6 +12,7 @@ from html import escape
 import requests
 from colorama import Fore, Style, init
 
+from live_providers import fetch_live_events, live_provider_status
 from match_calendar import Match, find_match, load_matches, local_now, upcoming_matches
 from post_utils import append_hashtags
 from runtime_config import (
@@ -20,6 +21,8 @@ from runtime_config import (
     MATCHDAY_FULLTIME_MINUTES,
     MATCHDAY_HALFTIME_MINUTES,
     MATCHDAY_HASHTAGS,
+    MATCHDAY_LIVE_ENABLED,
+    MATCHDAY_LIVE_POLL_SECONDS,
     MATCHDAY_POLL_SECONDS,
     MATCHDAY_POST_TOLERANCE_MINUTES,
     MATCHDAY_PREVIEW_MINUTES,
@@ -48,6 +51,7 @@ AUTO_PHASES = {
     "halftime": MATCHDAY_HALFTIME_MINUTES,
     "fulltime": MATCHDAY_FULLTIME_MINUTES,
 }
+last_live_check = 0.0
 
 
 def load_state() -> set[str]:
@@ -199,7 +203,60 @@ def run_auto_once() -> int:
                 sent += 1
                 logging.info("Опубликован matchday phase=%s match=%s", phase, match.id)
 
-    print(Fore.CYAN + f"[MATCHDAY] Проверка завершена, опубликовано: {sent}")
+    print(Fore.CYAN + f"[MATCHDAY] Проверка автопостов завершена, опубликовано: {sent}")
+    return sent
+
+
+def run_live_once() -> int:
+    status = live_provider_status()
+    if status != "api-football ready":
+        if MATCHDAY_LIVE_ENABLED:
+            logging.warning("Live-провайдер не готов: %s", status)
+            print(Fore.YELLOW + f"[MATCHDAY LIVE] Live-провайдер не готов: {status}")
+        return 0
+
+    sent = 0
+    events = fetch_live_events(load_matches())
+    for event in events:
+        key = f"live:{event.key}"
+        if key in posted_keys:
+            continue
+
+        message = format_event_message(
+            event.match,
+            minute=event.minute,
+            text=event.text,
+            kind=event.kind,
+            score=event.score,
+        )
+        if post_telegram_message(message):
+            mark_posted(key)
+            sent += 1
+            logging.info("Опубликовано live event key=%s match=%s", event.key, event.match.id)
+
+    print(Fore.CYAN + f"[MATCHDAY LIVE] Проверка live-событий завершена, опубликовано: {sent}")
+    return sent
+
+
+def live_due(force: bool = False) -> bool:
+    global last_live_check
+    if not MATCHDAY_LIVE_ENABLED:
+        return False
+    if force:
+        last_live_check = time.monotonic()
+        return True
+
+    now = time.monotonic()
+    if now - last_live_check >= MATCHDAY_LIVE_POLL_SECONDS:
+        last_live_check = now
+        return True
+    return False
+
+
+def run_cycle(force_live: bool = False) -> int:
+    sent = run_auto_once()
+    if live_due(force=force_live):
+        sent += run_live_once()
     return sent
 
 
@@ -230,12 +287,14 @@ def print_matches() -> None:
         return
 
     for match in matches:
-        print(f"{match.id} | {kickoff_label(match)} | {match.title} | {match_meta(match)}")
+        fixture = f" | api_football_fixture_id={match.api_football_fixture_id}" if match.api_football_fixture_id else ""
+        print(f"{match.id} | {kickoff_label(match)} | {match.title} | {match_meta(match)}{fixture}")
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Coffee Bot matchday broadcaster")
     parser.add_argument("--once", action="store_true", help="run one matchday check and exit")
+    parser.add_argument("--live-once", action="store_true", help="poll configured live provider once and exit")
     parser.add_argument("--list", action="store_true", help="print upcoming matches from config/matches.json")
     parser.add_argument("--match-id", help="match id for a manual/future live event")
     parser.add_argument("--event-text", help="text for a manual/future live event")
@@ -264,13 +323,17 @@ def main() -> int:
             score=args.score,
         )
 
-    if args.once:
-        run_auto_once()
+    if args.live_once:
+        run_live_once()
         return 0
 
-    print(Fore.YELLOW + "[MATCHDAY] Matchday broadcaster started")
+    if args.once:
+        run_cycle(force_live=True)
+        return 0
+
+    print(Fore.YELLOW + f"[MATCHDAY] Matchday broadcaster started; live={live_provider_status()}")
     while True:
-        run_auto_once()
+        run_cycle()
         time.sleep(MATCHDAY_POLL_SECONDS)
 
 
