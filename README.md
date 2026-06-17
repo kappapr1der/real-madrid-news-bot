@@ -1,6 +1,6 @@
 # Coffee Bot (Кофе со сливками)
 
-Телеграм-бот для канала о Real Madrid: собирает RSS-новости, фильтрует нерелевантное, переводит заголовки на русский и публикует breaking-новости и дайджесты.
+Телеграм-бот для канала о Real Madrid: собирает RSS-новости, фильтрует нерелевантное, переводит заголовки на русский и публикует breaking-новости, дайджесты и матчевые обновления.
 
 Проект не требует OpenAI/GPT API. AI-редактор удален из рабочей схемы, чтобы бот оставался бесплатным и стабильным.
 
@@ -23,6 +23,8 @@
 - Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху.
 - Автоматический тип дайджеста по времени: утренний, дневной, вечерний или ночной.
 - Расписание дайджестов настраивается через `.env` и работает в `DIGEST_TIMEZONE`, а не в случайной таймзоне VPS.
+- Матч-день: отдельный процесс для превью/старта/перерыва/финального свистка и будущих live-событий.
+- Дайджесты автоматически пропускаются в матчевое окно, чтобы не перекрывать матч.
 - Breaking-мониторинг каждые 120 секунд.
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
 - One-shot проверка breaking-цикла через `python breaking.py --once`.
@@ -47,6 +49,58 @@
 ```
 
 Ссылки спрятаны в `Читать`, время берется из даты публикации RSS, а `disable_web_page_preview=True` отключает большую карточку под постом.
+
+## Матч-день
+
+Матчевый режим пока не привязан к платному live API. Он использует локальный календарь `config/matches.json` и готов к подключению внешнего провайдера событий позже.
+
+Создать календарь на сервере:
+
+```bash
+cp config/matches.example.json config/matches.json
+```
+
+Формат матча:
+
+```json
+{
+  "id": "laliga-2026-08-23-real-madrid-opponent",
+  "competition": "La Liga",
+  "round": "Matchday 1",
+  "home": "Real Madrid",
+  "away": "Opponent",
+  "kickoff": "2026-08-23T21:00:00+02:00",
+  "venue": "Santiago Bernabeu",
+  "broadcast": ""
+}
+```
+
+Проверить ближайшие матчи:
+
+```bash
+python matchday.py --list
+```
+
+Проверить автопосты матча без отправки в Telegram:
+
+```bash
+DRY_RUN=true python matchday.py --once
+```
+
+Отправить ручное или будущее live-событие:
+
+```bash
+DRY_RUN=true python matchday.py --match-id laliga-2026-08-23-real-madrid-opponent --minute 23 --kind goal --score 1:0 --event-text "Беллингем открывает счет после передачи Винисиуса"
+```
+
+`main.py` запускает `matchday.py` отдельным процессом, если `MATCHDAY_ENABLED=true`. Автопосты сейчас такие:
+
+- превью за `MATCHDAY_PREVIEW_MINUTES` минут до начала;
+- старт матча в момент kickoff;
+- перерыв примерно через `MATCHDAY_HALFTIME_MINUTES` минут;
+- финальный свист примерно через `MATCHDAY_FULLTIME_MINUTES` минут.
+
+Дайджесты не публикуются в матчевое окно: по умолчанию за `3` часа до kickoff и `2` часа после. Если нужен полный режим “в день матча без дайджестов”, включи `MATCHDAY_BLOCK_ALL_DAY=true`.
 
 ## Источники
 
@@ -93,8 +147,11 @@ DRY_RUN=true python digest.py ночного
 
 ```text
 main.py                                # менеджер процессов
-runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста
+runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста и матч-дня
 feed_utils.py                          # общий RSS fetch helper с timeout/User-Agent
+match_calendar.py                      # календарь матчей и guard для дайджеста
+matchday.py                            # матчевые автопосты и заготовка live-событий
+config/matches.example.json            # пример календаря матчей
 heartbeat.py                           # HTTP heartbeat
 breaking.py                            # breaking-мониторинг RSS
 digest.py                              # разовый запуск дайджеста
@@ -116,6 +173,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+cp config/matches.example.json config/matches.json
 ```
 
 В `.env` нужно указать:
@@ -155,6 +213,18 @@ DIGEST_DAY_LOOKBACK_HOURS=8
 DIGEST_EVENING_LOOKBACK_HOURS=8
 DIGEST_NIGHT_LOOKBACK_HOURS=8
 DIGEST_INCLUDE_UNDATED=false
+
+# Матч-день и заготовка текстовых трансляций.
+MATCHDAY_ENABLED=true
+MATCH_SCHEDULE_FILE=config/matches.json
+MATCHDAY_BLOCK_BEFORE_HOURS=3
+MATCHDAY_BLOCK_AFTER_HOURS=2
+MATCHDAY_BLOCK_ALL_DAY=false
+MATCHDAY_PREVIEW_MINUTES=60
+MATCHDAY_HALFTIME_MINUTES=50
+MATCHDAY_FULLTIME_MINUTES=125
+MATCHDAY_POST_TOLERANCE_MINUTES=20
+MATCHDAY_POLL_SECONDS=60
 ```
 
 Если настоящий Telegram-токен когда-либо попадал в репозиторий, перевыпусти его в BotFather перед деплоем.
@@ -171,6 +241,13 @@ python scripts/preflight.py
 
 ```bash
 python scripts/check_sources.py
+```
+
+Проверить календарь матчей:
+
+```bash
+python matchday.py --list
+DRY_RUN=true python matchday.py --once
 ```
 
 Собрать дайджест без отправки в Telegram. Без аргумента бот сам выберет утро, день, вечер или ночь по текущему времени:
@@ -211,13 +288,14 @@ python main.py
 ```bash
 python heartbeat.py
 python breaking.py
+python matchday.py
 python digest.py
 python digest.py утреннего
 python digest.py дневного
 python digest.py вечернего
 ```
 
-`main.py` запускает `heartbeat.py` и `breaking.py` как процессы с рестартом, а `digest.py` — как одноразовую задачу без автоперезапуска после успешного завершения. Дайджесты планируются по настройкам `DIGEST_MORNING_TIME`, `DIGEST_DAY_TIME`, `DIGEST_EVENING_TIME` в таймзоне `DIGEST_TIMEZONE`. По умолчанию это `09:00`, `15:00`, `21:00` по Москве.
+`main.py` запускает `heartbeat.py`, `breaking.py` и `matchday.py` как процессы с рестартом, а `digest.py` — как одноразовую задачу без автоперезапуска после успешного завершения. Дайджесты планируются по настройкам `DIGEST_MORNING_TIME`, `DIGEST_DAY_TIME`, `DIGEST_EVENING_TIME` в таймзоне `DIGEST_TIMEZONE`. По умолчанию это `09:00`, `15:00`, `21:00` по Москве.
 
 ## Live-режим
 
@@ -260,13 +338,15 @@ sudo systemctl status coffee-bot.service
 - `.env`
 - `logs/`
 - `state/`
+- `config/matches.json`
 - `sent_links.txt`
 - `sent_breaking.txt`
 
-`sent_links.txt` и `sent_breaking.txt` теперь живут в `STATE_DIR`, чтобы история отправленных ссылок не попадала в git.
+`sent_links.txt`, `sent_breaking.txt` и `matchday_posts.json` теперь живут в `STATE_DIR`, чтобы runtime-состояние не попадало в git.
 
 ## Примечания
 
 - Для бесплатного режима не нужны `OPENAI_API_KEY`, `OPENROUTER_API_KEY` или другие LLM-ключи.
 - Для лучшего перевода можно добавить бесплатный `DEEPL_API_KEY`; без него бот продолжит работать через текущие fallback-переводчики.
 - Если RSS-источник часто не отдает дату публикации, можно временно поставить `DIGEST_INCLUDE_UNDATED=true`, но для настоящего “свежака” лучше держать `false`.
+- Для настоящей автоматической текстовой трансляции нужен live-events provider; текущий `matchday.py` уже дает место, куда его подключить.
