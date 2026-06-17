@@ -34,6 +34,21 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def env_csv(name: str, default: str) -> list[str]:
+    raw = os.getenv(name, default)
+    return [part.strip() for part in raw.replace(";", ",").split(",") if part.strip()]
+
+
+def env_int_list(name: str, default: str) -> list[int]:
+    values = []
+    for part in env_csv(name, default):
+        try:
+            values.append(int(part))
+        except ValueError:
+            continue
+    return values
+
+
 DRY_RUN = env_bool("DRY_RUN", default=True)
 STATE_DIR = _resolve_dir(os.getenv("STATE_DIR", "state"))
 LOG_DIR = _resolve_dir(os.getenv("LOG_DIR", "logs"))
@@ -77,6 +92,19 @@ MATCHDAY_HALFTIME_MINUTES = env_int("MATCHDAY_HALFTIME_MINUTES", 50)
 MATCHDAY_FULLTIME_MINUTES = env_int("MATCHDAY_FULLTIME_MINUTES", 125)
 MATCHDAY_POST_TOLERANCE_MINUTES = env_int("MATCHDAY_POST_TOLERANCE_MINUTES", 20)
 MATCHDAY_POLL_SECONDS = env_int("MATCHDAY_POLL_SECONDS", 60)
+
+MATCHDAY_LIVE_ENABLED = env_bool("MATCHDAY_LIVE_ENABLED", default=False)
+MATCHDAY_LIVE_PROVIDER = os.getenv("MATCHDAY_LIVE_PROVIDER", "api-football").strip().lower()
+MATCHDAY_LIVE_POLL_SECONDS = env_int("MATCHDAY_LIVE_POLL_SECONDS", 180)
+MATCHDAY_LIVE_BEFORE_MINUTES = env_int("MATCHDAY_LIVE_BEFORE_MINUTES", 15)
+MATCHDAY_LIVE_AFTER_MINUTES = env_int("MATCHDAY_LIVE_AFTER_MINUTES", 30)
+MATCHDAY_LIVE_EVENT_TYPES = {part.casefold() for part in env_csv("MATCHDAY_LIVE_EVENT_TYPES", "Goal,Card,subst,Var")}
+
+API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY") or os.getenv("APISPORTS_KEY")
+API_FOOTBALL_BASE_URL = os.getenv("API_FOOTBALL_BASE_URL", "https://v3.football.api-sports.io").rstrip("/")
+API_FOOTBALL_TEAM_ID = env_int("API_FOOTBALL_TEAM_ID", 541)
+API_FOOTBALL_LEAGUE_IDS = env_int_list("API_FOOTBALL_LEAGUE_IDS", "140,2")
+API_FOOTBALL_REQUEST_TIMEOUT_SECONDS = env_int("API_FOOTBALL_REQUEST_TIMEOUT_SECONDS", 10)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TARGET_CHAT_ID = os.getenv("TARGET_CHAT_ID")
