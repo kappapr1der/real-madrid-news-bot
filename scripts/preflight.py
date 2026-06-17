@@ -18,6 +18,7 @@ FILES = [
     "sources_international.py",
     "sources_ru.py",
     "uptime_webhook.py",
+    "scripts/check_sources.py",
 ]
 
 REQUIRED_MODULES = {
