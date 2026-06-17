@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import time
 import logging
 import random
@@ -188,11 +189,31 @@ def fetch_breaking(sources):
     return checked, found
 
 
+def run_cycle(sources):
+    checked, found = fetch_breaking(sources)
+    print(Fore.CYAN + f"[CYCLE DONE] Проверено {checked} источников, найдено {found} breaking.")
+    return checked, found
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Coffee Bot breaking news monitor")
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="run one cycle and exit; useful for dry-run checks before deployment",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
     mode = "DRY RUN" if DRY_RUN else "LIVE"
     print(Fore.YELLOW + f"[BREAKING BOT STARTED] Запущен мониторинг breaking news ({mode}).")
-    while True:
-        checked, found = fetch_breaking(sources)
-        print(Fore.CYAN + f"[CYCLE DONE] Проверено {checked} источников, найдено {found} breaking.")
-        time.sleep(BREAKING_INTERVAL_SECONDS)
+
+    if args.once:
+        run_cycle(sources)
+    else:
+        while True:
+            run_cycle(sources)
+            time.sleep(BREAKING_INTERVAL_SECONDS)
