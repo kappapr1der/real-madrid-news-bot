@@ -12,6 +12,7 @@ from runtime_config import (
     DIGEST_MORNING_TIME,
     DIGEST_TIMEZONE,
     DRY_RUN,
+    MATCHDAY_ENABLED,
     get_log_file,
 )
 
@@ -91,6 +92,11 @@ def run_breaking():
     start_process("breaking", [PYTHON, "breaking.py"], restart=True)
 
 
+def run_matchday():
+    if MATCHDAY_ENABLED:
+        start_process("matchday", [PYTHON, "matchday.py"], restart=True)
+
+
 def run_digest_with_label(label: str):
     start_process(f"digest:{label}", [PYTHON, "digest.py", label], restart=False)
 
@@ -107,6 +113,7 @@ if __name__ == "__main__":
 
     run_heartbeat()
     run_breaking()
+    run_matchday()
 
     schedule_digest("утреннего", DIGEST_MORNING_TIME)
     schedule_digest("дневного", DIGEST_DAY_TIME)
