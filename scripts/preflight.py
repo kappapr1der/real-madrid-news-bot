@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FILES = [
     "runtime_config.py",
     "feed_utils.py",
+    "post_utils.py",
     "match_calendar.py",
     "matchday.py",
     "main.py",
@@ -41,6 +42,13 @@ REQUIRED_MODULES = {
 
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 BOOL_VALUES = {"1", "true", "yes", "y", "on", "0", "false", "no", "n", "off"}
+HASHTAG_CONFIG_NAMES = (
+    "POST_HASHTAGS",
+    "DIGEST_HASHTAGS",
+    "BREAKING_HASHTAGS",
+    "MATCHDAY_HASHTAGS",
+    "LIVE_HASHTAGS",
+)
 
 
 def check_syntax():
@@ -130,6 +138,10 @@ def check_env():
             errors.append("TELEGRAM_BOT_TOKEN is required for DRY_RUN=false")
         if is_placeholder(config.get("TARGET_CHAT_ID")):
             errors.append("TARGET_CHAT_ID is required for DRY_RUN=false")
+
+    for name in HASHTAG_CONFIG_NAMES:
+        if name in config and not (config.get(name) or "").strip():
+            warnings.append(f"{name} is empty; quote values that start with #")
 
     for name in ("DIGEST_MORNING_TIME", "DIGEST_DAY_TIME", "DIGEST_EVENING_TIME"):
         value = (config.get(name) or "").strip()
