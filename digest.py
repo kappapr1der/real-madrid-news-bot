@@ -4,6 +4,7 @@
 import calendar
 import logging
 import random
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -11,11 +12,11 @@ from html import escape
 from zoneinfo import ZoneInfo
 
 import requests
-import feedparser
 
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from filters import passes_filters
+from feed_utils import parse_feed_url
 from translator import translate_text
 from text_cleaner import clean_text
 from runtime_config import (
@@ -30,6 +31,8 @@ from runtime_config import (
     DIGEST_TIMEZONE,
     DRY_RUN,
     TELEGRAM_BOT_TOKEN,
+    TELEGRAM_MESSAGE_LIMIT,
+    TELEGRAM_TIMEOUT_SECONDS,
     TARGET_CHAT_ID,
     get_log_file,
     get_state_file,
@@ -233,6 +236,32 @@ def format_news_entry(i: int, candidate: DigestCandidate) -> str:
     return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {meta}"
 
 
+def split_message(message: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
+    if len(message) <= limit:
+        return [message]
+
+    chunks: list[str] = []
+    current = ""
+    for block in message.split("\n\n"):
+        candidate = block if not current else f"{current}\n\n{block}"
+        if len(candidate) <= limit:
+            current = candidate
+            continue
+
+        if current:
+            chunks.append(current)
+            current = ""
+
+        while len(block) > limit:
+            chunks.append(block[:limit])
+            block = block[limit:]
+        current = block
+
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def collect_candidates(sources, cutoff: datetime):
     seen_links = set(sent_digest)
     candidates: list[DigestCandidate] = []
@@ -245,8 +274,8 @@ def collect_candidates(sources, cutoff: datetime):
             continue
 
         try:
-            feed = feedparser.parse(url)
-            if not feed.entries:
+            feed = parse_feed_url(url)
+            if not feed or not feed.entries:
                 continue
 
             for entry in feed.entries[:DIGEST_ENTRY_SCAN_LIMIT]:
@@ -298,6 +327,30 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
     return news_items, new_links
 
 
+def post_telegram_message(message: str) -> bool:
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TARGET_CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+
+    for attempt in range(1, 4):
+        try:
+            response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
+            if response.status_code == 200:
+                return True
+            logging.error("Ошибка Telegram API: %s %s", response.status_code, response.text)
+        except requests.RequestException as exc:
+            logging.error("Ошибка при отправке дайджеста, попытка %s: %s", attempt, exc)
+
+        if attempt < 3:
+            time.sleep(attempt * 2)
+
+    return False
+
+
 def send_digest(label: str = "auto"):
     global sent_digest
 
@@ -314,34 +367,27 @@ def send_digest(label: str = "auto"):
     templates = TEMPLATES.get(label, TEMPLATES["default"])
     intro = random.choice(INTRO_LINES.get(label, INTRO_LINES["default"]))
     message = random.choice(templates).format(news=joined_news, intro=intro)
+    chunks = split_message(message)
 
     if DRY_RUN:
-        logging.info(f"DRY_RUN {label} дайджест: {len(news_items)} новостей")
-        print(f"[DRY RUN DIGEST: {label}]\n{message}")
+        logging.info(f"DRY_RUN {label} дайджест: {len(news_items)} новостей, частей: {len(chunks)}")
+        print(f"[DRY RUN DIGEST: {label}]")
+        for index, chunk in enumerate(chunks, start=1):
+            print(f"\n--- часть {index}/{len(chunks)} ---\n{chunk}")
         return
 
     if not telegram_configured():
         logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TARGET_CHAT_ID,
-        "text": message,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True,
-    }
+    for chunk in chunks:
+        if not post_telegram_message(chunk):
+            logging.error("Дайджест не сохранен как отправленный: часть сообщения не дошла")
+            return
 
-    try:
-        r = requests.post(url, data=payload, timeout=10)
-        if r.status_code == 200:
-            sent_digest.update(new_links)
-            save_sent_links(sent_digest)
-            logging.info(f"Опубликован {label} дайджест")
-        else:
-            logging.error(f"Ошибка Telegram API: {r.status_code} {r.text}")
-    except Exception as e:
-        logging.error(f"Ошибка при отправке дайджеста: {e}")
+    sent_digest.update(new_links)
+    save_sent_links(sent_digest)
+    logging.info(f"Опубликован {label} дайджест")
 
 
 if __name__ == "__main__":
