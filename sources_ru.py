@@ -1,4 +1,8 @@
-SOURCES_RU = [
+REAL_MADRID_RU_SOURCES = [
+    {"url": "https://www.sports.ru/rss/team/real-madrid.xml", "label": "Sports.ru – Реал Мадрид"},
+]
+
+GENERAL_RU_FOOTBALL_SOURCES = [
     {"url": "https://rsport.ria.ru/export/rss2/archive/index.xml", "label": "РИА Новости Спорт"},
     {"url": "https://www.sport-express.ru/services/materials/news/", "label": "Спорт-Экспресс"},
     {"url": "https://www.championat.com/xml/rss_news.xml", "label": "Чемпионат"},
@@ -13,6 +17,6 @@ SOURCES_RU = [
     {"url": "https://www.livesport.ru/rss/all.xml", "label": "Livesport"},
     {"url": "https://www.sportsdaily.ru/rss.xml", "label": "SportsDaily"},
     {"url": "https://www.metaratings.ru/rss/all.xml", "label": "MetaRatings"},
-    {"url": "https://www.sports.ru/rss/team/real-madrid.xml", "label": "Sports.ru – Реал Мадрид"},
-    {"url": "https://www.lagalerna.com/feed/", "label": "La Galerna (ES, RU-читабельно)"}
 ]
+
+SOURCES_RU = REAL_MADRID_RU_SOURCES + GENERAL_RU_FOOTBALL_SOURCES
