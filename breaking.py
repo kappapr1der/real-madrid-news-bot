@@ -14,10 +14,12 @@ from colorama import init, Fore, Style
 from text_cleaner import clean_text
 from filters import passes_filters
 from feed_utils import parse_feed_url
+from post_utils import append_hashtags
 from translator import translate_text
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from runtime_config import (
+    BREAKING_HASHTAGS,
     BREAKING_INTERVAL_SECONDS,
     DRY_RUN,
     TELEGRAM_BOT_TOKEN,
@@ -133,6 +135,7 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         link=escape(link, quote=True),
         source=escape(source),
     )
+    message = append_hashtags(message, BREAKING_HASHTAGS)
 
     if DRY_RUN:
         logging.info(f"DRY_RUN breaking: {news} | Источник: {source}")
