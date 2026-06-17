@@ -209,10 +209,11 @@ def check_env():
     validate_int_list(config, "API_FOOTBALL_LEAGUE_IDS", "140,2", errors)
     live_enabled = env_bool_value(config, "MATCHDAY_LIVE_ENABLED", "false")
     live_provider = (config.get("MATCHDAY_LIVE_PROVIDER") or "api-football").strip().lower()
+    live_key = config.get("API_FOOTBALL_KEY") or config.get("APISPORTS_KEY")
     if live_provider != "api-football":
         errors.append("MATCHDAY_LIVE_PROVIDER currently supports only api-football")
-    if live_enabled and is_placeholder(config.get("API_FOOTBALL_KEY")):
-        errors.append("API_FOOTBALL_KEY is required for MATCHDAY_LIVE_ENABLED=true")
+    if live_enabled and is_placeholder(live_key):
+        errors.append("API_FOOTBALL_KEY or APISPORTS_KEY is required for MATCHDAY_LIVE_ENABLED=true")
     if live_enabled and not (config.get("MATCHDAY_LIVE_EVENT_TYPES") or "").strip():
         warnings.append("MATCHDAY_LIVE_EVENT_TYPES is empty; all provider event types will be accepted")
 
