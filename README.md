@@ -8,14 +8,31 @@
 
 - RSS-источники на русском, английском и испанском.
 - Фильтр релевантности по Real Madrid, игрокам, турнирам и стоп-словам.
-- Перевод через `deep-translator` с fallback на MyMemory.
+- Перевод через DeepL API Free, если задан `DEEPL_API_KEY`; иначе fallback на `deep-translator` / MyMemory.
 - Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
+- Компактные HTML-дайджесты без сырых URL и без огромных link preview.
 - Breaking-мониторинг каждые 120 секунд.
 - Дайджесты по расписанию: утро, день, вечер.
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
 - One-shot проверка breaking-цикла через `python breaking.py --once`.
 - Heartbeat HTTP-сервис для мониторинга.
 - Логи в каталоге `logs/`, runtime-состояние в `state/`.
+
+## Как выглядит дайджест
+
+Вместо сырого URL и большого Telegram-превью бот отправляет компактный HTML-пост:
+
+```text
+Вечерний дайджест «Реала»
+
+1. «Реал» узнал диагноз по травме Трента Александер-Арнольда
+Читать · Football España
+
+2. «Арсенал» снова интересуется Ардой Гюлером
+Читать · FourFourTwo
+```
+
+Ссылки спрятаны в `Читать`, а `disable_web_page_preview=True` отключает большую карточку под постом.
 
 ## Структура
 
@@ -52,6 +69,10 @@ TARGET_CHAT_ID=@your_channel_username
 
 # Безопасный режим по умолчанию: бот печатает сообщения, но не отправляет их.
 DRY_RUN=true
+
+# Опционально: улучшает русский перевод без GPT/OpenAI.
+DEEPL_API_KEY=
+DEEPL_API_URL=https://api-free.deepl.com/v2/translate
 
 STATE_DIR=state
 LOG_DIR=logs
@@ -156,4 +177,4 @@ sudo systemctl status coffee-bot.service
 ## Примечания
 
 - Для бесплатного режима не нужны `OPENAI_API_KEY`, `OPENROUTER_API_KEY` или другие LLM-ключи.
-- Если когда-нибудь понадобится улучшить перевод, самый простой опциональный следующий слой - DeepL API Free, но базовая версия уже работает без него.
+- Для лучшего перевода можно добавить бесплатный `DEEPL_API_KEY`; без него бот продолжит работать через текущие fallback-переводчики.
