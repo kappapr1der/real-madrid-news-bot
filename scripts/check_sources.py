@@ -4,19 +4,12 @@
 import sys
 from pathlib import Path
 
-import feedparser
-import requests
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from feed_utils import parse_feed_url  # noqa: E402
 from sources_international import SOURCES_INTERNATIONAL  # noqa: E402
 from sources_ru import SOURCES_RU  # noqa: E402
-
-HEADERS = {
-    "User-Agent": "CoffeeBot/1.0 (+https://github.com/kappapr1der/real-madrid-news-bot)",
-}
-TIMEOUT_SECONDS = 15
 
 
 def check_source(source):
@@ -25,13 +18,10 @@ def check_source(source):
     if not url:
         return "FAIL", label, "missing URL"
 
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=TIMEOUT_SECONDS)
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        return "FAIL", label, f"HTTP error: {exc}"
+    feed = parse_feed_url(url)
+    if not feed:
+        return "FAIL", label, f"could not fetch RSS: {url}"
 
-    feed = feedparser.parse(response.content)
     entries = len(feed.entries or [])
     if entries == 0:
         return "WARN", label, f"no entries: {url}"
