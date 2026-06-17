@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
 import time
 import logging
 import random
@@ -9,7 +8,6 @@ from typing import Any
 
 import requests
 import feedparser
-from dotenv import load_dotenv
 from deep_translator import GoogleTranslator, MyMemoryTranslator
 from colorama import init, Fore, Style
 
@@ -17,34 +15,38 @@ from text_cleaner import clean_text
 from filters import passes_filters
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
+from runtime_config import (
+    BREAKING_INTERVAL_SECONDS,
+    DRY_RUN,
+    TELEGRAM_BOT_TOKEN,
+    TARGET_CHAT_ID,
+    get_log_file,
+    get_state_file,
+    telegram_configured,
+)
 
 init(autoreset=True)
 
-load_dotenv()
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TARGET_CHAT_ID")
-
-LOG_FILE = "logs/breaking.log"
-os.makedirs("logs", exist_ok=True)
+LOG_FILE = get_log_file("breaking.log")
 logging.basicConfig(
-    filename=LOG_FILE,
+    filename=str(LOG_FILE),
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     encoding="utf-8",
 )
 
-SENT_FILE = "sent_breaking.txt"
+SENT_FILE = get_state_file("sent_breaking.txt")
 
 
 def load_sent_links():
-    if not os.path.exists(SENT_FILE):
+    if not SENT_FILE.exists():
         return set()
-    with open(SENT_FILE, "r", encoding="utf-8") as f:
+    with SENT_FILE.open("r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
 
 def save_sent_links(links):
-    with open(SENT_FILE, "w", encoding="utf-8") as f:
+    with SENT_FILE.open("w", encoding="utf-8") as f:
         for link in sorted(links):
             f.write(link + "\n")
 
@@ -115,17 +117,22 @@ def is_breaking(text: str) -> bool:
 
 
 def send_breaking(news: str, link: str, source: str = "Неизвестный источник"):
-    if not BOT_TOKEN or not CHAT_ID:
+    template = random.choice(TEMPLATES)
+    message = template.format(news=news, link=link, source=source)
+
+    if DRY_RUN:
+        logging.info(f"DRY_RUN breaking: {news} | Источник: {source}")
+        print(Fore.MAGENTA + Style.BRIGHT + "[DRY RUN BREAKING]\n" + message)
+        return
+
+    if not telegram_configured():
         logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         print(Fore.RED + "[BREAKING] TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
 
-    template = random.choice(TEMPLATES)
-    message = template.format(news=news, link=link, source=source)
-
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
-        "chat_id": CHAT_ID,
+        "chat_id": TARGET_CHAT_ID,
         "text": message,
         "disable_web_page_preview": False,
     }
@@ -183,8 +190,9 @@ def fetch_breaking(sources):
 
 if __name__ == "__main__":
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
-    print(Fore.YELLOW + "[BREAKING BOT STARTED] Запущен мониторинг breaking news.")
+    mode = "DRY RUN" if DRY_RUN else "LIVE"
+    print(Fore.YELLOW + f"[BREAKING BOT STARTED] Запущен мониторинг breaking news ({mode}).")
     while True:
         checked, found = fetch_breaking(sources)
         print(Fore.CYAN + f"[CYCLE DONE] Проверено {checked} источников, найдено {found} breaking.")
-        time.sleep(120)
+        time.sleep(BREAKING_INTERVAL_SECONDS)
