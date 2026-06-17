@@ -18,6 +18,7 @@ from sources_ru import SOURCES_RU
 from filters import passes_filters
 from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
+from post_utils import append_hashtags
 from translator import translate_text
 from text_cleaner import clean_text
 from runtime_config import (
@@ -25,6 +26,7 @@ from runtime_config import (
     DIGEST_DEFAULT_LOOKBACK_HOURS,
     DIGEST_ENTRY_SCAN_LIMIT,
     DIGEST_EVENING_LOOKBACK_HOURS,
+    DIGEST_HASHTAGS,
     DIGEST_INCLUDE_UNDATED,
     DIGEST_LIMIT,
     DIGEST_MORNING_LOOKBACK_HOURS,
@@ -374,6 +376,7 @@ def send_digest(label: str = "auto"):
     templates = TEMPLATES.get(label, TEMPLATES["default"])
     intro = random.choice(INTRO_LINES.get(label, INTRO_LINES["default"]))
     message = random.choice(templates).format(news=joined_news, intro=intro)
+    message = append_hashtags(message, DIGEST_HASHTAGS)
     chunks = split_message(message)
 
     if DRY_RUN:
