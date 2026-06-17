@@ -212,7 +212,7 @@ def run_live_once() -> int:
     if status != "api-football ready":
         if MATCHDAY_LIVE_ENABLED:
             logging.warning("Live-провайдер не готов: %s", status)
-            print(Fore.YELLOW + f"[MATCHDAY LIVE] Live-провайдер не готов: {status}")
+        print(Fore.YELLOW + f"[MATCHDAY LIVE] Live-провайдер не готов: {status}")
         return 0
 
     sent = 0
