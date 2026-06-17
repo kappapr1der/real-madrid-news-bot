@@ -1,59 +1,82 @@
-# ☕ Coffee Bot (Кофе со сливками)
+# Coffee Bot (Кофе со сливками)
 
-Телеграм-бот, который собирает новости о **Real Madrid**  
-с англоязычных, испанских и русскоязычных источников.  
-Публикует переводы в канал 👉 [Кофе со сливками](https://t.me/slivochniyfootball)
+Телеграм-бот для канала о Real Madrid: собирает RSS-новости, фильтрует нерелевантное, переводит заголовки на русский и публикует breaking-новости и дайджесты.
 
----
+Проект не требует OpenAI/GPT API. AI-редактор удален из рабочей схемы, чтобы бот оставался бесплатным и стабильным.
 
-## 🚀 Возможности
-- Сбор новостей с более чем 40 источников (RSS, сайты, Twitter-зеркала)
-- Автоматический перевод на русский язык
-- Умный фильтр (убирает тизеры, дубли и спам)
-- Постинг в Telegram-канал
-- 💓 Heartbeat-сервис для мониторинга активности
-- Логирование в консоль для удобного отслеживания работы
+## Возможности
 
----
+- RSS-источники на русском, английском и испанском.
+- Фильтр релевантности по Real Madrid, игрокам, турнирам и стоп-словам.
+- Перевод через `deep-translator` с fallback на MyMemory.
+- Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
+- Breaking-мониторинг каждые 120 секунд.
+- Дайджесты по расписанию: утро, день, вечер.
+- Heartbeat HTTP-сервис для мониторинга.
+- Логи в каталоге `logs/`.
 
-## 📂 Структура проекта
-coffee-bot/
-├── main.py # основной код бота
-├── heartbeat_service.py # отдельный heartbeat
-├── sources_int.py # иностранные источники (английские, испанские, международные)
-├── sources_ru.py # русскоязычные источники
-├── requirements.txt # зависимости
-└── README.md # документация
+## Структура
 
-yaml
-Копировать
-Редактировать
+```text
+main.py                  # менеджер процессов
+heartbeat.py             # HTTP heartbeat на порту 8000
+breaking.py              # breaking-мониторинг RSS
+digest.py                # разовый запуск дайджеста
+filters.py               # фильтр релевантности
+text_cleaner.py          # очистка текста после перевода
+translator.py            # перевод + словарные замены
+sources_international.py # международные источники
+sources_ru.py            # русскоязычные источники
+utils/                   # вспомогательные функции
+requirements.txt         # зависимости
+```
 
----
+## Настройка
 
-## ⚡ Автозапуск
-Оба сервиса запускаются через systemd:
-- `coffee-bot.service` — бот
-- `heartbeat.service` — мониторинг
-
-Примеры команд:
 ```bash
-sudo systemctl start coffee-bot.service
-sudo systemctl stop coffee-bot.service
-sudo systemctl restart coffee-bot.service
-sudo systemctl status coffee-bot.service
-🔗 Канал
-Новости публикуются здесь: t.me/slivochniyfootball
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
 
-🛠️ Технологии
-Python 3.10
+В `.env` нужно указать:
 
-Aiogram 3.x
+```env
+TELEGRAM_BOT_TOKEN=123456789:replace_me
+TARGET_CHAT_ID=@your_channel_username
+```
 
-Loguru
+Если настоящий Telegram-токен когда-либо попадал в репозиторий, перевыпусти его в BotFather перед деплоем.
 
-Deep Translator / MyMemory API
+## Запуск
 
-Systemd (VPS)
+Полный менеджер:
 
-GitHub для синхронизации
+```bash
+python main.py
+```
+
+Отдельные сервисы:
+
+```bash
+python heartbeat.py
+python breaking.py
+python digest.py утреннего
+python digest.py дневного
+python digest.py вечернего
+```
+
+`main.py` запускает `heartbeat.py` и `breaking.py`, а также планирует дайджесты на `08:00`, `14:00` и `20:00` по локальному времени сервера.
+
+## Мониторинг
+
+`heartbeat.py` отвечает `Bernabeu Heartbeat OK` на HTTP-запросы по порту `8000`.
+
+`uptime_webhook.py` можно использовать для webhook-уведомлений от UptimeRobot. Он берет Telegram-токен и канал из `.env`, а не из кода.
+
+## Примечания
+
+- Не коммить `.env`, логи и файлы `sent_links.txt` / `sent_breaking.txt`.
+- Для бесплатного режима не нужны `OPENAI_API_KEY`, `OPENROUTER_API_KEY` или другие LLM-ключи.
+- Если когда-нибудь понадобится улучшить перевод, самый простой опциональный следующий слой - DeepL API Free, но базовая версия уже работает без него.
