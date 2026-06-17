@@ -5,21 +5,23 @@ import argparse
 import time
 import logging
 import random
+from html import escape
 from typing import Any
 
 import requests
-import feedparser
-from deep_translator import GoogleTranslator, MyMemoryTranslator
 from colorama import init, Fore, Style
 
 from text_cleaner import clean_text
 from filters import passes_filters
+from feed_utils import parse_feed_url
+from translator import translate_text
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from runtime_config import (
     BREAKING_INTERVAL_SECONDS,
     DRY_RUN,
     TELEGRAM_BOT_TOKEN,
+    TELEGRAM_TIMEOUT_SECONDS,
     TARGET_CHAT_ID,
     get_log_file,
     get_state_file,
@@ -66,18 +68,11 @@ BREAKING_KEYWORDS = [
 ]
 
 TEMPLATES = [
-    "☕️ Сливочная молния\n{news}\nИсточник: {source}\n🔗 {link}",
-    "⚪️ Экстра от «Кофе со сливками»\n{news}\nИсточник: {source}\n🔗 {link}",
-    "🚨 Горячо из чашки сливочного кофе\n{news}\nИсточник: {source}\n🔗 {link}",
-    "🔥 Срочно! Новости Реала:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "🏰 Новости замка Мадрида:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "✨ В центре внимания:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "💥 Брызги на поле:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "📣 Эй, фанаты Реала:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "⚡️ Breaking из Мадрида:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "🏃 Быстрое обновление:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "📰 Горячие новости:\n{news}\nИсточник: {source}\n🔗 {link}",
-    "🌟 Эксклюзив от «Кофе со сливками»:\n{news}\nИсточник: {source}\n🔗 {link}",
+    "<b>Сливочная молния</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
+    "<b>Экстра для мадридистов</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
+    "<b>Срочно вокруг «Реала»</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
+    "<b>Белая лента обновилась</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
+    "<b>Из Мадрида пришло важное</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
 ]
 
 
@@ -97,16 +92,6 @@ def source_label(source: Any) -> str:
     return "Неизвестный источник"
 
 
-def translate_text(text: str) -> str:
-    try:
-        return GoogleTranslator(source="auto", target="ru").translate(text)
-    except Exception:
-        try:
-            return MyMemoryTranslator(source="auto", target="ru").translate(text)
-        except Exception:
-            return text
-
-
 def is_breaking(text: str) -> bool:
     lower_text = text.lower()
     for word in BREAKING_KEYWORDS:
@@ -117,9 +102,37 @@ def is_breaking(text: str) -> bool:
     return False
 
 
+def post_telegram_message(message: str) -> bool:
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TARGET_CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+
+    for attempt in range(1, 4):
+        try:
+            response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
+            if response.status_code == 200:
+                return True
+            logging.error("Ошибка Telegram API: %s %s", response.status_code, response.text)
+        except requests.RequestException as exc:
+            logging.error("Ошибка при отправке breaking, попытка %s: %s", attempt, exc)
+
+        if attempt < 3:
+            time.sleep(attempt * 2)
+
+    return False
+
+
 def send_breaking(news: str, link: str, source: str = "Неизвестный источник"):
     template = random.choice(TEMPLATES)
-    message = template.format(news=news, link=link, source=source)
+    message = template.format(
+        news=escape(news),
+        link=escape(link, quote=True),
+        source=escape(source),
+    )
 
     if DRY_RUN:
         logging.info(f"DRY_RUN breaking: {news} | Источник: {source}")
@@ -131,24 +144,11 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         print(Fore.RED + "[BREAKING] TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TARGET_CHAT_ID,
-        "text": message,
-        "disable_web_page_preview": False,
-    }
-
-    try:
-        r = requests.post(url, data=payload, timeout=10)
-        if r.status_code == 200:
-            logging.info(f"Опубликовано breaking: {news} | Источник: {source}")
-            print(Fore.RED + Style.BRIGHT + f"[SENT BREAKING] {news}")
-            sent_breaking.add(link)
-            save_sent_links(sent_breaking)
-        else:
-            logging.error(f"Ошибка Telegram API: {r.status_code} {r.text}")
-    except Exception as e:
-        logging.error(f"Ошибка при отправке breaking: {e}")
+    if post_telegram_message(message):
+        logging.info(f"Опубликовано breaking: {news} | Источник: {source}")
+        print(Fore.RED + Style.BRIGHT + f"[SENT BREAKING] {news}")
+        sent_breaking.add(link)
+        save_sent_links(sent_breaking)
 
 
 def fetch_breaking(sources):
@@ -164,8 +164,8 @@ def fetch_breaking(sources):
 
         checked += 1
         try:
-            feed = feedparser.parse(url)
-            if not feed.entries:
+            feed = parse_feed_url(url)
+            if not feed or not feed.entries:
                 continue
 
             entry = feed.entries[0]
