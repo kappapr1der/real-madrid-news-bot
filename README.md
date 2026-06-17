@@ -18,6 +18,7 @@
 - Перевод через DeepL API Free, если задан `DEEPL_API_KEY`; иначе fallback на `deep-translator` / MyMemory.
 - Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
 - Компактные HTML-дайджесты и breaking-посты без сырых URL и без огромных link preview.
+- Настраиваемые хэштеги для дайджеста, breaking-постов, матч-дня и live-событий.
 - Длинные Telegram-сообщения режутся на части до `TELEGRAM_MESSAGE_LIMIT`.
 - RSS читается через HTTP timeout и `HTTP_USER_AGENT`, чтобы плохой источник не подвешивал процесс.
 - Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху.
@@ -46,9 +47,25 @@
 
 2. «Арсенал» снова интересуется Ардой Гюлером
 Читать · The Real Champs · 13:58
+
+#RealMadrid #HalaMadrid #КофеСоСливками #Дайджест
 ```
 
 Ссылки спрятаны в `Читать`, время берется из даты публикации RSS, а `disable_web_page_preview=True` отключает большую карточку под постом.
+
+## Хэштеги
+
+Все типы постов добавляют хэштеги через `post_utils.py`. По умолчанию используются фанатские теги канала, а в `.env` можно задать отдельный набор для каждого режима:
+
+```env
+POST_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками"
+DIGEST_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #Дайджест"
+BREAKING_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #СливочнаяМолния"
+MATCHDAY_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #МатчДень"
+LIVE_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #Live #МатчДень"
+```
+
+Можно разделять хэштеги пробелами или запятыми. `#` можно писать или не писать, бот нормализует сам. Если значение начинается с `#`, держи строку в кавычках, иначе `.env` может принять ее за комментарий.
 
 ## Матч-день
 
@@ -149,6 +166,7 @@ DRY_RUN=true python digest.py ночного
 main.py                                # менеджер процессов
 runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста и матч-дня
 feed_utils.py                          # общий RSS fetch helper с timeout/User-Agent
+post_utils.py                          # общий формат хэштегов для Telegram-постов
 match_calendar.py                      # календарь матчей и guard для дайджеста
 matchday.py                            # матчевые автопосты и заготовка live-событий
 config/matches.example.json            # пример календаря матчей
@@ -199,6 +217,13 @@ HTTP_USER_AGENT=CoffeeBot/1.0 (+https://t.me/slivochniyfootball)
 RSS_TIMEOUT_SECONDS=15
 TELEGRAM_TIMEOUT_SECONDS=10
 TELEGRAM_MESSAGE_LIMIT=3900
+
+# Хэштеги для Telegram. Значения с # держи в кавычках.
+POST_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками"
+DIGEST_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #Дайджест"
+BREAKING_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #СливочнаяМолния"
+MATCHDAY_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #МатчДень"
+LIVE_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #Live #МатчДень"
 
 # Свежесть, расписание и формат дайджестов.
 DIGEST_TIMEZONE=Europe/Moscow
