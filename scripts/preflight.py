@@ -11,6 +11,7 @@ FILES = [
     "runtime_config.py",
     "feed_utils.py",
     "post_utils.py",
+    "live_providers.py",
     "match_calendar.py",
     "matchday.py",
     "main.py",
@@ -103,6 +104,23 @@ def validate_int(config: dict, name: str, default: str, minimum: int, errors: li
     return value
 
 
+def validate_int_list(config: dict, name: str, default: str, errors: list[str]) -> None:
+    raw = (config.get(name) or default).strip()
+    if not raw:
+        errors.append(f"{name} must contain at least one integer id")
+        return
+
+    for part in raw.replace(";", ",").split(","):
+        value = part.strip()
+        if not value:
+            continue
+        try:
+            int(value)
+        except ValueError:
+            errors.append(f"{name} must be a comma-separated list of integer ids")
+            return
+
+
 def resolve_repo_path(value: str) -> Path:
     path = Path(value)
     return path if path.is_absolute() else ROOT / path
@@ -125,6 +143,7 @@ def check_env():
         "DIGEST_INCLUDE_UNDATED": "false",
         "MATCHDAY_ENABLED": "true",
         "MATCHDAY_BLOCK_ALL_DAY": "false",
+        "MATCHDAY_LIVE_ENABLED": "false",
     }
     for name, default in bool_rules.items():
         raw = (config.get(name) or default).strip().lower()
@@ -168,6 +187,11 @@ def check_env():
         "MATCHDAY_FULLTIME_MINUTES": ("125", 1),
         "MATCHDAY_POST_TOLERANCE_MINUTES": ("20", 1),
         "MATCHDAY_POLL_SECONDS": ("60", 10),
+        "MATCHDAY_LIVE_POLL_SECONDS": ("180", 60),
+        "MATCHDAY_LIVE_BEFORE_MINUTES": ("15", 0),
+        "MATCHDAY_LIVE_AFTER_MINUTES": ("30", 0),
+        "API_FOOTBALL_TEAM_ID": ("541", 1),
+        "API_FOOTBALL_REQUEST_TIMEOUT_SECONDS": ("10", 1),
     }
     parsed_values = {}
     for name, (default, minimum) in int_rules.items():
@@ -181,6 +205,16 @@ def check_env():
     schedule_file = resolve_repo_path(config.get("MATCH_SCHEDULE_FILE") or "config/matches.json")
     if matchday_enabled and not schedule_file.exists():
         warnings.append(f"MATCH_SCHEDULE_FILE not found: {schedule_file}")
+
+    validate_int_list(config, "API_FOOTBALL_LEAGUE_IDS", "140,2", errors)
+    live_enabled = env_bool_value(config, "MATCHDAY_LIVE_ENABLED", "false")
+    live_provider = (config.get("MATCHDAY_LIVE_PROVIDER") or "api-football").strip().lower()
+    if live_provider != "api-football":
+        errors.append("MATCHDAY_LIVE_PROVIDER currently supports only api-football")
+    if live_enabled and is_placeholder(config.get("API_FOOTBALL_KEY")):
+        errors.append("API_FOOTBALL_KEY is required for MATCHDAY_LIVE_ENABLED=true")
+    if live_enabled and not (config.get("MATCHDAY_LIVE_EVENT_TYPES") or "").strip():
+        warnings.append("MATCHDAY_LIVE_EVENT_TYPES is empty; all provider event types will be accepted")
 
     if errors:
         joined = "\n- ".join(errors)
