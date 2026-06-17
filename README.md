@@ -20,6 +20,7 @@
 - Компактные HTML-дайджесты без сырых URL и без огромных link preview.
 - Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху.
 - Автоматический тип дайджеста по времени: утренний, дневной, вечерний или ночной.
+- Расписание дайджестов настраивается через `.env` и работает в `DIGEST_TIMEZONE`, а не в случайной таймзоне VPS.
 - Breaking-мониторинг каждые 120 секунд.
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
 - One-shot проверка breaking-цикла через `python breaking.py --once`.
@@ -131,8 +132,11 @@ LOG_DIR=logs
 BREAKING_INTERVAL_SECONDS=120
 HEARTBEAT_PORT=8000
 
-# Свежесть и формат дайджестов.
+# Свежесть, расписание и формат дайджестов.
 DIGEST_TIMEZONE=Europe/Moscow
+DIGEST_MORNING_TIME=09:00
+DIGEST_DAY_TIME=15:00
+DIGEST_EVENING_TIME=21:00
 DIGEST_LIMIT=10
 DIGEST_ENTRY_SCAN_LIMIT=5
 DIGEST_DEFAULT_LOOKBACK_HOURS=8
@@ -203,7 +207,7 @@ python digest.py дневного
 python digest.py вечернего
 ```
 
-`main.py` запускает `heartbeat.py` и `breaking.py`, а также планирует дайджесты на `08:00`, `14:00` и `20:00` по локальному времени сервера.
+`main.py` запускает `heartbeat.py` и `breaking.py`, а также планирует дайджесты по настройкам `DIGEST_MORNING_TIME`, `DIGEST_DAY_TIME`, `DIGEST_EVENING_TIME` в таймзоне `DIGEST_TIMEZONE`. По умолчанию это `09:00`, `15:00`, `21:00` по Москве.
 
 ## Live-режим
 
