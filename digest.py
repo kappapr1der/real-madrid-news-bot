@@ -17,6 +17,7 @@ from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from filters import passes_filters
 from feed_utils import parse_feed_url
+from match_calendar import digest_block_reason
 from translator import translate_text
 from text_cleaner import clean_text
 from runtime_config import (
@@ -355,6 +356,12 @@ def send_digest(label: str = "auto"):
     global sent_digest
 
     label = normalize_label(label)
+    block_reason = digest_block_reason()
+    if block_reason:
+        logging.info("Дайджест %s пропущен: %s", label, block_reason)
+        print(f"[DIGEST] Пропущен: {block_reason}")
+        return
+
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
     news_items, new_links = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
 
