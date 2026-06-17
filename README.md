@@ -11,8 +11,9 @@
 - Перевод через DeepL API Free, если задан `DEEPL_API_KEY`; иначе fallback на `deep-translator` / MyMemory.
 - Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
 - Компактные HTML-дайджесты без сырых URL и без огромных link preview.
+- Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху.
+- Автоматический тип дайджеста по времени: утренний, дневной, вечерний или ночной.
 - Breaking-мониторинг каждые 120 секунд.
-- Дайджесты по расписанию: утро, день, вечер.
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
 - One-shot проверка breaking-цикла через `python breaking.py --once`.
 - Heartbeat HTTP-сервис для мониторинга.
@@ -26,19 +27,45 @@
 Вечерний дайджест «Реала»
 
 1. «Реал» узнал диагноз по травме Трента Александер-Арнольда
-Читать · Football España
+Читать · Football España · 14:23
 
 2. «Арсенал» снова интересуется Ардой Гюлером
-Читать · FourFourTwo
+Читать · FourFourTwo · 13:58
 ```
 
-Ссылки спрятаны в `Читать`, а `disable_web_page_preview=True` отключает большую карточку под постом.
+Ссылки спрятаны в `Читать`, время берется из даты публикации RSS, а `disable_web_page_preview=True` отключает большую карточку под постом.
+
+## Свежесть дайджеста
+
+`digest.py` смотрит только свежие записи относительно текущего времени:
+
+- утренний дайджест: последние `14` часов по умолчанию;
+- дневной, вечерний и ночной дайджесты: последние `8` часов по умолчанию;
+- если RSS-запись без даты, она пропускается при `DIGEST_INCLUDE_UNDATED=false`;
+- найденные новости сортируются от самых новых к более старым;
+- уже отправленные ссылки сохраняются в `STATE_DIR/sent_links.txt` и не повторяются.
+
+Если запустить `python digest.py` без аргумента, бот сам выберет тип дайджеста по `DIGEST_TIMEZONE`:
+
+- `05:00-10:59` — утренний;
+- `11:00-16:59` — дневной;
+- `17:00-23:59` — вечерний;
+- `00:00-04:59` — ночной.
+
+Явно можно запускать так:
+
+```bash
+DRY_RUN=true python digest.py утреннего
+DRY_RUN=true python digest.py дневного
+DRY_RUN=true python digest.py вечернего
+DRY_RUN=true python digest.py ночного
+```
 
 ## Структура
 
 ```text
 main.py                                # менеджер процессов
-runtime_config.py                      # env, dry-run, пути logs/state
+runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста
 heartbeat.py                           # HTTP heartbeat
 breaking.py                            # breaking-мониторинг RSS
 digest.py                              # разовый запуск дайджеста
@@ -78,6 +105,17 @@ STATE_DIR=state
 LOG_DIR=logs
 BREAKING_INTERVAL_SECONDS=120
 HEARTBEAT_PORT=8000
+
+# Свежесть и формат дайджестов.
+DIGEST_TIMEZONE=Europe/Moscow
+DIGEST_LIMIT=10
+DIGEST_ENTRY_SCAN_LIMIT=5
+DIGEST_DEFAULT_LOOKBACK_HOURS=8
+DIGEST_MORNING_LOOKBACK_HOURS=14
+DIGEST_DAY_LOOKBACK_HOURS=8
+DIGEST_EVENING_LOOKBACK_HOURS=8
+DIGEST_NIGHT_LOOKBACK_HOURS=8
+DIGEST_INCLUDE_UNDATED=false
 ```
 
 Если настоящий Telegram-токен когда-либо попадал в репозиторий, перевыпусти его в BotFather перед деплоем.
@@ -90,10 +128,17 @@ HEARTBEAT_PORT=8000
 python scripts/preflight.py
 ```
 
-Собрать дайджест без отправки в Telegram:
+Собрать дайджест без отправки в Telegram. Без аргумента бот сам выберет утро, день, вечер или ночь по текущему времени:
+
+```bash
+DRY_RUN=true python digest.py
+```
+
+Проверить конкретный тип дайджеста:
 
 ```bash
 DRY_RUN=true python digest.py утреннего
+DRY_RUN=true python digest.py дневного
 ```
 
 Проверить один цикл breaking-мониторинга без бесконечного процесса:
@@ -121,6 +166,7 @@ python main.py
 ```bash
 python heartbeat.py
 python breaking.py
+python digest.py
 python digest.py утреннего
 python digest.py дневного
 python digest.py вечернего
@@ -178,3 +224,4 @@ sudo systemctl status coffee-bot.service
 
 - Для бесплатного режима не нужны `OPENAI_API_KEY`, `OPENROUTER_API_KEY` или другие LLM-ключи.
 - Для лучшего перевода можно добавить бесплатный `DEEPL_API_KEY`; без него бот продолжит работать через текущие fallback-переводчики.
+- Если RSS-источник часто не отдает дату публикации, можно временно поставить `DIGEST_INCLUDE_UNDATED=true`, но для настоящего “свежака” лучше держать `false`.
