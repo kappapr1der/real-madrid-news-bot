@@ -28,6 +28,7 @@ class Match:
     venue: str = ""
     round: str = ""
     broadcast: str = ""
+    api_football_fixture_id: str = ""
 
     @property
     def title(self) -> str:
@@ -63,6 +64,15 @@ def make_match_id(match: dict) -> str:
     return re.sub(r"[^a-zA-Z0-9]+", "-", base).strip("-").lower()
 
 
+def fixture_id_from_dict(raw: dict) -> str:
+    return str(
+        raw.get("api_football_fixture_id")
+        or raw.get("apiFootballFixtureId")
+        or raw.get("fixture_id")
+        or ""
+    ).strip()
+
+
 def match_from_dict(raw: dict) -> Match:
     kickoff = parse_kickoff(str(raw["kickoff"]))
     return Match(
@@ -74,6 +84,7 @@ def match_from_dict(raw: dict) -> Match:
         venue=str(raw.get("venue") or ""),
         round=str(raw.get("round") or ""),
         broadcast=str(raw.get("broadcast") or ""),
+        api_football_fixture_id=fixture_id_from_dict(raw),
     )
 
 
