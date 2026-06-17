@@ -13,10 +13,13 @@ import requests
 from colorama import Fore, Style, init
 
 from match_calendar import Match, find_match, load_matches, local_now, upcoming_matches
+from post_utils import append_hashtags
 from runtime_config import (
     DRY_RUN,
+    LIVE_HASHTAGS,
     MATCHDAY_FULLTIME_MINUTES,
     MATCHDAY_HALFTIME_MINUTES,
+    MATCHDAY_HASHTAGS,
     MATCHDAY_POLL_SECONDS,
     MATCHDAY_POST_TOLERANCE_MINUTES,
     MATCHDAY_PREVIEW_MINUTES,
@@ -91,25 +94,29 @@ def format_auto_message(match: Match, phase: str) -> str:
         ]
         if match.broadcast:
             lines.append(f"Трансляция: {escape(match.broadcast)}")
-        return "\n".join(lines)
+        message = "\n".join(lines)
+        return append_hashtags(message, MATCHDAY_HASHTAGS)
 
     if phase == "kickoff":
-        return "\n".join([
+        message = "\n".join([
             f"<b>Матч начался: {safe_title}</b>",
             safe_meta,
             "Следим за сливочными.",
         ])
+        return append_hashtags(message, MATCHDAY_HASHTAGS)
 
     if phase == "halftime":
-        return "\n".join([
+        message = "\n".join([
             f"<b>Перерыв: {safe_title}</b>",
             "Пауза в матче. Продолжаем следить за Мадридом.",
         ])
+        return append_hashtags(message, MATCHDAY_HASHTAGS)
 
-    return "\n".join([
+    message = "\n".join([
         f"<b>Финальный свист: {safe_title}</b>",
         "Ждем подтвержденные итоги и детали после матча.",
     ])
+    return append_hashtags(message, MATCHDAY_HASHTAGS)
 
 
 def format_event_message(match: Match, minute: str, text: str, kind: str = "update", score: str = "") -> str:
@@ -127,7 +134,8 @@ def format_event_message(match: Match, minute: str, text: str, kind: str = "upda
         header_parts.append(safe_score)
 
     header = " · ".join(header_parts)
-    return f"<b>{header} | {safe_title}</b>\n{safe_text}"
+    message = f"<b>{header} | {safe_title}</b>\n{safe_text}"
+    return append_hashtags(message, LIVE_HASHTAGS)
 
 
 def post_telegram_message(message: str) -> bool:
