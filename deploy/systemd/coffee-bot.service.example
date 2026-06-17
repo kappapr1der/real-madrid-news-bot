@@ -1,0 +1,19 @@
+[Unit]
+Description=Coffee Bot - Real Madrid news monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coffee
+Group=coffee
+WorkingDirectory=/opt/coffee-bot
+EnvironmentFile=/opt/coffee-bot/.env
+ExecStart=/opt/coffee-bot/.venv/bin/python /opt/coffee-bot/main.py
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
