@@ -1,22 +1,21 @@
 import subprocess
 import logging
-import os
+import sys
 import time
 import schedule
 from collections import deque
 from colorama import init, Fore, Style
 
-# Init colorama
+from runtime_config import DRY_RUN, get_log_file
+
 init(autoreset=True)
 
-# Логирование
-LOG_FILE = "logs/main.log"
-os.makedirs("logs", exist_ok=True)
+LOG_FILE = get_log_file("main.log")
 logging.basicConfig(
-    filename=LOG_FILE,
+    filename=str(LOG_FILE),
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    encoding="utf-8"
+    encoding="utf-8",
 )
 
 processes = {}
@@ -24,6 +23,8 @@ restart_history = {}
 
 RESTART_LIMIT = 5
 TIME_WINDOW = 600  # 10 минут
+PYTHON = sys.executable or "python"
+
 
 def start_process(name, command):
     try:
@@ -32,11 +33,12 @@ def start_process(name, command):
         if name not in restart_history:
             restart_history[name] = deque(maxlen=RESTART_LIMIT)
         restart_history[name].append(time.time())
-        logging.info(f"{name} запущен ✅ (PID {proc.pid})")
+        logging.info(f"{name} запущен (PID {proc.pid})")
         print(Fore.GREEN + Style.BRIGHT + f"[MAIN] {name} запущен (PID {proc.pid})")
     except Exception as e:
         logging.error(f"Ошибка запуска {name}: {e}")
         print(Fore.RED + f"[MAIN] Ошибка запуска {name}: {e}")
+
 
 def can_restart(name):
     if name not in restart_history:
@@ -46,6 +48,7 @@ def can_restart(name):
     while history and now - history[0] > TIME_WINDOW:
         history.popleft()
     return len(history) < RESTART_LIMIT
+
 
 def check_processes():
     for name, proc in list(processes.items()):
@@ -57,20 +60,25 @@ def check_processes():
                 print(Fore.YELLOW + f"[MAIN] Перезапускаем {name}...")
                 start_process(name, proc.args)
             else:
-                logging.error(f"{name} превысил лимит рестартов ❌")
-                print(Fore.RED + f"[MAIN] {name} превысил лимит рестартов ❌")
+                logging.error(f"{name} превысил лимит рестартов")
+                print(Fore.RED + f"[MAIN] {name} превысил лимит рестартов")
+
 
 def run_heartbeat():
-    start_process("heartbeat", ["python", "heartbeat.py"])
+    start_process("heartbeat", [PYTHON, "heartbeat.py"])
+
 
 def run_breaking():
-    start_process("breaking", ["python", "breaking.py"])
+    start_process("breaking", [PYTHON, "breaking.py"])
+
 
 def run_digest_with_label(label: str):
-    start_process(f"digest:{label}", ["python", "digest.py", label])
+    start_process(f"digest:{label}", [PYTHON, "digest.py", label])
+
 
 if __name__ == "__main__":
-    print(Fore.YELLOW + Style.BRIGHT + "[MAIN] Менеджер запущен")
+    mode = "DRY RUN" if DRY_RUN else "LIVE"
+    print(Fore.YELLOW + Style.BRIGHT + f"[MAIN] Менеджер запущен ({mode})")
 
     run_heartbeat()
     run_breaking()
