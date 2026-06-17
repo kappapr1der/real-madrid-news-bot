@@ -30,6 +30,7 @@ REQUIRED_MODULES = {
     "bs4": "beautifulsoup4",
     "flask": "Flask",
     "schedule": "schedule",
+    "tzdata": "tzdata",
 }
 
 
