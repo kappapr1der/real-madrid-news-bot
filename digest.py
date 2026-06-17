@@ -3,6 +3,7 @@
 
 import logging
 import random
+from html import escape
 
 import requests
 import feedparser
@@ -11,6 +12,7 @@ from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from filters import passes_filters
 from translator import translate_text
+from text_cleaner import clean_text
 from runtime_config import (
     DRY_RUN,
     TELEGRAM_BOT_TOKEN,
@@ -48,30 +50,51 @@ sent_digest = load_sent_links()
 
 TEMPLATES = {
     "утреннего": [
-        "☕️ Утренний сливочный дайджест\n\n{news}",
-        "🌅 Доброе утро, мадридисты!\n\n{news}",
+        "<b>Утренний дайджест «Реала»</b>\n\n{news}",
+        "<b>Доброе утро, мадридисты</b>\n\n{news}",
     ],
     "дневного": [
-        "⚪️ Дневная подборка от «Кофе со сливками»\n\n{news}",
-        "📋 Всё самое важное днём:\n\n{news}",
+        "<b>Дневная подборка «Кофе со сливками»</b>\n\n{news}",
+        "<b>Главное к этому часу</b>\n\n{news}",
     ],
     "вечернего": [
-        "🌙 Вечерние сливки дня\n\n{news}",
-        "📰 Вечерний дайджест Реала:\n\n{news}",
+        "<b>Вечерний дайджест «Реала»</b>\n\n{news}",
+        "<b>Вечерние сливки дня</b>\n\n{news}",
     ],
     "ночного": [
-        "🌌 Ночной сливочный дайджест\n\n{news}",
-        "💤 Пока вы спите, у нас новости:\n\n{news}",
+        "<b>Ночной дайджест «Реала»</b>\n\n{news}",
+        "<b>Пока Мадрид спит</b>\n\n{news}",
     ],
     "default": [
-        "📋 Дайджест Реала:\n\n{news}",
-        "📰 Всё самое важное:\n\n{news}",
+        "<b>Дайджест «Реала»</b>\n\n{news}",
+        "<b>Все самое важное</b>\n\n{news}",
     ],
 }
 
 
+def polish_title(title: str) -> str:
+    title = clean_text(translate_text(title))
+
+    replacements = {
+        "получает диагноз травмы": "узнал диагноз по травме",
+        "получил диагноз травмы": "узнал диагноз по травме",
+        "диагноз травмы": "диагноз по травме",
+        "снова обратился к новой заинтересованности": "снова получил интерес",
+        "рекордной плате": "рекордной сумме",
+        "новой заинтересованности": "новому интересу",
+        "получает новости обратно": "получил новости",
+    }
+    for bad, good in replacements.items():
+        title = title.replace(bad, good)
+
+    return title.strip()
+
+
 def format_news_entry(i: int, text: str, link: str, source: str) -> str:
-    return f"{i}️⃣ {text}\n🔗 {link}\nИсточник: {source}"
+    safe_text = escape(text)
+    safe_source = escape(source)
+    safe_link = escape(link, quote=True)
+    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {safe_source}"
 
 
 def fetch_digest(sources, limit=10):
@@ -101,7 +124,7 @@ def fetch_digest(sources, limit=10):
                 if not title or not passes_filters(title, summary=summary, source=label):
                     continue
 
-                cleaned = translate_text(title)
+                cleaned = polish_title(title)
                 formatted = format_news_entry(len(news_items) + 1, cleaned, link, label)
                 news_items.append(formatted)
                 seen_links.add(link)
@@ -129,7 +152,7 @@ def send_digest(label: str = "default"):
         logging.info(f"Нет новостей для {label} дайджеста")
         return
 
-    joined_news = "\n━━━━━━━━━━━━━━\n".join(news_items) if len(news_items) > 3 else "\n\n".join(news_items)
+    joined_news = "\n\n".join(news_items)
     templates = TEMPLATES.get(label, TEMPLATES["default"])
     message = random.choice(templates).format(news=joined_news)
 
@@ -146,7 +169,8 @@ def send_digest(label: str = "default"):
     payload = {
         "chat_id": TARGET_CHAT_ID,
         "text": message,
-        "disable_web_page_preview": False,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
     }
 
     try:
