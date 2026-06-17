@@ -75,15 +75,22 @@ def env_bool_value(config: dict, name: str, default: str) -> bool:
     return raw in {"1", "true", "yes", "y", "on"}
 
 
-def validate_int(config: dict, name: str, default: str, minimum: int, errors: list[str]):
+def parse_int(config: dict, name: str, default: str, errors: list[str]) -> int | None:
     raw = (config.get(name) or default).strip()
     try:
-        value = int(raw)
+        return int(raw)
     except ValueError:
         errors.append(f"{name} must be an integer")
-        return
+        return None
+
+
+def validate_int(config: dict, name: str, default: str, minimum: int, errors: list[str]) -> int | None:
+    value = parse_int(config, name, default, errors)
+    if value is None:
+        return None
     if value < minimum:
         errors.append(f"{name} must be >= {minimum}")
+    return value
 
 
 def check_env():
@@ -127,11 +134,12 @@ def check_env():
         "DIGEST_EVENING_LOOKBACK_HOURS": ("8", 1),
         "DIGEST_NIGHT_LOOKBACK_HOURS": ("8", 1),
     }
+    parsed_values = {}
     for name, (default, minimum) in int_rules.items():
-        validate_int(config, name, default, minimum, errors)
+        parsed_values[name] = validate_int(config, name, default, minimum, errors)
 
-    message_limit = int((config.get("TELEGRAM_MESSAGE_LIMIT") or "3900").strip() or "3900")
-    if message_limit > 4096:
+    message_limit = parsed_values.get("TELEGRAM_MESSAGE_LIMIT")
+    if message_limit is not None and message_limit > 4096:
         errors.append("TELEGRAM_MESSAGE_LIMIT must be <= 4096")
 
     if errors:
