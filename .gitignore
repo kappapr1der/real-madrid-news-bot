@@ -2,6 +2,7 @@
 sessions.jsonl
 logs/
 state/
+config/matches.json
 *.log
 sent_links.txt
 sent_breaking.txt
