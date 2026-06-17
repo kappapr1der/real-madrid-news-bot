@@ -33,13 +33,14 @@ TIME_WINDOW = 600  # 10 минут
 PYTHON = sys.executable or "python"
 
 
-def start_process(name, command):
+def start_process(name, command, restart: bool = True):
     try:
         proc = subprocess.Popen(command)
-        processes[name] = proc
-        if name not in restart_history:
-            restart_history[name] = deque(maxlen=RESTART_LIMIT)
-        restart_history[name].append(time.time())
+        processes[name] = {"process": proc, "restart": restart, "command": command}
+        if restart:
+            if name not in restart_history:
+                restart_history[name] = deque(maxlen=RESTART_LIMIT)
+            restart_history[name].append(time.time())
         logging.info(f"{name} запущен (PID {proc.pid})")
         print(Fore.GREEN + Style.BRIGHT + f"[MAIN] {name} запущен (PID {proc.pid})")
     except Exception as e:
@@ -58,29 +59,40 @@ def can_restart(name):
 
 
 def check_processes():
-    for name, proc in list(processes.items()):
+    for name, state in list(processes.items()):
+        proc = state["process"]
         retcode = proc.poll()
-        if retcode is not None:
-            logging.warning(f"{name} упал с кодом {retcode}")
-            print(Fore.RED + f"[MAIN] {name} упал с кодом {retcode}")
-            if can_restart(name):
-                print(Fore.YELLOW + f"[MAIN] Перезапускаем {name}...")
-                start_process(name, proc.args)
-            else:
-                logging.error(f"{name} превысил лимит рестартов")
-                print(Fore.RED + f"[MAIN] {name} превысил лимит рестартов")
+        if retcode is None:
+            continue
+
+        processes.pop(name, None)
+        if not state["restart"]:
+            level = logging.INFO if retcode == 0 else logging.ERROR
+            logging.log(level, "%s завершился с кодом %s", name, retcode)
+            color = Fore.GREEN if retcode == 0 else Fore.RED
+            print(color + f"[MAIN] {name} завершился с кодом {retcode}")
+            continue
+
+        logging.warning(f"{name} упал с кодом {retcode}")
+        print(Fore.RED + f"[MAIN] {name} упал с кодом {retcode}")
+        if can_restart(name):
+            print(Fore.YELLOW + f"[MAIN] Перезапускаем {name}...")
+            start_process(name, state["command"], restart=True)
+        else:
+            logging.error(f"{name} превысил лимит рестартов")
+            print(Fore.RED + f"[MAIN] {name} превысил лимит рестартов")
 
 
 def run_heartbeat():
-    start_process("heartbeat", [PYTHON, "heartbeat.py"])
+    start_process("heartbeat", [PYTHON, "heartbeat.py"], restart=True)
 
 
 def run_breaking():
-    start_process("breaking", [PYTHON, "breaking.py"])
+    start_process("breaking", [PYTHON, "breaking.py"], restart=True)
 
 
 def run_digest_with_label(label: str):
-    start_process(f"digest:{label}", [PYTHON, "digest.py", label])
+    start_process(f"digest:{label}", [PYTHON, "digest.py", label], restart=False)
 
 
 def schedule_digest(label: str, at_time: str):
