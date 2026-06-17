@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import calendar
 import logging
 import random
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from html import escape
+from zoneinfo import ZoneInfo
 
 import requests
 import feedparser
@@ -14,6 +19,15 @@ from filters import passes_filters
 from translator import translate_text
 from text_cleaner import clean_text
 from runtime_config import (
+    DIGEST_DAY_LOOKBACK_HOURS,
+    DIGEST_DEFAULT_LOOKBACK_HOURS,
+    DIGEST_ENTRY_SCAN_LIMIT,
+    DIGEST_EVENING_LOOKBACK_HOURS,
+    DIGEST_INCLUDE_UNDATED,
+    DIGEST_LIMIT,
+    DIGEST_MORNING_LOOKBACK_HOURS,
+    DIGEST_NIGHT_LOOKBACK_HOURS,
+    DIGEST_TIMEZONE,
     DRY_RUN,
     TELEGRAM_BOT_TOKEN,
     TARGET_CHAT_ID,
@@ -31,6 +45,15 @@ logging.basicConfig(
 )
 
 SENT_FILE = get_state_file("sent_links.txt")
+TZ = ZoneInfo(DIGEST_TIMEZONE)
+
+
+@dataclass
+class DigestCandidate:
+    title: str
+    link: str
+    source: str
+    published_at: datetime | None
 
 
 def load_sent_links():
@@ -71,6 +94,94 @@ TEMPLATES = {
     ],
 }
 
+LABEL_ALIASES = {
+    "morning": "утреннего",
+    "утро": "утреннего",
+    "утренний": "утреннего",
+    "утреннего": "утреннего",
+    "day": "дневного",
+    "день": "дневного",
+    "дневной": "дневного",
+    "дневного": "дневного",
+    "evening": "вечернего",
+    "вечер": "вечернего",
+    "вечерний": "вечернего",
+    "вечернего": "вечернего",
+    "night": "ночного",
+    "ночь": "ночного",
+    "ночной": "ночного",
+    "ночного": "ночного",
+    "auto": "auto",
+    "default": "default",
+}
+
+LOOKBACK_BY_LABEL = {
+    "утреннего": DIGEST_MORNING_LOOKBACK_HOURS,
+    "дневного": DIGEST_DAY_LOOKBACK_HOURS,
+    "вечернего": DIGEST_EVENING_LOOKBACK_HOURS,
+    "ночного": DIGEST_NIGHT_LOOKBACK_HOURS,
+    "default": DIGEST_DEFAULT_LOOKBACK_HOURS,
+}
+
+
+def auto_digest_label(now: datetime | None = None) -> str:
+    dt = now.astimezone(TZ) if now else datetime.now(TZ)
+    hour = dt.hour
+    if 5 <= hour < 11:
+        return "утреннего"
+    if 11 <= hour < 17:
+        return "дневного"
+    if 17 <= hour <= 23:
+        return "вечернего"
+    return "ночного"
+
+
+def normalize_label(label: str | None) -> str:
+    if not label:
+        return auto_digest_label()
+    value = label.strip().lower()
+    normalized = LABEL_ALIASES.get(value, value)
+    if normalized == "auto":
+        return auto_digest_label()
+    return normalized
+
+
+def lookback_hours_for_label(label: str) -> int:
+    return LOOKBACK_BY_LABEL.get(label, DIGEST_DEFAULT_LOOKBACK_HOURS)
+
+
+def entry_published_at(entry) -> datetime | None:
+    for key in ("published_parsed", "updated_parsed", "created_parsed"):
+        parsed = entry.get(key)
+        if parsed:
+            return datetime.fromtimestamp(calendar.timegm(parsed), tz=timezone.utc)
+
+    for key in ("published", "updated", "created"):
+        raw = entry.get(key)
+        if not raw:
+            continue
+        try:
+            dt = parsedate_to_datetime(raw)
+        except (TypeError, ValueError):
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+
+    return None
+
+
+def is_fresh(published_at: datetime | None, cutoff: datetime) -> bool:
+    if published_at is None:
+        return DIGEST_INCLUDE_UNDATED
+    return published_at >= cutoff
+
+
+def published_time_label(published_at: datetime | None) -> str:
+    if not published_at:
+        return ""
+    return published_at.astimezone(TZ).strftime("%H:%M")
+
 
 def polish_title(title: str) -> str:
     title = clean_text(translate_text(title))
@@ -90,17 +201,18 @@ def polish_title(title: str) -> str:
     return title.strip()
 
 
-def format_news_entry(i: int, text: str, link: str, source: str) -> str:
-    safe_text = escape(text)
-    safe_source = escape(source)
-    safe_link = escape(link, quote=True)
-    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {safe_source}"
+def format_news_entry(i: int, candidate: DigestCandidate) -> str:
+    safe_text = escape(polish_title(candidate.title))
+    safe_source = escape(candidate.source)
+    safe_link = escape(candidate.link, quote=True)
+    time_label = published_time_label(candidate.published_at)
+    meta = f"{safe_source} · {time_label}" if time_label else safe_source
+    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {meta}"
 
 
-def fetch_digest(sources, limit=10):
+def collect_candidates(sources, cutoff: datetime):
     seen_links = set(sent_digest)
-    new_links = set()
-    news_items = []
+    candidates: list[DigestCandidate] = []
 
     for src in sources:
         url = src.get("url")
@@ -114,9 +226,13 @@ def fetch_digest(sources, limit=10):
             if not feed.entries:
                 continue
 
-            for entry in feed.entries[:3]:
+            for entry in feed.entries[:DIGEST_ENTRY_SCAN_LIMIT]:
                 link = entry.get("link")
                 if not link or link in seen_links:
+                    continue
+
+                published_at = entry_published_at(entry)
+                if not is_fresh(published_at, cutoff):
                     continue
 
                 title = entry.get("title", "").strip()
@@ -124,32 +240,51 @@ def fetch_digest(sources, limit=10):
                 if not title or not passes_filters(title, summary=summary, source=label):
                     continue
 
-                cleaned = polish_title(title)
-                formatted = format_news_entry(len(news_items) + 1, cleaned, link, label)
-                news_items.append(formatted)
                 seen_links.add(link)
-                new_links.add(link)
-
-                if len(news_items) >= limit:
-                    break
-
-            if len(news_items) >= limit:
-                break
-
+                candidates.append(
+                    DigestCandidate(
+                        title=title,
+                        link=link,
+                        source=label,
+                        published_at=published_at,
+                    )
+                )
         except Exception as e:
             logging.error(f"Ошибка при парсинге {url}: {e}")
 
+    return candidates
+
+
+def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
+    lookback_hours = lookback_hours_for_label(label)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+    candidates = collect_candidates(sources, cutoff)
+    candidates.sort(key=lambda item: item.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+
+    selected = candidates[:limit]
+    news_items = [format_news_entry(i, candidate) for i, candidate in enumerate(selected, start=1)]
+    new_links = {candidate.link for candidate in selected}
+
+    logging.info(
+        "Digest label=%s lookback=%sh candidates=%s selected=%s",
+        label,
+        lookback_hours,
+        len(candidates),
+        len(selected),
+    )
     return news_items, new_links
 
 
-def send_digest(label: str = "default"):
+def send_digest(label: str = "auto"):
     global sent_digest
 
+    label = normalize_label(label)
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
-    news_items, new_links = fetch_digest(sources, limit=10)
+    news_items, new_links = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
 
     if not news_items:
-        logging.info(f"Нет новостей для {label} дайджеста")
+        logging.info(f"Нет свежих новостей для {label} дайджеста")
+        print(f"[DIGEST] Нет свежих новостей для {label} дайджеста")
         return
 
     joined_news = "\n\n".join(news_items)
@@ -188,5 +323,5 @@ def send_digest(label: str = "default"):
 if __name__ == "__main__":
     import sys
 
-    arg = sys.argv[1] if len(sys.argv) > 1 else "default"
+    arg = sys.argv[1] if len(sys.argv) > 1 else "auto"
     send_digest(arg)
