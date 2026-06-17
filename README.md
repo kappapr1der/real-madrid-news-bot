@@ -13,24 +13,26 @@
 - Breaking-мониторинг каждые 120 секунд.
 - Дайджесты по расписанию: утро, день, вечер.
 - Safe dry-run режим: можно тестировать без отправки в Telegram.
+- One-shot проверка breaking-цикла через `python breaking.py --once`.
 - Heartbeat HTTP-сервис для мониторинга.
 - Логи в каталоге `logs/`, runtime-состояние в `state/`.
 
 ## Структура
 
 ```text
-main.py                  # менеджер процессов
-runtime_config.py        # env, dry-run, пути logs/state
-heartbeat.py             # HTTP heartbeat
-breaking.py              # breaking-мониторинг RSS
-digest.py                # разовый запуск дайджеста
-filters.py               # фильтр релевантности
-text_cleaner.py          # очистка текста после перевода
-translator.py            # перевод + словарные замены
-sources_international.py # международные источники
-sources_ru.py            # русскоязычные источники
-scripts/preflight.py     # проверка синтаксиса перед деплоем
-requirements.txt         # зависимости
+main.py                                # менеджер процессов
+runtime_config.py                      # env, dry-run, пути logs/state
+heartbeat.py                           # HTTP heartbeat
+breaking.py                            # breaking-мониторинг RSS
+digest.py                              # разовый запуск дайджеста
+filters.py                             # фильтр релевантности
+text_cleaner.py                        # очистка текста после перевода
+translator.py                          # перевод + словарные замены
+sources_international.py               # международные источники
+sources_ru.py                          # русскоязычные источники
+scripts/preflight.py                   # проверка синтаксиса и зависимостей
+deploy/systemd/coffee-bot.service.example # systemd-шаблон для VPS
+requirements.txt                       # зависимости
 ```
 
 ## Настройка
@@ -61,7 +63,7 @@ HEARTBEAT_PORT=8000
 
 ## Проверка до сервера
 
-Проверить синтаксис основных модулей:
+Проверить синтаксис основных модулей и наличие зависимостей:
 
 ```bash
 python scripts/preflight.py
@@ -71,6 +73,12 @@ python scripts/preflight.py
 
 ```bash
 DRY_RUN=true python digest.py утреннего
+```
+
+Проверить один цикл breaking-мониторинга без бесконечного процесса:
+
+```bash
+DRY_RUN=true python breaking.py --once
 ```
 
 Запустить breaking-мониторинг в безопасном режиме:
@@ -108,6 +116,24 @@ DRY_RUN=false
 ```
 
 Без этого бот не будет публиковать сообщения в Telegram. Это сделано специально, чтобы случайный локальный запуск не стрелял в канал.
+
+## Systemd на VPS
+
+В репозитории есть шаблон:
+
+```text
+deploy/systemd/coffee-bot.service.example
+```
+
+Перед установкой проверь `User`, `Group`, `WorkingDirectory`, `EnvironmentFile` и `ExecStart` под реальный путь на сервере. Пример для `/opt/coffee-bot`:
+
+```bash
+sudo cp deploy/systemd/coffee-bot.service.example /etc/systemd/system/coffee-bot.service
+sudo systemctl daemon-reload
+sudo systemctl enable coffee-bot.service
+sudo systemctl start coffee-bot.service
+sudo systemctl status coffee-bot.service
+```
 
 ## Мониторинг
 
