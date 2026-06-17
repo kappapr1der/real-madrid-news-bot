@@ -6,7 +6,14 @@ import schedule
 from collections import deque
 from colorama import init, Fore, Style
 
-from runtime_config import DRY_RUN, get_log_file
+from runtime_config import (
+    DIGEST_DAY_TIME,
+    DIGEST_EVENING_TIME,
+    DIGEST_MORNING_TIME,
+    DIGEST_TIMEZONE,
+    DRY_RUN,
+    get_log_file,
+)
 
 init(autoreset=True)
 
@@ -76,6 +83,12 @@ def run_digest_with_label(label: str):
     start_process(f"digest:{label}", [PYTHON, "digest.py", label])
 
 
+def schedule_digest(label: str, at_time: str):
+    job = schedule.every().day.at(at_time, DIGEST_TIMEZONE).do(run_digest_with_label, label=label)
+    logging.info("Запланирован %s дайджест на %s %s", label, at_time, DIGEST_TIMEZONE)
+    return job
+
+
 if __name__ == "__main__":
     mode = "DRY RUN" if DRY_RUN else "LIVE"
     print(Fore.YELLOW + Style.BRIGHT + f"[MAIN] Менеджер запущен ({mode})")
@@ -83,10 +96,15 @@ if __name__ == "__main__":
     run_heartbeat()
     run_breaking()
 
-    # Три фиксированных слота дайджеста (локальное время сервера)
-    schedule.every().day.at("08:00").do(run_digest_with_label, label="утреннего")
-    schedule.every().day.at("14:00").do(run_digest_with_label, label="дневного")
-    schedule.every().day.at("20:00").do(run_digest_with_label, label="вечернего")
+    schedule_digest("утреннего", DIGEST_MORNING_TIME)
+    schedule_digest("дневного", DIGEST_DAY_TIME)
+    schedule_digest("вечернего", DIGEST_EVENING_TIME)
+
+    print(
+        Fore.CYAN
+        + f"[MAIN] Дайджесты: {DIGEST_MORNING_TIME}, {DIGEST_DAY_TIME}, "
+        + f"{DIGEST_EVENING_TIME} ({DIGEST_TIMEZONE})"
+    )
 
     while True:
         schedule.run_pending()
