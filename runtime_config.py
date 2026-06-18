@@ -52,8 +52,14 @@ def env_int_list(name: str, default: str) -> list[int]:
 DRY_RUN = env_bool("DRY_RUN", default=True)
 STATE_DIR = _resolve_dir(os.getenv("STATE_DIR", "state"))
 LOG_DIR = _resolve_dir(os.getenv("LOG_DIR", "logs"))
+STATUS_FILE = _resolve_path(os.getenv("STATUS_FILE", str(STATE_DIR / "status.json")))
 BREAKING_INTERVAL_SECONDS = env_int("BREAKING_INTERVAL_SECONDS", 120)
 HEARTBEAT_PORT = env_int("HEARTBEAT_PORT", 8000)
+HEARTBEAT_MAIN_STALE_SECONDS = env_int("HEARTBEAT_MAIN_STALE_SECONDS", 180)
+HEARTBEAT_BREAKING_STALE_SECONDS = env_int(
+    "HEARTBEAT_BREAKING_STALE_SECONDS",
+    max(BREAKING_INTERVAL_SECONDS * 3 + 60, 300),
+)
 
 HTTP_USER_AGENT = os.getenv(
     "HTTP_USER_AGENT",
@@ -96,6 +102,10 @@ MATCHDAY_HALFTIME_MINUTES = env_int("MATCHDAY_HALFTIME_MINUTES", 50)
 MATCHDAY_FULLTIME_MINUTES = env_int("MATCHDAY_FULLTIME_MINUTES", 125)
 MATCHDAY_POST_TOLERANCE_MINUTES = env_int("MATCHDAY_POST_TOLERANCE_MINUTES", 20)
 MATCHDAY_POLL_SECONDS = env_int("MATCHDAY_POLL_SECONDS", 60)
+HEARTBEAT_MATCHDAY_STALE_SECONDS = env_int(
+    "HEARTBEAT_MATCHDAY_STALE_SECONDS",
+    max(MATCHDAY_POLL_SECONDS * 5 + 60, 600),
+)
 
 MATCHDAY_LIVE_ENABLED = env_bool("MATCHDAY_LIVE_ENABLED", default=False)
 MATCHDAY_LIVE_PROVIDER = os.getenv("MATCHDAY_LIVE_PROVIDER", "api-football").strip().lower()
@@ -103,6 +113,10 @@ MATCHDAY_LIVE_POLL_SECONDS = env_int("MATCHDAY_LIVE_POLL_SECONDS", 180)
 MATCHDAY_LIVE_BEFORE_MINUTES = env_int("MATCHDAY_LIVE_BEFORE_MINUTES", 15)
 MATCHDAY_LIVE_AFTER_MINUTES = env_int("MATCHDAY_LIVE_AFTER_MINUTES", 30)
 MATCHDAY_LIVE_EVENT_TYPES = {part.casefold() for part in env_csv("MATCHDAY_LIVE_EVENT_TYPES", "Goal,Card,subst,Var")}
+HEARTBEAT_LIVE_STALE_SECONDS = env_int(
+    "HEARTBEAT_LIVE_STALE_SECONDS",
+    max(MATCHDAY_LIVE_POLL_SECONDS * 3 + 60, 900),
+)
 
 API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY") or os.getenv("APISPORTS_KEY")
 API_FOOTBALL_BASE_URL = os.getenv("API_FOOTBALL_BASE_URL", "https://v3.football.api-sports.io").rstrip("/")
@@ -115,6 +129,7 @@ TARGET_CHAT_ID = os.getenv("TARGET_CHAT_ID")
 
 STATE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
+STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
 def get_state_file(name: str) -> Path:
