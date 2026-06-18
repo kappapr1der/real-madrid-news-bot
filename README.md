@@ -35,7 +35,7 @@
 - One-shot проверка breaking-цикла через `python breaking.py --once`.
 - Проверка RSS-источников через `python scripts/check_sources.py`.
 - `preflight.py` проверяет синтаксис, зависимости и базовую валидность `.env`.
-- Heartbeat HTTP-сервис для мониторинга.
+- Статус-файл `state/status.json` и JSON heartbeat: `200`, если основные процессы свежие; `503`, если сервис устарел или упал.
 - Логи в каталоге `logs/`, runtime-состояние в `state/`.
 
 ## Как выглядит дайджест
@@ -230,12 +230,13 @@ main.py                                # менеджер процессов
 runtime_config.py                      # env, dry-run, пути logs/state, настройки дайджеста и матч-дня
 feed_utils.py                          # общий RSS fetch helper с timeout/User-Agent
 post_utils.py                          # общий формат хэштегов для Telegram-постов
+status_manager.py                      # runtime-статус сервисов и JSON health snapshot
 content_quality.py                     # ранжирование и антидубли дайджеста
 live_providers.py                      # API-FOOTBALL live-события для матчей Реала
 match_calendar.py                      # календарь матчей и guard для дайджеста
 matchday.py                            # матчевые автопосты, ручные и автоматические live-события
 config/matches.example.json            # пример календаря матчей Ла Лиги и ЛЧ
-heartbeat.py                           # HTTP heartbeat
+heartbeat.py                           # HTTP JSON heartbeat
 breaking.py                            # breaking-мониторинг RSS
 digest.py                              # разовый запуск дайджеста
 filters.py                             # фильтр релевантности
@@ -274,8 +275,13 @@ DEEPL_API_URL=https://api-free.deepl.com/v2/translate
 
 STATE_DIR=state
 LOG_DIR=logs
+STATUS_FILE=state/status.json
 BREAKING_INTERVAL_SECONDS=120
 HEARTBEAT_PORT=8000
+HEARTBEAT_MAIN_STALE_SECONDS=180
+HEARTBEAT_BREAKING_STALE_SECONDS=420
+HEARTBEAT_MATCHDAY_STALE_SECONDS=600
+HEARTBEAT_LIVE_STALE_SECONDS=900
 
 # HTTP и Telegram-лимиты.
 HTTP_USER_AGENT=CoffeeBot/1.0 (+https://t.me/slivochniyfootball)
@@ -437,7 +443,31 @@ sudo systemctl status coffee-bot.service
 
 ## Мониторинг
 
-`heartbeat.py` отвечает `Bernabeu Heartbeat OK` на HTTP-запросы по порту из `HEARTBEAT_PORT` (`8000` по умолчанию).
+`main.py`, `breaking.py`, `digest.py` и `matchday.py` пишут runtime-состояние в `STATUS_FILE` (`state/status.json` по умолчанию). `heartbeat.py` читает этот файл и отвечает JSON по порту из `HEARTBEAT_PORT` (`8000` по умолчанию).
+
+Проверить локально:
+
+```bash
+curl http://127.0.0.1:8000/
+```
+
+Heartbeat возвращает `200`, если обязательные сервисы свежие, и `503`, если сервис еще не отчитался, упал или давно не обновлялся. Обязательные сервисы:
+
+- `main`;
+- `breaking`;
+- `matchday`, если `MATCHDAY_ENABLED=true`;
+- `live`, если `MATCHDAY_LIVE_ENABLED=true`.
+
+Пороги свежести настраиваются через `.env`:
+
+```env
+HEARTBEAT_MAIN_STALE_SECONDS=180
+HEARTBEAT_BREAKING_STALE_SECONDS=420
+HEARTBEAT_MATCHDAY_STALE_SECONDS=600
+HEARTBEAT_LIVE_STALE_SECONDS=900
+```
+
+Если запустить только `heartbeat.py` без `main.py`, он честно вернет `503`: это нормально, потому что менеджер и воркеры еще не записали статус.
 
 `uptime_webhook.py` можно использовать для webhook-уведомлений от UptimeRobot. Он берет Telegram-токен и канал из `.env`, а не из кода.
 
@@ -452,12 +482,12 @@ sudo systemctl status coffee-bot.service
 - `sent_links.txt`
 - `sent_breaking.txt`
 
-`sent_links.txt`, `sent_breaking.txt` и `matchday_posts.json` теперь живут в `STATE_DIR`, чтобы runtime-состояние не попадало в git.
+`sent_links.txt`, `sent_breaking.txt`, `matchday_posts.json` и `status.json` теперь живут в `STATE_DIR`, чтобы runtime-состояние не попадало в git.
 
 ## Примечания
 
 - Для бесплатного режима не нужны `OPENAI_API_KEY`, `OPENROUTER_API_KEY` или другие LLM-ключи.
 - Для лучшего перевода можно добавить бесплатный `DEEPL_API_KEY`; без него бот продолжит работать через текущие fallback-переводчики.
 - Если RSS-источник часто не отдает дату публикации, можно временно поставить `DIGEST_INCLUDE_UNDATED=true`, но для настоящего “свежака” лучше держать `false`.
-- Если антидубли склеивают слишком много, подними `DIGEST_DEDUPE_SIMILARITY`; если пропускают повторы, опусти значение.
+- Если антидубли склеивают слишком много, подними `DIGEST_DEDUPE_SIMILARITY`; если пропускает повторы, опусти значение.
 - API-FOOTBALL free plan ограничен по запросам в день, поэтому `MATCHDAY_LIVE_POLL_SECONDS=180` лучше не снижать без необходимости.
