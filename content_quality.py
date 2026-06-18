@@ -330,8 +330,8 @@ def add_to_group(group: CandidateGroup, candidate: Any, profile: CandidateProfil
     group.scores[link_attr(candidate)] = profile.score
     group.reasons[link_attr(candidate)] = profile.reason
 
-    current_profile = candidate_profile(group.primary, datetime.now(timezone.utc))
-    if candidate_sort_key(candidate, profile) > candidate_sort_key(group.primary, current_profile):
+    current_sort = candidate_sort_key(group.primary, group.profile)
+    if candidate_sort_key(candidate, profile) > current_sort:
         group.primary = candidate
         group.profile.score = profile.score
         group.profile.reason = profile.reason
