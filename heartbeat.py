@@ -1,7 +1,9 @@
+import json
 import logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from runtime_config import HEARTBEAT_PORT, get_log_file
+from status_manager import health_snapshot, record_status
 
 LOG_FILE = get_log_file("heartbeat.log")
 logging.basicConfig(
@@ -13,29 +15,42 @@ logging.basicConfig(
 
 
 class HeartbeatHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain; charset=utf-8")
+    def write_health_response(self, include_body: bool = True) -> None:
+        payload, status_code = health_snapshot()
+        body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body) if include_body else 0))
         self.end_headers()
-        self.wfile.write(b"Bernabeu Heartbeat OK")
-        logging.info("GET / - Heartbeat responded 200")
+        if include_body:
+            self.wfile.write(body)
+        record_status(
+            "heartbeat",
+            "ok" if status_code == 200 else "degraded",
+            "health request served",
+            {"status_code": status_code, "issues": len(payload.get("issues", []))},
+        )
+        logging.info("%s %s - Heartbeat responded %s", self.command, self.path, status_code)
+
+    def do_GET(self):
+        self.write_health_response(include_body=True)
 
     def do_HEAD(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain; charset=utf-8")
-        self.end_headers()
-        logging.info("HEAD / - Heartbeat responded 200")
+        self.write_health_response(include_body=False)
 
 
 def run(server_class=HTTPServer, handler_class=HeartbeatHandler, port=HEARTBEAT_PORT):
     server_address = ("", port)
     httpd = server_class(server_address, handler_class)
     logging.info(f"Starting Bernabeu Heartbeat on port {port}")
+    record_status("heartbeat", "starting", f"port {port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
     httpd.server_close()
+    record_status("heartbeat", "stopped", "server stopped")
     logging.info("Stopping Bernabeu Heartbeat")
 
 
