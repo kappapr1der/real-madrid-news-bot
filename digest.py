@@ -20,6 +20,7 @@ from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, rank_digest_candidates
+from status_manager import record_error, record_status
 from translator import translate_text
 from text_cleaner import clean_text
 from runtime_config import (
@@ -361,7 +362,16 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         DIGEST_PRIORITY_SORT_ENABLED,
         DIGEST_DEDUPE_ENABLED,
     )
-    return news_items, new_links
+    metrics = {
+        "label": label,
+        "lookback_hours": lookback_hours,
+        "candidates": len(candidates),
+        "selected": len(selected),
+        "grouped_links": grouped_links,
+        "dedupe": DIGEST_DEDUPE_ENABLED,
+        "priority_sort": DIGEST_PRIORITY_SORT_ENABLED,
+    }
+    return news_items, new_links, metrics
 
 
 def post_telegram_message(message: str) -> bool:
@@ -392,16 +402,21 @@ def send_digest(label: str = "auto"):
     global sent_digest
 
     label = normalize_label(label)
+    record_status("digest", "starting", "digest run started", {"label": label, "dry_run": DRY_RUN})
     block_reason = digest_block_reason()
     if block_reason:
+        metrics = {"label": label, "reason": block_reason}
+        record_status("digest", "skipped", block_reason, metrics)
         logging.info("Дайджест %s пропущен: %s", label, block_reason)
         print(f"[DIGEST] Пропущен: {block_reason}")
         return
 
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
-    news_items, new_links = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
+    news_items, new_links, metrics = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
+    metrics["dry_run"] = DRY_RUN
 
     if not news_items:
+        record_status("digest", "empty", f"Нет свежих новостей для {label} дайджеста", metrics)
         logging.info(f"Нет свежих новостей для {label} дайджеста")
         print(f"[DIGEST] Нет свежих новостей для {label} дайджеста")
         return
@@ -412,8 +427,11 @@ def send_digest(label: str = "auto"):
     message = random.choice(templates).format(news=joined_news, intro=intro)
     message = append_hashtags(message, DIGEST_HASHTAGS)
     chunks = split_message(message)
+    metrics["chunks"] = len(chunks)
+    metrics["new_links"] = len(new_links)
 
     if DRY_RUN:
+        record_status("digest", "dry_run", f"{label} digest rendered", metrics)
         logging.info(f"DRY_RUN {label} дайджест: {len(news_items)} новостей, частей: {len(chunks)}")
         print(f"[DRY RUN DIGEST: {label}]")
         for index, chunk in enumerate(chunks, start=1):
@@ -421,16 +439,19 @@ def send_digest(label: str = "auto"):
         return
 
     if not telegram_configured():
+        record_error("digest", "TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы", metrics)
         logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
 
     for chunk in chunks:
         if not post_telegram_message(chunk):
+            record_error("digest", "Дайджест не сохранен как отправленный: часть сообщения не дошла", metrics)
             logging.error("Дайджест не сохранен как отправленный: часть сообщения не дошла")
             return
 
     sent_digest.update(new_links)
     save_sent_links(sent_digest)
+    record_status("digest", "ok", f"Опубликован {label} дайджест", metrics)
     logging.info(f"Опубликован {label} дайджест")
 
 
