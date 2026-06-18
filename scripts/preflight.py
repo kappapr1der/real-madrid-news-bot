@@ -11,6 +11,7 @@ FILES = [
     "runtime_config.py",
     "feed_utils.py",
     "post_utils.py",
+    "status_manager.py",
     "content_quality.py",
     "live_providers.py",
     "match_calendar.py",
@@ -174,6 +175,10 @@ def check_env():
     int_rules = {
         "BREAKING_INTERVAL_SECONDS": ("120", 30),
         "HEARTBEAT_PORT": ("8000", 1),
+        "HEARTBEAT_MAIN_STALE_SECONDS": ("180", 30),
+        "HEARTBEAT_BREAKING_STALE_SECONDS": ("420", 60),
+        "HEARTBEAT_MATCHDAY_STALE_SECONDS": ("600", 60),
+        "HEARTBEAT_LIVE_STALE_SECONDS": ("900", 60),
         "RSS_TIMEOUT_SECONDS": ("15", 1),
         "TELEGRAM_TIMEOUT_SECONDS": ("10", 1),
         "TELEGRAM_MESSAGE_LIMIT": ("3900", 1000),
