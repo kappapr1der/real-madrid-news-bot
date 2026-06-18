@@ -19,10 +19,13 @@ from filters import passes_filters
 from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
 from post_utils import append_hashtags
+from content_quality import RankedDigestItem, rank_digest_candidates
 from translator import translate_text
 from text_cleaner import clean_text
 from runtime_config import (
     DIGEST_DAY_LOOKBACK_HOURS,
+    DIGEST_DEDUPE_ENABLED,
+    DIGEST_DEDUPE_SIMILARITY,
     DIGEST_DEFAULT_LOOKBACK_HOURS,
     DIGEST_ENTRY_SCAN_LIMIT,
     DIGEST_EVENING_LOOKBACK_HOURS,
@@ -31,6 +34,8 @@ from runtime_config import (
     DIGEST_LIMIT,
     DIGEST_MORNING_LOOKBACK_HOURS,
     DIGEST_NIGHT_LOOKBACK_HOURS,
+    DIGEST_PRIORITY_SORT_ENABLED,
+    DIGEST_SHOW_RELATED_SOURCES,
     DIGEST_TIMEZONE,
     DRY_RUN,
     TELEGRAM_BOT_TOKEN,
@@ -230,13 +235,25 @@ def polish_title(title: str) -> str:
     return title.strip()
 
 
-def format_news_entry(i: int, candidate: DigestCandidate) -> str:
+def related_sources_line(item: RankedDigestItem) -> str:
+    if not DIGEST_SHOW_RELATED_SOURCES or not item.related_sources:
+        return ""
+
+    visible_sources = [escape(source) for source in item.related_sources[:3]]
+    extra_count = len(item.related_sources) - len(visible_sources)
+    suffix = f" +{extra_count}" if extra_count > 0 else ""
+    return f"\nЕще источники: {', '.join(visible_sources)}{suffix}"
+
+
+def format_news_entry(i: int, item: RankedDigestItem) -> str:
+    candidate = item.candidate
     safe_text = escape(polish_title(candidate.title))
     safe_source = escape(candidate.source)
     safe_link = escape(candidate.link, quote=True)
     time_label = published_time_label(candidate.published_at)
     meta = f"{safe_source} · {time_label}" if time_label else safe_source
-    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {meta}"
+    related = related_sources_line(item)
+    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {meta}{related}"
 
 
 def split_message(message: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
@@ -310,22 +327,39 @@ def collect_candidates(sources, cutoff: datetime):
     return candidates
 
 
+def normalized_similarity_threshold() -> float:
+    return min(max(DIGEST_DEDUPE_SIMILARITY, 0), 100) / 100
+
+
 def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
     lookback_hours = lookback_hours_for_label(label)
     cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
     candidates = collect_candidates(sources, cutoff)
     candidates.sort(key=lambda item: item.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
 
-    selected = candidates[:limit]
-    news_items = [format_news_entry(i, candidate) for i, candidate in enumerate(selected, start=1)]
-    new_links = {candidate.link for candidate in selected}
+    selected = rank_digest_candidates(
+        candidates,
+        limit=limit,
+        dedupe_enabled=DIGEST_DEDUPE_ENABLED,
+        priority_sort_enabled=DIGEST_PRIORITY_SORT_ENABLED,
+        similarity_threshold=normalized_similarity_threshold(),
+    )
+    news_items = [format_news_entry(i, item) for i, item in enumerate(selected, start=1)]
+    new_links = set()
+    grouped_links = 0
+    for item in selected:
+        new_links.update(item.grouped_links)
+        grouped_links += max(len(item.grouped_links) - 1, 0)
 
     logging.info(
-        "Digest label=%s lookback=%sh candidates=%s selected=%s",
+        "Digest label=%s lookback=%sh candidates=%s selected=%s grouped=%s priority_sort=%s dedupe=%s",
         label,
         lookback_hours,
         len(candidates),
         len(selected),
+        grouped_links,
+        DIGEST_PRIORITY_SORT_ENABLED,
+        DIGEST_DEDUPE_ENABLED,
     )
     return news_items, new_links
 
