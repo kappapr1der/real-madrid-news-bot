@@ -11,6 +11,7 @@ FILES = [
     "runtime_config.py",
     "feed_utils.py",
     "post_utils.py",
+    "content_quality.py",
     "live_providers.py",
     "match_calendar.py",
     "matchday.py",
@@ -141,6 +142,9 @@ def check_env():
     bool_rules = {
         "DRY_RUN": "true",
         "DIGEST_INCLUDE_UNDATED": "false",
+        "DIGEST_DEDUPE_ENABLED": "true",
+        "DIGEST_PRIORITY_SORT_ENABLED": "true",
+        "DIGEST_SHOW_RELATED_SOURCES": "true",
         "MATCHDAY_ENABLED": "true",
         "MATCHDAY_BLOCK_ALL_DAY": "false",
         "MATCHDAY_LIVE_ENABLED": "false",
@@ -180,6 +184,7 @@ def check_env():
         "DIGEST_DAY_LOOKBACK_HOURS": ("8", 1),
         "DIGEST_EVENING_LOOKBACK_HOURS": ("8", 1),
         "DIGEST_NIGHT_LOOKBACK_HOURS": ("8", 1),
+        "DIGEST_DEDUPE_SIMILARITY": ("42", 0),
         "MATCHDAY_BLOCK_BEFORE_HOURS": ("3", 0),
         "MATCHDAY_BLOCK_AFTER_HOURS": ("2", 0),
         "MATCHDAY_PREVIEW_MINUTES": ("60", 0),
@@ -200,6 +205,10 @@ def check_env():
     message_limit = parsed_values.get("TELEGRAM_MESSAGE_LIMIT")
     if message_limit is not None and message_limit > 4096:
         errors.append("TELEGRAM_MESSAGE_LIMIT must be <= 4096")
+
+    dedupe_similarity = parsed_values.get("DIGEST_DEDUPE_SIMILARITY")
+    if dedupe_similarity is not None and dedupe_similarity > 100:
+        errors.append("DIGEST_DEDUPE_SIMILARITY must be <= 100")
 
     matchday_enabled = env_bool_value(config, "MATCHDAY_ENABLED", "true")
     schedule_file = resolve_repo_path(config.get("MATCH_SCHEDULE_FILE") or "config/matches.json")
