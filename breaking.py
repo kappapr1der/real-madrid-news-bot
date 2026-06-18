@@ -15,6 +15,7 @@ from text_cleaner import clean_text
 from filters import passes_filters
 from feed_utils import parse_feed_url
 from post_utils import append_hashtags
+from status_manager import record_error, record_status
 from translator import translate_text
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
@@ -143,6 +144,7 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         return
 
     if not telegram_configured():
+        record_error("breaking", "TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         print(Fore.RED + "[BREAKING] TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
@@ -152,11 +154,14 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         print(Fore.RED + Style.BRIGHT + f"[SENT BREAKING] {news}")
         sent_breaking.add(link)
         save_sent_links(sent_breaking)
+    else:
+        record_error("breaking", "Telegram send failed for breaking post", {"source": source})
 
 
 def fetch_breaking(sources):
     found = 0
     checked = 0
+    errors = 0
 
     for source in sources:
         url = source_url(source)
@@ -187,14 +192,22 @@ def fetch_breaking(sources):
                 send_breaking(clean_news, link, source=label)
                 found += 1
         except Exception as e:
+            errors += 1
             logging.error(f"Ошибка при парсинге {url}: {e}")
 
-    return checked, found
+    return checked, found, errors
 
 
 def run_cycle(sources):
-    checked, found = fetch_breaking(sources)
-    print(Fore.CYAN + f"[CYCLE DONE] Проверено {checked} источников, найдено {found} breaking.")
+    checked, found, errors = fetch_breaking(sources)
+    state = "degraded" if errors and errors == checked else "ok"
+    record_status(
+        "breaking",
+        state,
+        "cycle complete",
+        {"checked": checked, "found": found, "errors": errors, "dry_run": DRY_RUN},
+    )
+    print(Fore.CYAN + f"[CYCLE DONE] Проверено {checked} источников, найдено {found} breaking, ошибок {errors}.")
     return checked, found
 
 
@@ -212,6 +225,7 @@ if __name__ == "__main__":
     args = parse_args()
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
     mode = "DRY RUN" if DRY_RUN else "LIVE"
+    record_status("breaking", "starting", f"monitor started ({mode})")
     print(Fore.YELLOW + f"[BREAKING BOT STARTED] Запущен мониторинг breaking news ({mode}).")
 
     if args.once:
