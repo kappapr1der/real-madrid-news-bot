@@ -15,6 +15,7 @@ from colorama import Fore, Style, init
 from live_providers import fetch_live_events, live_provider_status
 from match_calendar import Match, find_match, load_matches, local_now, upcoming_matches
 from post_utils import append_hashtags
+from status_manager import record_error, record_status
 from runtime_config import (
     DRY_RUN,
     LIVE_HASHTAGS,
@@ -148,6 +149,7 @@ def post_telegram_message(message: str) -> bool:
         return True
 
     if not telegram_configured():
+        record_error("matchday", "TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         print(Fore.RED + "[MATCHDAY] TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return False
@@ -190,8 +192,9 @@ def phase_due(match: Match, phase: str, now) -> bool:
 def run_auto_once() -> int:
     now = local_now()
     sent = 0
+    matches = load_matches()
 
-    for match in load_matches():
+    for match in matches:
         for phase in AUTO_PHASES:
             key = f"auto:{match.id}:{phase}"
             if key in posted_keys or not phase_due(match, phase, now):
@@ -203,6 +206,12 @@ def run_auto_once() -> int:
                 sent += 1
                 logging.info("Опубликован matchday phase=%s match=%s", phase, match.id)
 
+    record_status(
+        "matchday",
+        "ok",
+        "auto check complete",
+        {"matches": len(matches), "sent": sent, "dry_run": DRY_RUN},
+    )
     print(Fore.CYAN + f"[MATCHDAY] Проверка автопостов завершена, опубликовано: {sent}")
     return sent
 
@@ -211,7 +220,10 @@ def run_live_once() -> int:
     status = live_provider_status()
     if status != "api-football ready":
         if MATCHDAY_LIVE_ENABLED:
+            record_error("live", status)
             logging.warning("Live-провайдер не готов: %s", status)
+        else:
+            record_status("live", "disabled", status)
         print(Fore.YELLOW + f"[MATCHDAY LIVE] Live-провайдер не готов: {status}")
         return 0
 
@@ -234,6 +246,12 @@ def run_live_once() -> int:
             sent += 1
             logging.info("Опубликовано live event key=%s match=%s", event.key, event.match.id)
 
+    record_status(
+        "live",
+        "ok",
+        "live check complete",
+        {"events": len(events), "sent": sent, "dry_run": DRY_RUN},
+    )
     print(Fore.CYAN + f"[MATCHDAY LIVE] Проверка live-событий завершена, опубликовано: {sent}")
     return sent
 
@@ -257,12 +275,15 @@ def run_cycle(force_live: bool = False) -> int:
     sent = run_auto_once()
     if live_due(force=force_live):
         sent += run_live_once()
+    elif not MATCHDAY_LIVE_ENABLED:
+        record_status("live", "disabled", "MATCHDAY_LIVE_ENABLED=false")
     return sent
 
 
 def post_manual_event(match_id: str, minute: str, text: str, kind: str, score: str) -> int:
     match = find_match(match_id)
     if not match:
+        record_error("matchday", f"Матч не найден: {match_id}")
         print(Fore.RED + f"[MATCHDAY] Матч не найден: {match_id}")
         return 1
 
@@ -275,8 +296,10 @@ def post_manual_event(match_id: str, minute: str, text: str, kind: str, score: s
     message = format_event_message(match, minute=minute, text=text, kind=kind, score=score)
     if post_telegram_message(message):
         mark_posted(key)
+        record_status("live", "ok", "manual event posted", {"match_id": match_id, "kind": kind, "minute": minute})
         logging.info("Опубликовано matchday event match=%s kind=%s minute=%s", match_id, kind, minute)
         return 0
+    record_error("live", "manual event send failed", {"match_id": match_id, "kind": kind, "minute": minute})
     return 1
 
 
@@ -306,6 +329,7 @@ def parse_args():
 
 def main() -> int:
     args = parse_args()
+    record_status("matchday", "starting", f"matchday started; live={live_provider_status()}")
 
     if args.list:
         print_matches()
@@ -313,6 +337,7 @@ def main() -> int:
 
     if args.event_text:
         if not args.match_id:
+            record_error("matchday", "Для --event-text нужен --match-id")
             print(Fore.RED + "[MATCHDAY] Для --event-text нужен --match-id")
             return 1
         return post_manual_event(
