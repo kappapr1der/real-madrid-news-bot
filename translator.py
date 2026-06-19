@@ -7,6 +7,9 @@ from typing import Any, Dict, List, Tuple
 import requests
 import yaml
 from deep_translator import GoogleTranslator, MyMemoryTranslator
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +20,13 @@ DEFAULT_ADDITIONS = HERE / "additions.yaml"
 TERMS_PATH = Path(os.getenv("TERMS_PATH", str(DEFAULT_TERMS_PATH)))
 TERMS_ADDITIONS_ENV = os.getenv("TERMS_ADDITIONS")
 ADDITIONS_PATHS: List[Path] = []
+
+YANDEX_TRANSLATE_API_KEY = os.getenv("YANDEX_TRANSLATE_API_KEY") or os.getenv("YANDEX_API_KEY")
+YANDEX_FOLDER_ID = os.getenv("YANDEX_FOLDER_ID")
+YANDEX_TRANSLATE_URL = os.getenv(
+    "YANDEX_TRANSLATE_URL",
+    "https://translate.api.cloud.yandex.net/translate/v2/translate",
+)
 
 DEEPL_API_KEY = os.getenv("DEEPL_API_KEY")
 DEEPL_API_URL = os.getenv("DEEPL_API_URL", "https://api-free.deepl.com/v2/translate")
@@ -142,6 +152,31 @@ def apply_custom_dictionary(text: str) -> str:
     return result
 
 
+def _translate_with_yandex(text: str) -> str | None:
+    if not (YANDEX_TRANSLATE_API_KEY and YANDEX_FOLDER_ID):
+        return None
+
+    response = requests.post(
+        YANDEX_TRANSLATE_URL,
+        headers={
+            "Authorization": f"Api-Key {YANDEX_TRANSLATE_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "folderId": YANDEX_FOLDER_ID,
+            "texts": [text],
+            "targetLanguageCode": "ru",
+        },
+        timeout=12,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    translations = payload.get("translations") or []
+    if not translations:
+        return None
+    return translations[0].get("text")
+
+
 def _translate_with_deepl(text: str) -> str | None:
     if not DEEPL_API_KEY:
         return None
@@ -174,16 +209,23 @@ def _translate_with_mymemory(text: str) -> str:
 
 def translate_text(text: str) -> str:
     """
-    1) DeepL API Free, if DEEPL_API_KEY is configured
-    2) GoogleTranslator
-    3) MyMemoryTranslator
-    4) original text
+    1) Yandex Translate, if YANDEX_TRANSLATE_API_KEY and YANDEX_FOLDER_ID are configured
+    2) DeepL API Free, if DEEPL_API_KEY is configured
+    3) GoogleTranslator
+    4) MyMemoryTranslator
+    5) original text
 
     Then apply the local football dictionary.
     """
     translated = None
 
-    if DEEPL_API_KEY:
+    if YANDEX_TRANSLATE_API_KEY and YANDEX_FOLDER_ID:
+        try:
+            translated = _translate_with_yandex(text)
+        except Exception as e:
+            logger.error(f"Yandex Translate error: {e}")
+
+    if not translated and DEEPL_API_KEY:
         try:
             translated = _translate_with_deepl(text)
         except Exception as e:
