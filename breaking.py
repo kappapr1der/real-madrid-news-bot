@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import signal
 import time
 import logging
 import random
+import threading
 from html import escape
 from typing import Any
 
@@ -42,6 +44,16 @@ logging.basicConfig(
 )
 
 SENT_FILE = get_state_file("sent_breaking.txt")
+stop_event = threading.Event()
+
+
+def request_stop(signum=None, frame=None):
+    stop_event.set()
+
+
+def install_signal_handlers():
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, request_stop)
 
 
 def load_sent_links():
@@ -164,6 +176,9 @@ def fetch_breaking(sources):
     errors = 0
 
     for source in sources:
+        if stop_event.is_set():
+            break
+
         url = source_url(source)
         label = source_label(source)
         if not url:
@@ -221,7 +236,8 @@ def parse_args():
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> int:
+    install_signal_handlers()
     args = parse_args()
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
     mode = "DRY RUN" if DRY_RUN else "LIVE"
@@ -230,12 +246,21 @@ if __name__ == "__main__":
 
     if args.once:
         run_cycle(sources)
-    else:
-        try:
-            while True:
-                run_cycle(sources)
-                time.sleep(BREAKING_INTERVAL_SECONDS)
-        except KeyboardInterrupt:
-            record_status("breaking", "stopping", "monitor stopped by signal", {"dry_run": DRY_RUN})
-            logging.info("Breaking-монитор остановлен сигналом")
-            print(Fore.YELLOW + "[BREAKING] Остановка по сигналу")
+        return 0
+
+    try:
+        while not stop_event.is_set():
+            run_cycle(sources)
+            stop_event.wait(BREAKING_INTERVAL_SECONDS)
+    except KeyboardInterrupt:
+        request_stop(signal.SIGINT, None)
+
+    if stop_event.is_set():
+        record_status("breaking", "stopping", "monitor stopped by signal", {"dry_run": DRY_RUN})
+        logging.info("Breaking-монитор остановлен сигналом")
+        print(Fore.YELLOW + "[BREAKING] Остановка по сигналу")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
