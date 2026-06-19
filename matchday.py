@@ -15,7 +15,7 @@ import requests
 from colorama import Fore, Style, init
 
 from live_providers import fetch_live_events, live_provider_status
-from match_calendar import Match, find_match, load_matches, local_now, upcoming_matches
+from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, upcoming_matches
 from post_utils import append_hashtags
 from status_manager import record_error, record_status
 from runtime_config import (
@@ -203,6 +203,17 @@ def phase_due(match: Match, phase: str, now) -> bool:
     return due_at <= now <= expires_at
 
 
+def calendar_ready() -> bool:
+    calendar_error = calendar_read_error()
+    if not calendar_error:
+        return True
+
+    record_error("matchday", calendar_error, {"dry_run": DRY_RUN})
+    logging.error(calendar_error)
+    print(Fore.RED + f"[MATCHDAY] {calendar_error}")
+    return False
+
+
 def run_auto_once() -> int:
     now = local_now()
     sent = 0
@@ -243,6 +254,9 @@ def run_live_once() -> int:
         else:
             record_status("live", "disabled", status)
         print(Fore.YELLOW + f"[MATCHDAY LIVE] Live-провайдер не готов: {status}")
+        return 0
+
+    if not calendar_ready():
         return 0
 
     sent = 0
@@ -292,6 +306,9 @@ def live_due(force: bool = False) -> bool:
 
 
 def run_cycle(force_live: bool = False) -> int:
+    if not calendar_ready():
+        return 0
+
     sent = run_auto_once()
     if live_due(force=force_live):
         sent += run_live_once()
