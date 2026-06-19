@@ -357,9 +357,15 @@ def main() -> int:
         return 0
 
     print(Fore.YELLOW + f"[MATCHDAY] Matchday broadcaster started; live={live_provider_status()}")
-    while True:
-        run_cycle()
-        time.sleep(MATCHDAY_POLL_SECONDS)
+    try:
+        while True:
+            run_cycle()
+            time.sleep(MATCHDAY_POLL_SECONDS)
+    except KeyboardInterrupt:
+        record_status("matchday", "stopping", "matchday stopped by signal", {"dry_run": DRY_RUN})
+        logging.info("Matchday-воркер остановлен сигналом")
+        print(Fore.YELLOW + "[MATCHDAY] Остановка по сигналу")
+        return 0
 
 
 if __name__ == "__main__":
