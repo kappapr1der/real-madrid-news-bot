@@ -124,6 +124,29 @@ def check_processes():
             print(Fore.RED + f"[MAIN] {name} превысил лимит рестартов")
 
 
+def shutdown_processes(timeout: float = 10.0):
+    if not processes:
+        return
+
+    logging.info("Останавливаем дочерние процессы: %s", ", ".join(sorted(processes.keys())))
+    for name, state in list(processes.items()):
+        proc = state["process"]
+        if proc.poll() is None:
+            logging.info("Остановка %s (PID %s)", name, proc.pid)
+            proc.terminate()
+
+    deadline = time.time() + timeout
+    for name, state in list(processes.items()):
+        proc = state["process"]
+        remaining = max(deadline - time.time(), 0.1)
+        try:
+            proc.wait(timeout=remaining)
+            logging.info("%s остановлен с кодом %s", name, proc.returncode)
+        except subprocess.TimeoutExpired:
+            logging.warning("%s не остановился вовремя, завершаем принудительно", name)
+            proc.kill()
+
+
 def run_heartbeat():
     start_process("heartbeat", [PYTHON, "heartbeat.py"], restart=True)
 
@@ -168,8 +191,14 @@ if __name__ == "__main__":
         + f"{DIGEST_EVENING_TIME} ({DIGEST_TIMEZONE})"
     )
 
-    while True:
-        schedule.run_pending()
-        check_processes()
-        update_manager_status()
-        time.sleep(5)
+    try:
+        while True:
+            schedule.run_pending()
+            check_processes()
+            update_manager_status()
+            time.sleep(5)
+    except KeyboardInterrupt:
+        record_status("main", "stopping", "manager stopped by signal", {"pid": os.getpid()})
+        logging.info("Менеджер остановлен сигналом")
+        print(Fore.YELLOW + "[MAIN] Остановка по сигналу")
+        shutdown_processes()
