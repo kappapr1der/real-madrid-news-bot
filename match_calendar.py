@@ -88,16 +88,27 @@ def match_from_dict(raw: dict) -> Match:
     )
 
 
-def load_matches(path: Path = MATCH_SCHEDULE_FILE) -> list[Match]:
-    if not MATCHDAY_ENABLED:
-        return []
-    if not path.exists():
-        return []
+def read_match_payload(path: Path = MATCH_SCHEDULE_FILE) -> tuple[object | None, str | None]:
+    if not MATCHDAY_ENABLED or not path.exists():
+        return None, None
 
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8")), None
     except (OSError, json.JSONDecodeError) as exc:
-        logging.error("Не удалось прочитать календарь матчей %s: %s", path, exc)
+        return None, f"Не удалось прочитать календарь матчей {path}: {exc}"
+
+
+def calendar_read_error(path: Path = MATCH_SCHEDULE_FILE) -> str | None:
+    _, error = read_match_payload(path)
+    return error
+
+
+def load_matches(path: Path = MATCH_SCHEDULE_FILE) -> list[Match]:
+    payload, error = read_match_payload(path)
+    if error:
+        logging.error(error)
+        return []
+    if payload is None:
         return []
 
     rows = payload.get("matches", []) if isinstance(payload, dict) else payload
