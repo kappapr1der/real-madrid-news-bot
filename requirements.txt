@@ -21,7 +21,3 @@ beautifulsoup4==4.12.3
 
 # HTTP-сервисы
 Flask==3.0.3
-
-# Асинхронщина
-aiogram==3.22.0
-aiohttp==3.12.15
