@@ -212,12 +212,6 @@ def is_fresh(published_at: datetime | None, cutoff: datetime) -> bool:
     return published_at >= cutoff
 
 
-def published_time_label(published_at: datetime | None) -> str:
-    if not published_at:
-        return ""
-    return published_at.astimezone(TZ).strftime("%H:%M")
-
-
 def polish_title(title: str) -> str:
     title = clean_text(translate_text(title))
 
@@ -251,10 +245,8 @@ def format_news_entry(i: int, item: RankedDigestItem) -> str:
     safe_text = escape(polish_title(candidate.title))
     safe_source = escape(candidate.source)
     safe_link = escape(candidate.link, quote=True)
-    time_label = published_time_label(candidate.published_at)
-    meta = f"{safe_source} · {time_label}" if time_label else safe_source
     related = related_sources_line(item)
-    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {meta}{related}"
+    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {safe_source}{related}"
 
 
 def split_message(message: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
