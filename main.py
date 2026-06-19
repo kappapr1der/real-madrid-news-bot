@@ -1,8 +1,10 @@
 import os
+import signal
 import subprocess
 import logging
 import sys
 import time
+import threading
 import schedule
 from collections import deque
 from colorama import init, Fore, Style
@@ -36,6 +38,16 @@ TIME_WINDOW = 600  # 10 минут
 PYTHON = sys.executable or "python"
 MANAGER_STATUS_INTERVAL = 60
 last_manager_status = 0.0
+stop_event = threading.Event()
+
+
+def request_stop(signum=None, frame=None):
+    stop_event.set()
+
+
+def install_signal_handlers():
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, request_stop)
 
 
 def status_metrics(name, command, restart: bool, pid: int | None = None):
@@ -172,33 +184,42 @@ def schedule_digest(label: str, at_time: str):
     return job
 
 
-if __name__ == "__main__":
-    mode = "DRY RUN" if DRY_RUN else "LIVE"
-    print(Fore.YELLOW + Style.BRIGHT + f"[MAIN] Менеджер запущен ({mode})")
-    update_manager_status(force=True)
-
-    run_heartbeat()
-    run_breaking()
-    run_matchday()
-
-    schedule_digest("утреннего", DIGEST_MORNING_TIME)
-    schedule_digest("дневного", DIGEST_DAY_TIME)
-    schedule_digest("вечернего", DIGEST_EVENING_TIME)
-
-    print(
-        Fore.CYAN
-        + f"[MAIN] Дайджесты: {DIGEST_MORNING_TIME}, {DIGEST_DAY_TIME}, "
-        + f"{DIGEST_EVENING_TIME} ({DIGEST_TIMEZONE})"
-    )
-
+def main():
+    install_signal_handlers()
     try:
-        while True:
+        mode = "DRY RUN" if DRY_RUN else "LIVE"
+        print(Fore.YELLOW + Style.BRIGHT + f"[MAIN] Менеджер запущен ({mode})")
+        update_manager_status(force=True)
+
+        run_heartbeat()
+        run_breaking()
+        run_matchday()
+
+        schedule_digest("утреннего", DIGEST_MORNING_TIME)
+        schedule_digest("дневного", DIGEST_DAY_TIME)
+        schedule_digest("вечернего", DIGEST_EVENING_TIME)
+
+        print(
+            Fore.CYAN
+            + f"[MAIN] Дайджесты: {DIGEST_MORNING_TIME}, {DIGEST_DAY_TIME}, "
+            + f"{DIGEST_EVENING_TIME} ({DIGEST_TIMEZONE})"
+        )
+
+        while not stop_event.is_set():
             schedule.run_pending()
             check_processes()
             update_manager_status()
-            time.sleep(5)
+            stop_event.wait(5)
     except KeyboardInterrupt:
-        record_status("main", "stopping", "manager stopped by signal", {"pid": os.getpid()})
-        logging.info("Менеджер остановлен сигналом")
-        print(Fore.YELLOW + "[MAIN] Остановка по сигналу")
+        request_stop(signal.SIGINT, None)
+    finally:
+        if stop_event.is_set():
+            record_status("main", "stopping", "manager stopped by signal", {"pid": os.getpid()})
+            logging.info("Менеджер остановлен сигналом")
+            print(Fore.YELLOW + "[MAIN] Остановка по сигналу")
         shutdown_processes()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
