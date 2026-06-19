@@ -39,15 +39,16 @@ FILTERS = {
     "whitelist": [
         # Реал Мадрид и синонимы
         "real madrid", "rmcf", "реал мадрид", "реал", "мадридисты",
-        "bernabeu", "бернабеу", "сантьяго бернабеу",
+        "bernabeu", "bernábeu", "бернабеу", "сантьяго бернабеу",
         "los blancos", "blancos", "сливочные", "галактикос",
         "la fabrica", "la fábrica", "фабрика", "кастилья", "castilla",
 
         # Игроки, тренеры и клубные фигуры
-        "vinicius", "vinícius", "винисиус", "rodrygo", "родриго",
+        "vinicius", "vinícius", "винисиус", "виниций", "rodrygo", "родриго",
         "mbappe", "mbappé", "мбаппе", "bellingham", "беллингем",
-        "endrick", "эндрик", "gonzalo garcia", "gonzalo garcía", "гонсало гарсия",
-        "mastantuono", "мастантуоно", "arda guler", "arda güler", "арда", "арда гюлер",
+        "endrick", "эндрик", "gonzalo garcia", "gonzalo garcía", "gonzalo", "гонсало гарсия", "гонсало",
+        "nico paz", "нико пас", "mastantuono", "мастантуоно",
+        "arda guler", "arda güler", "арда", "арда гюлер",
         "valverde", "вальверде", "tchouameni", "tchouaméni", "тчуамени", "чуамени",
         "camavinga", "камавинга", "modric", "modrić", "модрич", "kroos", "кроос",
         "ceballos", "себальос", "brahim", "брахим", "диас",
@@ -56,8 +57,11 @@ FILTERS = {
         "trent", "alexander-arnold", "александер-арнольд", "трент",
         "huijsen", "хейсен", "хуисен", "asencio", "асенсио",
         "alaba", "алаба", "mendy", "менди", "fran garcia", "fran garcía", "фран гарсия",
-        "carreras", "каррерас", "ancelotti", "анчеротти", "анчелотти",
-        "xabi alonso", "хаби алонсо", "arbeloa", "арбеоа", "florentino perez", "florentino pérez", "перес",
+        "carreras", "каррерас", "olise", "олисе", "konate", "konaté", "конате",
+        "enzo fernandez", "enzo fernández", "энцо фернандес", "cucurella", "кукурелья",
+        "ancelotti", "анчеротти", "анчелотти", "mourinho", "мourinho", "моруинью", "моуринью",
+        "xabi alonso", "хаби алонсо", "arbeloa", "арбеоа",
+        "florentino perez", "florentino pérez", "florentino", "флорентино", "перес",
     ],
     "greylist": [
         # Турниры и соперники по контексту (требуют связки с Реалом)
@@ -95,6 +99,11 @@ FILTERS = {
         "политика", "выборы", "elections", "war", "война",
         "economy", "business", "экономика", "бизнес",
 
+        # Нерелевантные рубрики на профильных сайтах
+        "quiz", "who am i", "sensational", "cromos", "sticker", "stickers",
+        "путевк", "карточк", "налог", "tributar", "irpf",
+        "playas para perros", "perros", "dogs", "собак",
+
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",
         "спартак", "цска", "зенит", "локомотив", "рубин",
@@ -122,10 +131,21 @@ REAL_SOURCE_MARKERS = [
     "sport - real madrid",
 ]
 
+REAL_SOURCE_TOPIC_MARKERS = [
+    "fichaje", "fichajes", "transfer", "mercado", "market",
+    "salida", "sale", "venta", "sell", "sold", "loan", "cesion", "cesión",
+    "renueva", "renovacion", "renovación", "renewal", "contract", "contrato",
+    "lesion", "lesión", "injury", "diagnosis", "recupera", "return",
+    "cantera", "canterano", "academy", "squad", "plantilla", "lineup",
+    "partido", "match", "liga", "champions", "bernabeu", "bernábeu",
+    "gol", "goal", "defensa", "midfield", "centro del campo",
+]
+
 _WHITELIST = tuple(FILTERS["whitelist"])
 _GREYLIST = tuple(FILTERS["greylist"])
 _BLACKLIST = tuple(FILTERS["blacklist"])
 _REAL_SOURCE_MARKERS = tuple(REAL_SOURCE_MARKERS)
+_REAL_SOURCE_TOPIC_MARKERS = tuple(REAL_SOURCE_TOPIC_MARKERS)
 
 MATCHUP_PATTERNS = [
     re.compile(r"(rm|rma|real madrid|реал)[\s\-:]*v[s]?[.\s\-:]*?(fcb|barcelona|барса|барселона)", re.IGNORECASE),
@@ -158,6 +178,15 @@ def _matches_any(haystack: str, needles: tuple) -> bool:
     return any(n in haystack for n in needles)
 
 
+def _real_source_has_topic_signal(title: str, body: str) -> bool:
+    return (
+        _matches_any(title, _WHITELIST)
+        or (body and _matches_any(body, _WHITELIST))
+        or _matches_any(title, _REAL_SOURCE_TOPIC_MARKERS)
+        or (body and _matches_any(body, _REAL_SOURCE_TOPIC_MARKERS))
+    )
+
+
 def passes_filters(text: str, summary: Optional[str] = None, source: Optional[str] = None) -> bool:
     """
     Основной фильтр релевантности.
@@ -181,8 +210,11 @@ def passes_filters(text: str, summary: Optional[str] = None, source: Optional[st
         return False
 
     if source_name and _matches_any(source_name, _REAL_SOURCE_MARKERS):
-        logger.info(f"[PASSED: REAL SOURCE] {source}: {text[:90]}...")
-        return True
+        if _real_source_has_topic_signal(title, body):
+            logger.info(f"[PASSED: REAL SOURCE] {source}: {text[:90]}...")
+            return True
+        logger.info(f"[FILTERED: REAL SOURCE LOW SIGNAL] {source}: {text[:90]}...")
+        return False
 
     if re.search(r"(el[\s\-]?clas[íi]co|эль\s?класико)", title):
         if "real madrid" in title or "реал" in title:
