@@ -5,6 +5,8 @@ import argparse
 import hashlib
 import json
 import logging
+import signal
+import threading
 import time
 from datetime import timedelta
 from html import escape
@@ -53,6 +55,16 @@ AUTO_PHASES = {
     "fulltime": MATCHDAY_FULLTIME_MINUTES,
 }
 last_live_check = 0.0
+stop_event = threading.Event()
+
+
+def request_stop(signum=None, frame=None):
+    stop_event.set()
+
+
+def install_signal_handlers():
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, request_stop)
 
 
 def load_state() -> set[str]:
@@ -163,6 +175,8 @@ def post_telegram_message(message: str) -> bool:
     }
 
     for attempt in range(1, 4):
+        if stop_event.is_set():
+            return False
         try:
             response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
             if response.status_code == 200:
@@ -172,7 +186,7 @@ def post_telegram_message(message: str) -> bool:
             logging.error("Ошибка при отправке matchday, попытка %s: %s", attempt, exc)
 
         if attempt < 3:
-            time.sleep(attempt * 2)
+            stop_event.wait(attempt * 2)
 
     return False
 
@@ -195,7 +209,11 @@ def run_auto_once() -> int:
     matches = load_matches()
 
     for match in matches:
+        if stop_event.is_set():
+            break
         for phase in AUTO_PHASES:
+            if stop_event.is_set():
+                break
             key = f"auto:{match.id}:{phase}"
             if key in posted_keys or not phase_due(match, phase, now):
                 continue
@@ -230,6 +248,8 @@ def run_live_once() -> int:
     sent = 0
     events = fetch_live_events(load_matches())
     for event in events:
+        if stop_event.is_set():
+            break
         key = f"live:{event.key}"
         if key in posted_keys:
             continue
@@ -328,6 +348,7 @@ def parse_args():
 
 
 def main() -> int:
+    install_signal_handlers()
     args = parse_args()
     record_status("matchday", "starting", f"matchday started; live={live_provider_status()}")
 
@@ -358,14 +379,17 @@ def main() -> int:
 
     print(Fore.YELLOW + f"[MATCHDAY] Matchday broadcaster started; live={live_provider_status()}")
     try:
-        while True:
+        while not stop_event.is_set():
             run_cycle()
-            time.sleep(MATCHDAY_POLL_SECONDS)
+            stop_event.wait(MATCHDAY_POLL_SECONDS)
     except KeyboardInterrupt:
+        request_stop(signal.SIGINT, None)
+
+    if stop_event.is_set():
         record_status("matchday", "stopping", "matchday stopped by signal", {"dry_run": DRY_RUN})
         logging.info("Matchday-воркер остановлен сигналом")
         print(Fore.YELLOW + "[MATCHDAY] Остановка по сигналу")
-        return 0
+    return 0
 
 
 if __name__ == "__main__":
