@@ -231,6 +231,11 @@ if __name__ == "__main__":
     if args.once:
         run_cycle(sources)
     else:
-        while True:
-            run_cycle(sources)
-            time.sleep(BREAKING_INTERVAL_SECONDS)
+        try:
+            while True:
+                run_cycle(sources)
+                time.sleep(BREAKING_INTERVAL_SECONDS)
+        except KeyboardInterrupt:
+            record_status("breaking", "stopping", "monitor stopped by signal", {"dry_run": DRY_RUN})
+            logging.info("Breaking-монитор остановлен сигналом")
+            print(Fore.YELLOW + "[BREAKING] Остановка по сигналу")
