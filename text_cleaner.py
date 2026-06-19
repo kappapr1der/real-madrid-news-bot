@@ -4,6 +4,36 @@
 
 import re
 
+
+def _fix_russian_quotes(text: str) -> str:
+    """Normalize quotes and repair Yandex-style malformed guillemets."""
+    out = []
+    in_quote = False
+    for char in text:
+        if char in {'"', '“', '”'}:
+            out.append("»" if in_quote else "«")
+            in_quote = not in_quote
+        else:
+            out.append(char)
+    text = "".join(out)
+
+    text = re.sub(r"«{2,}", "«", text)
+    text = re.sub(r"»{2,}", "»", text)
+    text = re.sub(r"«\s+", "«", text)
+    text = re.sub(r"\s+»", "»", text)
+
+    # Yandex sometimes uses an opening guillemet where a closing one is needed:
+    # «Реала«на фоне -> «Реала» на фоне
+    text = re.sub(r"«([^«»]{1,80})«(?=([,.;:!?]))", r"«\1»", text)
+    text = re.sub(r"«([^«»]{1,80})«(?=\s|$)", r"«\1»", text)
+    text = re.sub(r"«([^«»]{1,80})«(?=[A-Za-zА-Яа-яЁё0-9])", r"«\1» ", text)
+    text = re.sub(r"»«(?=[A-Za-zА-Яа-яЁё0-9])", "» ", text)
+    text = re.sub(r"([A-Za-zА-Яа-яЁё0-9])«(?=([,.;:!?]|\s|$))", r"\1»", text)
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+
+    return text
+
+
 def clean_text(text: str) -> str:
     # Базовые замены
     replacements = {
@@ -60,15 +90,7 @@ def clean_text(text: str) -> str:
         cut = text[:max_len].rsplit(" ", 1)[0]
         text = cut + "…"
 
-    # Нормализация кавычек — всё переводим в «ёлочки»
-    text = re.sub(r"[\"“”]", "«", text)  # открывающие
-    text = re.sub(r"[\"”]", "»", text)   # закрывающие
-    text = re.sub(r"«{2,}", "«", text)
-    text = re.sub(r"»{2,}", "»", text)
-
-    # Убираем пробелы внутри кавычек (« Реал » -> «Реал»)
-    text = re.sub(r"«\s+", "«", text)
-    text = re.sub(r"\s+»", "»", text)
+    text = _fix_russian_quotes(text)
 
     # Убираем эмодзи (любые юникодные пиктограммы)
     emoji_pattern = re.compile(
