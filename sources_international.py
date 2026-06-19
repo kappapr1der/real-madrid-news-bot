@@ -9,23 +9,20 @@ REAL_MADRID_SOURCES = [
     {"url": "https://www.bernabeudigital.com/rss", "label": "Bernabéu Digital"},
     {"url": "https://www.mundodeportivo.com/feed/rss/futbol/real-madrid", "label": "Mundo Deportivo – Real Madrid"},
     {"url": "https://www.sport.es/es/rss/real-madrid/rss.xml", "label": "Sport – Real Madrid"},
+    {"url": "https://www.caughtoffside.com/tags/real-madrid/feed/", "label": "CaughtOffside – Real Madrid"},
 ]
 
 GENERAL_FOOTBALL_SOURCES = [
     {"url": "https://www.espn.com/espn/rss/soccer/news", "label": "ESPN FC"},
     {"url": "https://www.skysports.com/rss/12040", "label": "Sky Sports Football"},
     {"url": "https://www.football-espana.net/feed", "label": "Football España"},
-    {"url": "https://onefootball.com/en/home/rss", "label": "OneFootball"},
     {"url": "https://feeds.bbci.co.uk/sport/football/rss.xml", "label": "BBC Sport Football"},
     {"url": "https://www.theguardian.com/football/rss", "label": "Guardian Football"},
     {"url": "https://www.independent.co.uk/sport/football/rss", "label": "Independent Football"},
     {"url": "https://rss.nytimes.com/services/xml/rss/nyt/Soccer.xml", "label": "NY Times Soccer"},
-    {"url": "https://www.reutersagency.com/feed/?best-sectors=sports&post_type=best", "label": "Reuters Sports"},
-    {"url": "https://www.goal.com/feeds/en/news", "label": "Goal.com"},
-    {"url": "https://www.si.com/rss/football", "label": "Sports Illustrated"},
     {"url": "https://www.fourfourtwo.com/feeds/all", "label": "FourFourTwo"},
-    {"url": "https://www.eurosport.com/rss.xml", "label": "Eurosport"},
-    {"url": "https://theathletic.com/feed/football/", "label": "The Athletic Football"},
+    {"url": "https://www.90min.com/posts.rss", "label": "90min"},
+    {"url": "https://www.cbssports.com/rss/headlines/soccer/", "label": "CBS Soccer"},
 ]
 
 SOURCES_INTERNATIONAL = REAL_MADRID_SOURCES + GENERAL_FOOTBALL_SOURCES
