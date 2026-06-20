@@ -104,6 +104,12 @@ FILTERS = {
         "путевк", "карточк", "налог", "tributar", "irpf",
         "playas para perros", "perros", "dogs", "собак",
 
+        # Lifestyle/туризм вокруг бывших фигур клуба: это не новость о Реале.
+        "refugio", "pueblo", "habitantes", "senderismo", "paraje natural", "siglo xii",
+
+        # Низкосигнальный блоговый кликбейт.
+        "watching paint dry", "non-update", "non update",
+
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",
         "спартак", "цска", "зенит", "локомотив", "рубин",
