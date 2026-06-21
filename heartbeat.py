@@ -1,9 +1,12 @@
 import json
 import logging
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from runtime_config import HEARTBEAT_PORT, get_log_file
 from status_manager import health_snapshot, record_status
+
+HEARTBEAT_HOST = "127.0.0.1"
+REQUEST_TIMEOUT_SECONDS = 5
 
 LOG_FILE = get_log_file("heartbeat.log")
 logging.basicConfig(
@@ -14,7 +17,23 @@ logging.basicConfig(
 )
 
 
+class ResilientHeartbeatServer(ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def get_request(self):
+        request, client_address = super().get_request()
+        request.settimeout(REQUEST_TIMEOUT_SECONDS)
+        return request, client_address
+
+    def handle_error(self, request, client_address):
+        logging.warning("Ignored broken heartbeat request from %s", client_address[0])
+
+
 class HeartbeatHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        logging.info("%s - %s", self.address_string(), format % args)
+
     def write_health_response(self, include_body: bool = True) -> None:
         payload, status_code = health_snapshot()
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
@@ -40,11 +59,11 @@ class HeartbeatHandler(BaseHTTPRequestHandler):
         self.write_health_response(include_body=False)
 
 
-def run(server_class=HTTPServer, handler_class=HeartbeatHandler, port=HEARTBEAT_PORT):
-    server_address = ("", port)
+def run(server_class=ResilientHeartbeatServer, handler_class=HeartbeatHandler, port=HEARTBEAT_PORT):
+    server_address = (HEARTBEAT_HOST, port)
     httpd = server_class(server_address, handler_class)
-    logging.info(f"Starting Bernabeu Heartbeat on port {port}")
-    record_status("heartbeat", "starting", f"port {port}")
+    logging.info(f"Starting Bernabeu Heartbeat on {HEARTBEAT_HOST}:{port}")
+    record_status("heartbeat", "starting", f"{HEARTBEAT_HOST}:{port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
