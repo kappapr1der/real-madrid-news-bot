@@ -109,15 +109,20 @@ FILTERS = {
         "paseo", "paseo maritimo", "marítimo", "murallas", "fortaleza frente mar",
         "ocio", "playa", "nабережная", "набережная", "прогулок пешком",
 
-        # Общий ЧМ без прямой ценности для ленты «Реала».
+        # Общий ЧМ/сборные без прямой ценности для ленты «Реала».
         "golden boot", "bota de oro", "золотой бутс", "undav", "dumfries", "aruba",
         "tunisia", "тунис", "renard", "ренар", "белой рубашке",
+        "ni lamine yamal ni mbappe", "oyarzabal", "оярсабаль", "record historico jugador espana",
+        "espana arabia", "saudi arabia", "arabia saudi", "celebracion mas especial",
+        "pinguino", "pingüino", "mujer", "sus hijos", "wife", "children",
 
-        # Низкосигнальный блоговый кликбейт и опросы.
+        # Низкосигнальный блоговый кликбейт, опросы и generic-рубрики.
         "watching paint dry", "non-update", "non update", "spark", "transfer trap",
         "crystal-clear statement", "devastating news", "dream transfer target", "put on notice",
-        "smiles & casualties", "smiles casualties", "lectores defensa central", "aprueban forma masiva",
-        "encuesta", "87%", "palo de arda", "palo arda", "un palo",
+        "smiles & casualties", "smiles casualties", "moving on", "general/",
+        "lectores defensa central", "lectores", "aprueban forma masiva", "rechazan vender",
+        "encuesta", "87%", "60%", "se opone", "palo de arda", "palo arda", "un palo",
+        "anti-endrick", "anti endrick", "anti-endrik", "anti endrik",
 
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",
