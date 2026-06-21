@@ -106,9 +106,18 @@ FILTERS = {
 
         # Lifestyle/туризм вокруг бывших фигур клуба: это не новость о Реале.
         "refugio", "pueblo", "habitantes", "senderismo", "paraje natural", "siglo xii",
+        "paseo", "paseo maritimo", "marítimo", "murallas", "fortaleza frente mar",
+        "ocio", "playa", "nабережная", "набережная", "прогулок пешком",
 
-        # Низкосигнальный блоговый кликбейт.
-        "watching paint dry", "non-update", "non update",
+        # Общий ЧМ без прямой ценности для ленты «Реала».
+        "golden boot", "bota de oro", "золотой бутс", "undav", "dumfries", "aruba",
+        "tunisia", "тунис", "renard", "ренар", "белой рубашке",
+
+        # Низкосигнальный блоговый кликбейт и опросы.
+        "watching paint dry", "non-update", "non update", "spark", "transfer trap",
+        "crystal-clear statement", "devastating news", "dream transfer target", "put on notice",
+        "smiles & casualties", "smiles casualties", "lectores defensa central", "aprueban forma masiva",
+        "encuesta", "87%", "palo de arda", "palo arda", "un palo",
 
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",
