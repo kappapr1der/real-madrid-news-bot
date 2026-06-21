@@ -32,8 +32,8 @@ STOPWORDS = {
     "its",
     "latest",
     "league",
-    "madrid",
     "match",
+    "madrid",
     "new",
     "news",
     "of",
@@ -90,10 +90,16 @@ ENTITY_TOKENS = {
     "arda",
     "arnold",
     "bellingham",
+    "bernardo",
     "brahim",
+    "bouaddi",
     "carvajal",
+    "ceballos",
     "courtois",
+    "cucurella",
     "endrick",
+    "enzo",
+    "fernandez",
     "florentino",
     "fran",
     "guler",
@@ -103,9 +109,13 @@ ENTITY_TOKENS = {
     "mbappe",
     "militao",
     "modric",
+    "mourinho",
+    "nico",
+    "olise",
     "perez",
     "rodrygo",
     "rudiger",
+    "schlotterbeck",
     "trent",
     "valverde",
     "vini",
@@ -114,19 +124,29 @@ ENTITY_TOKENS = {
     "алонсо",
     "арда",
     "беллингем",
+    "брахим",
+    "буадди",
     "вальверде",
     "винисиус",
     "гюлер",
+    "камавинга",
     "карвахаль",
+    "кукурелья",
     "кортуа",
     "мбаппе",
     "модрич",
+    "моуринью",
+    "олисе",
     "перес",
     "родриго",
     "рудигер",
+    "себальос",
     "трент",
+    "флорентино",
     "хаби",
+    "шлоттербек",
     "эндрик",
+    "энцо",
 }
 
 TOPIC_RULES = {
@@ -152,7 +172,7 @@ TOPIC_RULES = {
     },
     "coach": {
         "weight": 12,
-        "terms": ("coach", "manager", "ancelotti", "xabi", "alonso", "тренер", "анчилотти", "хаби", "алонсо"),
+        "terms": ("coach", "manager", "ancelotti", "xabi", "alonso", "mourinho", "тренер", "анчилотти", "хаби", "алонсо", "моуринью"),
     },
 }
 
@@ -161,11 +181,21 @@ SOURCE_WEIGHTS = (
     ("real madrid official", 12),
     ("managing madrid", 6),
     ("madrid universal", 6),
-    ("the real champs", 5),
     ("marca", 4),
     ("as", 4),
     ("relevo", 4),
     ("defensa central", 3),
+    ("the real champs", 1),
+)
+
+QUALITY_PENALTIES = (
+    ("stunning", 8),
+    ("crystal clear", 8),
+    ("devastating", 8),
+    ("dream transfer", 8),
+    ("transfer trap", 12),
+    ("put on notice", 10),
+    ("spark", 10),
 )
 
 
@@ -241,6 +271,17 @@ def source_weight(source: str) -> int:
     return 0
 
 
+def quality_penalty(title: str) -> tuple[int, list[str]]:
+    normalized = normalize_text(title)
+    penalty = 0
+    reasons = []
+    for marker, value in QUALITY_PENALTIES:
+        if marker in normalized:
+            penalty += value
+            reasons.append("clickbait")
+    return penalty, reasons
+
+
 def recency_weight(published_at: datetime | None, now: datetime) -> int:
     if not published_at:
         return 0
@@ -286,12 +327,17 @@ def candidate_profile(candidate: Any, now: datetime) -> CandidateProfile:
         score += fresh_bonus
         reasons.append("fresh")
 
+    penalty, penalty_reasons = quality_penalty(title)
+    if penalty:
+        score -= penalty
+        reasons.extend(penalty_reasons)
+
     return CandidateProfile(
         tokens=tokens,
         entities=entities,
         topics=topics,
         score=score,
-        reason=", ".join(reasons) or "freshness",
+        reason=", ".join(dict.fromkeys(reasons)) or "freshness",
     )
 
 
