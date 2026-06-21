@@ -57,6 +57,7 @@ logging.basicConfig(
 )
 
 SENT_FILE = get_state_file("sent_links.txt")
+SENT_BREAKING_FILE = get_state_file("sent_breaking.txt")
 TZ = ZoneInfo(DIGEST_TIMEZONE)
 
 
@@ -68,10 +69,10 @@ class DigestCandidate:
     published_at: datetime | None
 
 
-def load_sent_links():
-    if not SENT_FILE.exists():
+def load_sent_links(path=SENT_FILE):
+    if not path.exists():
         return set()
-    with SENT_FILE.open("r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
 
@@ -81,7 +82,7 @@ def save_sent_links(links):
             f.write(link + "\n")
 
 
-sent_digest = load_sent_links()
+sent_digest = load_sent_links(SENT_FILE)
 
 TEMPLATES = {
     "утреннего": [
@@ -275,8 +276,12 @@ def split_message(message: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str
     return chunks
 
 
+def already_posted_links() -> set[str]:
+    return set(sent_digest) | load_sent_links(SENT_BREAKING_FILE)
+
+
 def collect_candidates(sources, cutoff: datetime):
-    seen_links = set(sent_digest)
+    seen_links = already_posted_links()
     candidates: list[DigestCandidate] = []
 
     for src in sources:
