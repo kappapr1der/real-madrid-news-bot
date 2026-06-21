@@ -71,15 +71,21 @@ def save_sent_links(links):
 
 sent_breaking = load_sent_links()
 
-BREAKING_KEYWORDS = [
+STRONG_BREAKING_KEYWORDS = [
     "breaking",
-    "urgent",
     "official",
     "confirmed",
-    "экстренно",
-    "срочно",
+    "oficial",
+    "confirmado",
+    "comunicado oficial",
     "официально",
     "подтверждено",
+]
+
+PREFIX_BREAKING_KEYWORDS = [
+    "urgent",
+    "экстренно",
+    "срочно",
 ]
 
 TEMPLATES = [
@@ -108,12 +114,19 @@ def source_label(source: Any) -> str:
 
 
 def is_breaking(text: str) -> bool:
-    lower_text = text.lower()
-    for word in BREAKING_KEYWORDS:
+    lower_text = text.lower().strip()
+    for word in STRONG_BREAKING_KEYWORDS:
         if word in lower_text:
             print(Fore.RED + Style.BRIGHT + f"[BREAKING DETECTED] {word} -> {text}")
             logging.info(f"Обнаружено ключевое слово: {word} -> {text}")
             return True
+
+    for word in PREFIX_BREAKING_KEYWORDS:
+        if lower_text == word or lower_text.startswith(f"{word} ") or lower_text.startswith(f"{word}:"):
+            print(Fore.RED + Style.BRIGHT + f"[BREAKING DETECTED] {word} -> {text}")
+            logging.info(f"Обнаружено ключевое слово: {word} -> {text}")
+            return True
+
     return False
 
 
