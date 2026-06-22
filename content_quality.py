@@ -198,6 +198,20 @@ QUALITY_PENALTIES = (
     ("spark", 10),
 )
 
+TOPIC_PRIORITY = ("official", "injury", "lineup", "matchday", "transfer", "coach")
+TOPIC_DIVERSITY_LIMITS = {
+    "transfer": 3,
+    "coach": 2,
+    "matchday": 3,
+    "lineup": 2,
+    "injury": 3,
+    "official": 4,
+    "general": 3,
+}
+SOURCE_DIVERSITY_LIMIT = 2
+LOW_SIGNAL_SOURCE_LIMIT = 1
+LOW_SIGNAL_SOURCE_MARKERS = ("the real champs", "defensa central")
+
 
 @dataclass
 class RankedDigestItem:
@@ -206,6 +220,7 @@ class RankedDigestItem:
     related_sources: list[str]
     score: int
     reason: str
+    category: str = "general"
 
 
 @dataclass
@@ -215,6 +230,7 @@ class CandidateProfile:
     topics: set[str]
     score: int
     reason: str
+    category: str = "general"
 
 
 @dataclass
@@ -269,6 +285,28 @@ def source_weight(source: str) -> int:
         if marker in normalized:
             return weight
     return 0
+
+
+def primary_topic(topics: set[str]) -> str:
+    for topic in TOPIC_PRIORITY:
+        if topic in topics:
+            return topic
+    return "general"
+
+
+def source_bucket(source: str) -> str:
+    normalized = normalize_text(source)
+    for marker, _weight in SOURCE_WEIGHTS:
+        if marker in normalized:
+            return marker
+    return normalized or "unknown"
+
+
+def source_diversity_limit(source: str) -> int:
+    normalized = normalize_text(source)
+    if any(marker in normalized for marker in LOW_SIGNAL_SOURCE_MARKERS):
+        return LOW_SIGNAL_SOURCE_LIMIT
+    return SOURCE_DIVERSITY_LIMIT
 
 
 def quality_penalty(title: str) -> tuple[int, list[str]]:
@@ -401,6 +439,37 @@ def grouped_links(group: CandidateGroup) -> set[str]:
     return {link_attr(candidate) for candidate in group.members if link_attr(candidate)}
 
 
+def apply_diversity_limits(ranked: list[RankedDigestItem], limit: int) -> list[RankedDigestItem]:
+    selected: list[RankedDigestItem] = []
+    deferred: list[RankedDigestItem] = []
+    source_counts: dict[str, int] = {}
+    topic_counts: dict[str, int] = {}
+
+    for item in ranked:
+        source = source_bucket(source_attr(item.candidate))
+        topic = item.category or "general"
+        source_limit = source_diversity_limit(source)
+        topic_limit = TOPIC_DIVERSITY_LIMITS.get(topic, TOPIC_DIVERSITY_LIMITS["general"])
+
+        if source_counts.get(source, 0) < source_limit and topic_counts.get(topic, 0) < topic_limit:
+            selected.append(item)
+            source_counts[source] = source_counts.get(source, 0) + 1
+            topic_counts[topic] = topic_counts.get(topic, 0) + 1
+        else:
+            deferred.append(item)
+
+        if len(selected) >= limit:
+            return selected[:limit]
+
+    # If the news day is thin, fill the remaining slots rather than publishing an anemic digest.
+    for item in deferred:
+        if len(selected) >= limit:
+            break
+        selected.append(item)
+
+    return selected[:limit]
+
+
 def rank_digest_candidates(
     candidates: list[Any],
     limit: int,
@@ -423,6 +492,7 @@ def rank_digest_candidates(
                     related_sources=[],
                     score=profile.score,
                     reason=profile.reason,
+                    category=primary_topic(profile.topics),
                 )
             )
     else:
@@ -465,6 +535,7 @@ def rank_digest_candidates(
                     related_sources=related_sources,
                     score=group.profile.score + source_bonus,
                     reason=group.profile.reason,
+                    category=primary_topic(group.profile.topics),
                 )
             )
 
@@ -482,4 +553,4 @@ def rank_digest_candidates(
             reverse=True,
         )
 
-    return ranked[:limit]
+    return apply_diversity_limits(ranked, limit)
