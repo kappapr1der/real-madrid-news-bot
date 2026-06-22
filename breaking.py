@@ -6,6 +6,7 @@ import signal
 import time
 import logging
 import random
+import re
 import threading
 from html import escape
 from typing import Any
@@ -13,6 +14,7 @@ from typing import Any
 import requests
 from colorama import init, Fore, Style
 
+from article_media import fetch_article_image
 from text_cleaner import clean_text
 from filters import passes_filters
 from feed_utils import parse_feed_url
@@ -88,6 +90,28 @@ PREFIX_BREAKING_KEYWORDS = [
     "срочно",
 ]
 
+BREAKING_REAL_CONTEXT_TERMS = (
+    "real madrid", "реал мадрид", "реал", "madrid", "bernabeu", "bernábeu",
+    "florentino", "флорентино", "mbappe", "мбаппе", "vinicius", "винисиус",
+    "bellingham", "беллингем", "valverde", "вальверде", "courtois", "куртуа",
+    "rodrygo", "родриго", "arda", "гюлер", "trent", "трент", "mourinho", "моуринью",
+    "xabi", "алонсо", "olise", "олисе", "enzo", "энцо",
+)
+BREAKING_FOOTBALL_TERMS = (
+    "sign", "signed", "transfer", "fichaje", "contract", "contrato", "renewal",
+    "injury", "lesion", "lesión", "squad", "lineup", "convocatoria", "match",
+    "partido", "goal", "gol", "трансфер", "контракт", "травм", "состав",
+    "матч", "гол", "переговор", "аренда", "уход", "подпис",
+)
+REAL_SOURCE_TERMS = (
+    "real madrid", "madrid universal", "managing madrid", "marca", "defensa central",
+    "bernabeu", "bernabéu", "sport - real madrid", "mundo deportivo - real madrid",
+)
+BREAKING_DENY_TERMS = (
+    "basketball", "baloncesto", "liga endesa", "euroleague",
+    "trey lyles", "scariolo", "баскетбол", "евролига", "трей лайлс", "скариоло",
+)
+
 TEMPLATES = [
     "<b>Сливочная молния</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
     "<b>Экстра для мадридистов</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
@@ -113,8 +137,30 @@ def source_label(source: Any) -> str:
     return "Неизвестный источник"
 
 
-def is_breaking(text: str) -> bool:
-    lower_text = text.lower().strip()
+def _breaking_normalize(value: str) -> str:
+    return re.sub(r"\s+", " ", value.casefold()).strip()
+
+
+def has_breaking_context(text: str, source: str = "", summary: str = "") -> bool:
+    combined = _breaking_normalize(f"{text} {summary}")
+    source_name = _breaking_normalize(source)
+
+    if any(term in combined for term in BREAKING_DENY_TERMS):
+        return False
+
+    has_real_signal = any(term in combined for term in BREAKING_REAL_CONTEXT_TERMS)
+    source_is_real = any(term in source_name for term in REAL_SOURCE_TERMS)
+    has_football_signal = any(term in combined for term in BREAKING_FOOTBALL_TERMS)
+
+    return has_real_signal and (has_football_signal or source_is_real)
+
+
+def is_breaking(text: str, source: str = "", summary: str = "") -> bool:
+    lower_text = _breaking_normalize(text)
+    if not has_breaking_context(text, source=source, summary=summary):
+        logging.info("[BREAKING SKIPPED: LOW CONTEXT] %s: %s", source, text)
+        return False
+
     for word in STRONG_BREAKING_KEYWORDS:
         if word in lower_text:
             print(Fore.RED + Style.BRIGHT + f"[BREAKING DETECTED] {word} -> {text}")
@@ -154,6 +200,33 @@ def post_telegram_message(message: str) -> bool:
     return False
 
 
+def post_telegram_photo(caption: str, photo_url: str) -> bool:
+    if not photo_url or len(caption) > 1024:
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    payload = {
+        "chat_id": TARGET_CHAT_ID,
+        "photo": photo_url,
+        "caption": caption,
+        "parse_mode": "HTML",
+    }
+
+    for attempt in range(1, 3):
+        try:
+            response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
+            if response.status_code == 200:
+                return True
+            logging.warning("Фото для breaking не отправилось: %s %s", response.status_code, response.text)
+        except requests.RequestException as exc:
+            logging.warning("Ошибка при отправке фото breaking, попытка %s: %s", attempt, exc)
+
+        if attempt < 2:
+            time.sleep(attempt * 2)
+
+    return False
+
+
 def send_breaking(news: str, link: str, source: str = "Неизвестный источник"):
     template = random.choice(TEMPLATES)
     message = template.format(
@@ -174,7 +247,17 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         print(Fore.RED + "[BREAKING] TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
 
-    if post_telegram_message(message):
+    image_url = fetch_article_image(link)
+    sent = False
+    if image_url:
+        sent = post_telegram_photo(message, image_url)
+        if sent:
+            logging.info("Опубликовано breaking с фото: %s | Источник: %s", news, source)
+
+    if not sent:
+        sent = post_telegram_message(message)
+
+    if sent:
         logging.info(f"Опубликовано breaking: {news} | Источник: {source}")
         print(Fore.RED + Style.BRIGHT + f"[SENT BREAKING] {news}")
         sent_breaking.add(link)
@@ -214,7 +297,7 @@ def fetch_breaking(sources):
             if not title or not passes_filters(title, summary=summary, source=label):
                 continue
 
-            if is_breaking(title):
+            if is_breaking(title, source=label, summary=summary):
                 news = translate_text(title)
                 clean_news = clean_text(news)
                 send_breaking(clean_news, link, source=label)
