@@ -91,6 +91,10 @@ FILTERS = {
         "бокс", "юфс", "мма", "мотогп", "шоссейные гонки",
         "конный спорт", "дартс", "снукер",
 
+        # Баскетбол «Реала» и другие не-футбольные секции клуба.
+        "basketball", "basket", "baloncesto", "liga endesa", "euroleague",
+        "баскетбол", "евролига", "trey lyles", "трей лайлс", "scariolo", "скариоло",
+
         # Хоккей и «Кубок Стэнли»
         "stanley cup", "кубок стэнли", "хоккей", "кхл", "шайба",
 
@@ -114,7 +118,13 @@ FILTERS = {
         "tunisia", "тунис", "renard", "ренар", "белой рубашке",
         "ni lamine yamal ni mbappe", "oyarzabal", "оярсабаль", "record historico jugador espana",
         "espana arabia", "saudi arabia", "arabia saudi", "celebracion mas especial",
+        "maldini sobre aspiraciones", "aspiraciones espana", "aspiraciones españa",
+        "maldini sobre las aspiraciones", "aspiraciones de espana", "aspiraciones de españa",
+        "gran favorita", "ultimo partido no primero", "último partido no primero",
+        "dembele", "dembélé", "дембеле", "в адрес дембеле",
         "pinguino", "pingüino", "mujer", "sus hijos", "wife", "children",
+        "pareja de marc cucurella", "pareja marc cucurella", "desvela gesto",
+        "marc cucurella desvela", "партнер марка кукуреллы",
 
         # Низкосигнальный блоговый кликбейт, опросы и generic-рубрики.
         "watching paint dry", "non-update", "non update", "spark", "transfer trap",
