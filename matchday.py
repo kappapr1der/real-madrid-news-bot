@@ -15,7 +15,7 @@ import requests
 from colorama import Fore, Style, init
 
 from live_providers import fetch_live_events, live_provider_status
-from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, upcoming_matches
+from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, match_calendar_status, upcoming_matches
 from post_utils import append_hashtags
 from status_manager import record_error, record_status
 from runtime_config import (
@@ -204,19 +204,23 @@ def phase_due(match: Match, phase: str, now) -> bool:
 
 
 def calendar_ready() -> bool:
-    calendar_error = calendar_read_error()
-    if not calendar_error:
+    state, message, metrics = match_calendar_status()
+    metrics["dry_run"] = DRY_RUN
+    record_state = "error" if state == "error" else state
+    record_status("calendar", record_state, message, metrics)
+    if state != "error":
         return True
 
-    record_error("matchday", calendar_error, {"dry_run": DRY_RUN})
-    logging.error(calendar_error)
-    print(Fore.RED + f"[MATCHDAY] {calendar_error}")
+    record_error("matchday", message, metrics)
+    logging.error(message)
+    print(Fore.RED + f"[MATCHDAY] {message}")
     return False
 
 
 def run_auto_once() -> int:
     now = local_now()
     sent = 0
+    calendar_state, calendar_message, calendar_metrics = match_calendar_status()
     matches = load_matches()
 
     for match in matches:
@@ -235,11 +239,16 @@ def run_auto_once() -> int:
                 sent += 1
                 logging.info("Опубликован matchday phase=%s match=%s", phase, match.id)
 
+    status_state = "waiting_calendar" if not matches and calendar_state in {"pending", "missing", "empty"} else "ok"
+    metrics = {"matches": len(matches), "sent": sent, "dry_run": DRY_RUN, "calendar_state": calendar_state}
+    if calendar_message:
+        metrics["calendar_message"] = calendar_message
+    metrics.update({f"calendar_{key}": value for key, value in calendar_metrics.items() if key not in metrics})
     record_status(
         "matchday",
-        "ok",
-        "auto check complete",
-        {"matches": len(matches), "sent": sent, "dry_run": DRY_RUN},
+        status_state,
+        "auto check complete" if matches else calendar_message,
+        metrics,
     )
     print(Fore.CYAN + f"[MATCHDAY] Проверка автопостов завершена, опубликовано: {sent}")
     return sent
@@ -340,10 +349,18 @@ def post_manual_event(match_id: str, minute: str, text: str, kind: str, score: s
     return 1
 
 
+def print_calendar_status() -> None:
+    state, message, metrics = match_calendar_status()
+    print(f"calendar_state={state}")
+    print(message)
+    for key, value in metrics.items():
+        print(f"{key}={value}")
+
+
 def print_matches() -> None:
     matches = upcoming_matches(days=30)
     if not matches:
-        print("Ближайших матчей в календаре нет. Проверь config/matches.json")
+        print_calendar_status()
         return
 
     for match in matches:
@@ -356,6 +373,7 @@ def parse_args():
     parser.add_argument("--once", action="store_true", help="run one matchday check and exit")
     parser.add_argument("--live-once", action="store_true", help="poll configured live provider once and exit")
     parser.add_argument("--list", action="store_true", help="print upcoming matches from config/matches.json")
+    parser.add_argument("--calendar-status", action="store_true", help="print calendar publication/load status")
     parser.add_argument("--match-id", help="match id for a manual/future live event")
     parser.add_argument("--event-text", help="text for a manual/future live event")
     parser.add_argument("--minute", default="", help="match minute for the event, for example 23")
@@ -368,6 +386,10 @@ def main() -> int:
     install_signal_handlers()
     args = parse_args()
     record_status("matchday", "starting", f"matchday started; live={live_provider_status()}")
+
+    if args.calendar_status:
+        print_calendar_status()
+        return 0
 
     if args.list:
         print_matches()
