@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from runtime_config import (
@@ -103,6 +104,48 @@ def calendar_read_error(path: Path = MATCH_SCHEDULE_FILE) -> str | None:
     return error
 
 
+def match_rows(payload: object | None) -> list[Any]:
+    if isinstance(payload, dict):
+        rows = payload.get("matches", [])
+    else:
+        rows = payload or []
+    return rows if isinstance(rows, list) else []
+
+
+def match_calendar_status(path: Path = MATCH_SCHEDULE_FILE) -> tuple[str, str, dict[str, Any]]:
+    if not MATCHDAY_ENABLED:
+        return "disabled", "matchday disabled", {"path": str(path)}
+    if not path.exists():
+        return "missing", f"календарь матчей не найден: {path}", {"path": str(path)}
+
+    payload, error = read_match_payload(path)
+    if error:
+        return "error", error, {"path": str(path)}
+
+    rows = match_rows(payload)
+    metadata = payload if isinstance(payload, dict) else {}
+    declared_status = str(metadata.get("status") or "").strip().lower()
+    expected_publication = str(metadata.get("expected_publication") or "").strip()
+    checked_at = str(metadata.get("checked_at") or "").strip()
+
+    metrics: dict[str, Any] = {
+        "path": str(path),
+        "matches": len(rows),
+        "status": declared_status or ("ready" if rows else "empty"),
+    }
+    if expected_publication:
+        metrics["expected_publication"] = expected_publication
+    if checked_at:
+        metrics["checked_at"] = checked_at
+
+    if declared_status in {"pending", "awaiting", "not_published"} and not rows:
+        when = f", ожидается {expected_publication}" if expected_publication else ""
+        return "pending", f"официальный календарь ещё не опубликован{when}", metrics
+    if rows:
+        return "ready", f"загружено матчей: {len(rows)}", metrics
+    return "empty", "календарь валиден, но матчей пока нет", metrics
+
+
 def load_matches(path: Path = MATCH_SCHEDULE_FILE) -> list[Match]:
     payload, error = read_match_payload(path)
     if error:
@@ -111,7 +154,7 @@ def load_matches(path: Path = MATCH_SCHEDULE_FILE) -> list[Match]:
     if payload is None:
         return []
 
-    rows = payload.get("matches", []) if isinstance(payload, dict) else payload
+    rows = match_rows(payload)
     matches: list[Match] = []
     for raw in rows:
         if not isinstance(raw, dict) or not raw.get("kickoff"):
