@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import calendar
+import json
 import logging
 import random
 import time
@@ -19,7 +20,7 @@ from filters import passes_filters
 from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
 from post_utils import append_hashtags
-from content_quality import RankedDigestItem, rank_digest_candidates
+from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from status_manager import record_error, record_status
 from translator import translate_text
 from text_cleaner import clean_text
@@ -58,6 +59,8 @@ logging.basicConfig(
 
 SENT_FILE = get_state_file("sent_links.txt")
 SENT_BREAKING_FILE = get_state_file("sent_breaking.txt")
+QUARANTINE_FILE = get_state_file("digest_quarantine.json")
+QUARANTINE_LIMIT = 200
 TZ = ZoneInfo(DIGEST_TIMEZONE)
 
 
@@ -329,6 +332,55 @@ def normalized_similarity_threshold() -> float:
     return min(max(DIGEST_DEDUPE_SIMILARITY, 0), 100) / 100
 
 
+def load_quarantine() -> list[dict]:
+    if not QUARANTINE_FILE.exists():
+        return []
+    try:
+        data = json.loads(QUARANTINE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    return data if isinstance(data, list) else []
+
+
+def save_quarantine(rows: list[dict]) -> None:
+    QUARANTINE_FILE.write_text(
+        json.dumps(rows[-QUARANTINE_LIMIT:], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[RankedDigestItem], label: str) -> int:
+    selected_links = {item.candidate.link for item in selected}
+    now = datetime.now(timezone.utc)
+    rows = load_quarantine()
+    existing = {row.get("link") for row in rows}
+    added = 0
+
+    for candidate in candidates:
+        if candidate.link in selected_links or candidate.link in existing:
+            continue
+        profile = candidate_profile(candidate, now)
+        if profile.score >= 78 and "clickbait" not in profile.reason:
+            continue
+        rows.append(
+            {
+                "captured_at": now.isoformat(),
+                "label": label,
+                "title": candidate.title,
+                "link": candidate.link,
+                "source": candidate.source,
+                "score": profile.score,
+                "reason": profile.reason,
+            }
+        )
+        existing.add(candidate.link)
+        added += 1
+
+    if added:
+        save_quarantine(rows)
+    return added
+
+
 def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
     lookback_hours = lookback_hours_for_label(label)
     cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
@@ -342,6 +394,7 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         priority_sort_enabled=DIGEST_PRIORITY_SORT_ENABLED,
         similarity_threshold=normalized_similarity_threshold(),
     )
+    quarantined = update_digest_quarantine(candidates, selected, label)
     news_items = [format_news_entry(i, item) for i, item in enumerate(selected, start=1)]
     new_links = set()
     grouped_links = 0
@@ -367,6 +420,7 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         "grouped_links": grouped_links,
         "dedupe": DIGEST_DEDUPE_ENABLED,
         "priority_sort": DIGEST_PRIORITY_SORT_ENABLED,
+        "quarantined": quarantined,
     }
     return news_items, new_links, metrics
 
