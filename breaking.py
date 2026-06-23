@@ -18,6 +18,7 @@ from article_media import fetch_article_image
 from text_cleaner import clean_text
 from filters import passes_filters
 from feed_utils import parse_feed_url
+from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
 from post_utils import append_hashtags
 from status_manager import record_error, record_status
 from translator import translate_text
@@ -46,6 +47,7 @@ logging.basicConfig(
 )
 
 SENT_FILE = get_state_file("sent_breaking.txt")
+SENT_FINGERPRINT_FILE = get_state_file("sent_breaking_fingerprints.txt")
 stop_event = threading.Event()
 
 
@@ -72,6 +74,7 @@ def save_sent_links(links):
 
 
 sent_breaking = load_sent_links()
+sent_breaking_fingerprints = load_news_keys(SENT_FINGERPRINT_FILE)
 
 STRONG_BREAKING_KEYWORDS = [
     "breaking",
@@ -227,7 +230,7 @@ def post_telegram_photo(caption: str, photo_url: str) -> bool:
     return False
 
 
-def send_breaking(news: str, link: str, source: str = "Неизвестный источник"):
+def send_breaking(news: str, link: str, source: str = "Неизвестный источник", fingerprint: str = ""):
     template = random.choice(TEMPLATES)
     message = template.format(
         news=escape(news),
@@ -262,6 +265,9 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         print(Fore.RED + Style.BRIGHT + f"[SENT BREAKING] {news}")
         sent_breaking.add(link)
         save_sent_links(sent_breaking)
+        if fingerprint:
+            sent_breaking_fingerprints.add(fingerprint)
+            save_news_keys(SENT_FINGERPRINT_FILE, sent_breaking_fingerprints)
     else:
         record_error("breaking", "Telegram send failed for breaking post", {"source": source})
 
@@ -298,9 +304,13 @@ def fetch_breaking(sources):
                 continue
 
             if is_breaking(title, source=label, summary=summary):
+                fingerprint = semantic_news_key(title, summary)
+                if fingerprint in sent_breaking_fingerprints:
+                    logging.info("[BREAKING SKIPPED: SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
+                    continue
                 news = translate_text(title)
                 clean_news = clean_text(news)
-                send_breaking(clean_news, link, source=label)
+                send_breaking(clean_news, link, source=label, fingerprint=fingerprint)
                 found += 1
         except Exception as e:
             errors += 1
