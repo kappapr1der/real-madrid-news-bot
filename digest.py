@@ -19,6 +19,7 @@ from sources_ru import SOURCES_RU
 from filters import passes_filters
 from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
+from news_fingerprint import load_news_keys, semantic_news_key
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from status_manager import record_error, record_status
@@ -59,6 +60,7 @@ logging.basicConfig(
 
 SENT_FILE = get_state_file("sent_links.txt")
 SENT_BREAKING_FILE = get_state_file("sent_breaking.txt")
+SENT_BREAKING_FINGERPRINT_FILE = get_state_file("sent_breaking_fingerprints.txt")
 QUARANTINE_FILE = get_state_file("digest_quarantine.json")
 QUARANTINE_LIMIT = 200
 TZ = ZoneInfo(DIGEST_TIMEZONE)
@@ -285,6 +287,7 @@ def already_posted_links() -> set[str]:
 
 def collect_candidates(sources, cutoff: datetime):
     seen_links = already_posted_links()
+    seen_breaking_fingerprints = load_news_keys(SENT_BREAKING_FINGERPRINT_FILE)
     candidates: list[DigestCandidate] = []
 
     for src in sources:
@@ -311,6 +314,11 @@ def collect_candidates(sources, cutoff: datetime):
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "")
                 if not title or not passes_filters(title, summary=summary, source=label):
+                    continue
+
+                fingerprint = semantic_news_key(title, summary)
+                if fingerprint in seen_breaking_fingerprints:
+                    logging.info("[DIGEST SKIPPED: BREAKING SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
                     continue
 
                 seen_links.add(link)
