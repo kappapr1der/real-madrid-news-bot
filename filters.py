@@ -95,6 +95,11 @@ FILTERS = {
         "basketball", "basket", "baloncesto", "liga endesa", "euroleague",
         "баскетбол", "евролига", "trey lyles", "трей лайлс", "scariolo", "скариоло",
 
+        # Женская команда и академические/секционные новости пока не для основной ленты.
+        "futbol femenino", "fútbol femenino", "real madrid femenino", "femenino", "femenina",
+        "felicia schroder", "felicia schröder", "фелисия шредер", "фелиция шредер",
+        "женский реал", "женская команда", "женского реала",
+
         # Хоккей и «Кубок Стэнли»
         "stanley cup", "кубок стэнли", "хоккей", "кхл", "шайба",
 
