@@ -131,6 +131,23 @@ FILTERS = {
         "pareja de marc cucurella", "pareja marc cucurella", "desvela gesto",
         "marc cucurella desvela", "партнер марка кукуреллы",
 
+        # Общие live/open-thread/recap посты по ЧМ и сборным без клубного угла.
+        "world cup open thread", "open thread", "открытая трансляция чемпионата мира",
+        "открытая трансляция чемпионата мира по футболу", "чемпионата мира по футболу |",
+        "resumen mundial", "world cup recap", "итоги чемпионата мира",
+        "england held by ghana", "held by ghana", "ghana", "гана", "jordan ayew", "айю",
+        "france iraq", "франция", "ирак", "storms cause havoc", "storm", "шторм",
+
+        # Ставки/букмекерка и около-Mbappe/MLS инфошум не подходят для канала.
+        "best bets", "betting", "free 2026 world cup", "anytime goalscorer",
+        "goalscorer picks", "odds", "букмекер", "букмекеров", "ставки", "ставках",
+        "коэффициент", "коэффициенты", "mls move", "перехода в mls", "дэвидом бекхэмом",
+        "david beckham", "beckham",
+
+        # Низкосигнальные цитаты/радио-рубрики вокруг игроков соперников.
+        "marc cucurella radio", "radio marca vinicius", "trabajo sucio", "dirty work",
+        "грязную работу", "кукурелла на радио",
+
         # Низкосигнальный блоговый кликбейт, опросы и generic-рубрики.
         "watching paint dry", "non-update", "non update", "spark", "transfer trap",
         "crystal-clear statement", "devastating news", "dream transfer target", "put on notice",
