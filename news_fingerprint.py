@@ -72,7 +72,14 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if player and contains_any(text, ("no fichara", "no firmara", "no sign", "not sign", "не подпиш", "не перейдет")):
         return f"transfer:no-sign:{player}"
 
-    if player and contains_any(text, ("fichaje", "transfer", "signing", "подпис", "трансфер", "переход")):
+    if player and contains_any(
+        text,
+        (
+            "fichaje", "transfer", "signing", "подпис", "трансфер", "переход",
+            "contactado", "contactos", "contact", "contacts", "контакт", "связался",
+            "chelsea", "челси", "enreda", "enredo", "interes", "interés", "интерес",
+        ),
+    ):
         return f"transfer:rumour:{player}"
 
     if contains_any(text, ("femenino", "femenina", "женск", "фелисия шредер", "фелиция шредер")):
