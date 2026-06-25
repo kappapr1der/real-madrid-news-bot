@@ -137,6 +137,18 @@ FILTERS = {
         "resumen mundial", "world cup recap", "итоги чемпионата мира",
         "england held by ghana", "held by ghana", "ghana", "гана", "jordan ayew", "айю",
         "france iraq", "франция", "ирак", "storms cause havoc", "storm", "шторм",
+        "brazil scotland", "scotland", "шотланд", "knockout", "главное на чм-2026 за 5 минут",
+        "главное на чм 2026 за 5 минут", "неймар и очоа", "бекхэм с бокалом",
+        "шикарный винисиус", "юар", "world cup 2026", "сборную бразилии на чемпионате мира",
+        "винисиус возглавляет сборную бразилии", "leading brazil in world cup",
+        "vinicius is leading brazil", "vinicius junior brazil",
+
+        # Подкасты и пересказы выпусков редко годятся для короткого новостного дайджеста.
+        "podcast", "подкаст", "managing madrid podcast", "ведущий мадридского подкаста",
+
+        # Личная драма вокруг соперников/бывших конфликтов без полезной клубной новости.
+        "alex baena", "баэна", "fijacion conmigo", "fijación conmigo",
+        "rencor", "обижаться", "простил", "привязан ко мне",
 
         # Ставки/букмекерка и около-Mbappe/MLS инфошум не подходят для канала.
         "best bets", "betting", "free 2026 world cup", "anytime goalscorer",
@@ -151,6 +163,7 @@ FILTERS = {
         # Низкосигнальный блоговый кликбейт, опросы и generic-рубрики.
         "watching paint dry", "non-update", "non update", "spark", "transfer trap",
         "crystal-clear statement", "devastating news", "dream transfer target", "put on notice",
+        "one game confirmed everything", "одна игра подтвердила все",
         "smiles & casualties", "smiles casualties", "moving on", "general/",
         "lectores defensa central", "lectores", "aprueban forma masiva", "rechazan vender",
         "encuesta", "87%", "60%", "se opone", "palo de arda", "palo arda", "un palo",
