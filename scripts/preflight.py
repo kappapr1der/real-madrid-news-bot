@@ -149,6 +149,9 @@ def check_env():
         "MATCHDAY_ENABLED": "true",
         "MATCHDAY_BLOCK_ALL_DAY": "false",
         "MATCHDAY_LIVE_ENABLED": "false",
+        "YANDEX_LLM_ENABLED": "false",
+        "LLM_EDITOR_DIGEST_ENABLED": "true",
+        "LLM_EDITOR_BREAKING_ENABLED": "true",
     }
     for name, default in bool_rules.items():
         raw = (config.get(name) or default).strip().lower()
@@ -202,6 +205,16 @@ def check_env():
         "MATCHDAY_LIVE_AFTER_MINUTES": ("30", 0),
         "API_FOOTBALL_TEAM_ID": ("541", 1),
         "API_FOOTBALL_REQUEST_TIMEOUT_SECONDS": ("10", 1),
+        "YANDEX_LLM_TIMEOUT_SECONDS": ("20", 1),
+        "YANDEX_LLM_MAX_TOKENS": ("900", 1),
+        "LLM_EDITOR_DAILY_REQUEST_LIMIT": ("60", 1),
+        "LLM_EDITOR_DAILY_CHAR_LIMIT": ("150000", 1000),
+        "LLM_EDITOR_MAX_DIGEST_ITEMS": ("14", 1),
+        "LLM_EDITOR_MAX_BREAKING_ITEMS": ("10", 1),
+        "LLM_EDITOR_MAX_SUMMARY_CHARS": ("240", 80),
+        "LLM_EDITOR_BREAKING_BUFFER_SECONDS": ("600", 0),
+        "LLM_EDITOR_BREAKING_MIN_INTERVAL_SECONDS": ("600", 0),
+        "LLM_EDITOR_BREAKING_FALLBACK_AFTER_SECONDS": ("3600", 0),
     }
     parsed_values = {}
     for name, (default, minimum) in int_rules.items():
@@ -230,6 +243,14 @@ def check_env():
         errors.append("API_FOOTBALL_KEY or APISPORTS_KEY is required for MATCHDAY_LIVE_ENABLED=true")
     if live_enabled and not (config.get("MATCHDAY_LIVE_EVENT_TYPES") or "").strip():
         warnings.append("MATCHDAY_LIVE_EVENT_TYPES is empty; all provider event types will be accepted")
+
+    llm_enabled = env_bool_value(config, "YANDEX_LLM_ENABLED", "false")
+    llm_key = config.get("YANDEX_LLM_API_KEY") or config.get("YANDEX_TRANSLATE_API_KEY") or config.get("YANDEX_API_KEY")
+    llm_folder = config.get("YANDEX_LLM_FOLDER_ID") or config.get("YANDEX_FOLDER_ID")
+    if llm_enabled and not llm_key:
+        errors.append("YANDEX_LLM_API_KEY, YANDEX_TRANSLATE_API_KEY or YANDEX_API_KEY is required for YANDEX_LLM_ENABLED=true")
+    if llm_enabled and not llm_folder:
+        errors.append("YANDEX_LLM_FOLDER_ID or YANDEX_FOLDER_ID is required for YANDEX_LLM_ENABLED=true")
 
     if errors:
         joined = "\n- ".join(errors)

@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -215,6 +216,7 @@ def _translate_with_mymemory(text: str) -> str:
 
 def _record_translation(provider: str, input_chars: int, status: str = "ok", error: str | None = None) -> None:
     now = int(time.time())
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     try:
         data: Dict[str, Any] = {}
         if TRANSLATION_STATS_PATH.exists():
@@ -238,6 +240,27 @@ def _record_translation(provider: str, input_chars: int, status: str = "ok", err
 
         bucket["input_chars"] = int(bucket.get("input_chars", 0)) + max(input_chars, 0)
         bucket["last_at"] = now
+
+        days: Dict[str, Any] = data.setdefault("days", {})
+        day_bucket: Dict[str, Any] = days.setdefault(
+            day,
+            {"ok_calls": 0, "error_calls": 0, "input_chars": 0, "providers": {}},
+        )
+        day_provider: Dict[str, Any] = day_bucket.setdefault("providers", {}).setdefault(
+            provider,
+            {"ok_calls": 0, "error_calls": 0, "input_chars": 0},
+        )
+        if status == "ok":
+            day_bucket["ok_calls"] = int(day_bucket.get("ok_calls", 0)) + 1
+            day_provider["ok_calls"] = int(day_provider.get("ok_calls", 0)) + 1
+        else:
+            day_bucket["error_calls"] = int(day_bucket.get("error_calls", 0)) + 1
+            day_provider["error_calls"] = int(day_provider.get("error_calls", 0)) + 1
+            day_provider["last_error"] = (error or "")[:200]
+        day_bucket["input_chars"] = int(day_bucket.get("input_chars", 0)) + max(input_chars, 0)
+        day_provider["input_chars"] = int(day_provider.get("input_chars", 0)) + max(input_chars, 0)
+        day_provider["last_at"] = now
+        data["current_day"] = day
         data["total_events"] = int(data.get("total_events", 0)) + 1
         data["total_input_chars"] = int(data.get("total_input_chars", 0)) + max(input_chars, 0)
 

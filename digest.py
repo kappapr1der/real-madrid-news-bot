@@ -42,6 +42,7 @@ from runtime_config import (
     DIGEST_SHOW_RELATED_SOURCES,
     DIGEST_TIMEZONE,
     DRY_RUN,
+    LLM_EDITOR_MAX_DIGEST_ITEMS,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_MESSAGE_LIMIT,
     TELEGRAM_TIMEOUT_SECONDS,
@@ -597,14 +598,16 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
     candidates = collect_candidates(sources, cutoff)
     candidates.sort(key=lambda item: item.published_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
 
+    review_limit = max(limit, LLM_EDITOR_MAX_DIGEST_ITEMS)
     selected = rank_digest_candidates(
         candidates,
-        limit=limit,
+        limit=review_limit,
         dedupe_enabled=DIGEST_DEDUPE_ENABLED,
         priority_sort_enabled=DIGEST_PRIORITY_SORT_ENABLED,
         similarity_threshold=normalized_similarity_threshold(),
     )
     selected, title_overrides, editor_metrics = apply_llm_digest_editor(selected, label)
+    selected = selected[:limit]
     quarantined = update_digest_quarantine(candidates, selected, label)
     news_items = [
         format_news_entry(i, item, title_overrides.get(item.candidate.link))
@@ -631,6 +634,7 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         "lookback_hours": lookback_hours,
         "candidates": len(candidates),
         "selected": len(selected),
+        "review_limit": review_limit,
         "grouped_links": grouped_links,
         "dedupe": DIGEST_DEDUPE_ENABLED,
         "priority_sort": DIGEST_PRIORITY_SORT_ENABLED,
