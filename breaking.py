@@ -88,6 +88,12 @@ sent_breaking = load_sent_links()
 llm_rejected_breaking = load_sent_links(LLM_REJECTED_FILE)
 sent_breaking_fingerprints = load_news_keys(SENT_FINGERPRINT_FILE)
 
+
+def refresh_sent_fingerprints() -> set[str]:
+    global sent_breaking_fingerprints
+    sent_breaking_fingerprints = load_news_keys(SENT_FINGERPRINT_FILE)
+    return sent_breaking_fingerprints
+
 STRONG_BREAKING_KEYWORDS = [
     "breaking",
     "official",
@@ -245,7 +251,7 @@ def _post_breaking_row(row: dict[str, Any], decision: dict[str, Any] | None = No
     link = str(row.get("link") or "")
     if not link or link in sent_breaking:
         return False
-    if fingerprint and fingerprint in sent_breaking_fingerprints:
+    if fingerprint and fingerprint in refresh_sent_fingerprints():
         logging.info("[BREAKING SKIPPED: SEMANTIC DUPLICATE AFTER LLM] %s: %s", fingerprint, row.get("title"))
         return False
 
@@ -428,6 +434,7 @@ def fetch_breaking(sources):
     errors = 0
     use_llm_editor = llm_editor_enabled("breaking")
     pending_links = pending_llm_links() if use_llm_editor else set()
+    seen_fingerprints = refresh_sent_fingerprints()
 
     for source in sources:
         if stop_event.is_set():
@@ -457,7 +464,7 @@ def fetch_breaking(sources):
 
             if is_breaking(title, source=label, summary=summary):
                 fingerprint = semantic_news_key(title, summary)
-                if fingerprint in sent_breaking_fingerprints:
+                if fingerprint in seen_fingerprints:
                     logging.info("[BREAKING SKIPPED: SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
                     continue
                 if use_llm_editor:
@@ -468,8 +475,9 @@ def fetch_breaking(sources):
                     continue
                 news = translate_text(title)
                 clean_news = clean_text(news)
-                send_breaking(clean_news, link, source=label, fingerprint=fingerprint)
-                found += 1
+                if send_breaking(clean_news, link, source=label, fingerprint=fingerprint):
+                    seen_fingerprints.add(fingerprint)
+                    found += 1
         except Exception as e:
             errors += 1
             logging.error(f"Ошибка при парсинге {url}: {e}")

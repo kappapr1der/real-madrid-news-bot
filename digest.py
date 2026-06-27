@@ -19,7 +19,7 @@ from sources_ru import SOURCES_RU
 from filters import passes_filters
 from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
-from news_fingerprint import load_news_keys, semantic_news_key
+from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from llm_editor import review_digest_items
@@ -430,6 +430,16 @@ def already_posted_links() -> set[str]:
     return set(sent_digest) | load_sent_links(SENT_BREAKING_FILE)
 
 
+def digest_semantic_keys(items: list[RankedDigestItem]) -> set[str]:
+    keys: set[str] = set()
+    for item in items:
+        candidate = item.candidate
+        key = semantic_news_key(candidate.title, candidate.summary)
+        if key:
+            keys.add(key)
+    return keys
+
+
 def collect_candidates(sources, cutoff: datetime):
     seen_links = already_posted_links()
     seen_breaking_fingerprints = load_news_keys(SENT_BREAKING_FINGERPRINT_FILE)
@@ -648,6 +658,7 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
     for item in selected:
         new_links.update(item.grouped_links)
         grouped_links += max(len(item.grouped_links) - 1, 0)
+    new_fingerprints = digest_semantic_keys(selected)
 
     logging.info(
         "Digest label=%s lookback=%sh candidates=%s selected=%s grouped=%s priority_sort=%s dedupe=%s",
@@ -669,9 +680,10 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         "dedupe": DIGEST_DEDUPE_ENABLED,
         "priority_sort": DIGEST_PRIORITY_SORT_ENABLED,
         "quarantined": quarantined,
+        "semantic_keys": len(new_fingerprints),
         **editor_metrics,
     }
-    return news_items, new_links, metrics
+    return news_items, new_links, new_fingerprints, metrics
 
 
 def post_telegram_message(message: str) -> bool:
@@ -712,7 +724,7 @@ def send_digest(label: str = "auto"):
         return
 
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
-    news_items, new_links, metrics = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
+    news_items, new_links, new_fingerprints, metrics = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
     metrics["dry_run"] = DRY_RUN
 
     if not news_items:
@@ -751,6 +763,10 @@ def send_digest(label: str = "auto"):
 
     sent_digest.update(new_links)
     save_sent_links(sent_digest)
+    if new_fingerprints:
+        sent_fingerprints = load_news_keys(SENT_BREAKING_FINGERPRINT_FILE)
+        sent_fingerprints.update(new_fingerprints)
+        save_news_keys(SENT_BREAKING_FINGERPRINT_FILE, sent_fingerprints)
     record_status("digest", "ok", f"Опубликован {label} дайджест", metrics)
     logging.info(f"Опубликован {label} дайджест")
 

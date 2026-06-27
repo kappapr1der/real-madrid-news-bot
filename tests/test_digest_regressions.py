@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from digest import digest_llm_hard_deny, format_news_entry
+from digest import digest_llm_hard_deny, digest_semantic_keys, format_news_entry
 from filters import passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
@@ -124,6 +124,26 @@ def test_digest_entry_uses_html_link():
 
     assert '<a href="https://example.com/story?x=1&amp;y=2">' in rendered
     assert "](" not in rendered
+
+
+def test_digest_semantic_key_blocks_later_breaking_variant():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid doctor resigns 2026",
+                "Managing Madrid",
+                "https://example.com/doctor-digest",
+            )
+        ],
+        limit=10,
+    )
+
+    keys = digest_semantic_keys(ranked)
+
+    assert "staff:doctor-resigns:manuel-arroyo" in keys
+    assert semantic_news_key(
+        "Es oficial, dimite uno de los medicos del Real Madrid tras un ano en el cargo"
+    ) in keys
 
 
 def test_mbappe_role_headline_is_shortened():
