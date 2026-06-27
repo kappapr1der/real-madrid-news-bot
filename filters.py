@@ -81,6 +81,13 @@ FILTERS = {
         "real sociedad", "villarreal", "girona",
     ],
     "blacklist": [
+        # National-team / World Cup noise that is not club-relevant enough for the channel.
+        "world cup spotlight", "madrid world cup spotlight",
+        "entra historia belgica", "historia belgica", "historia de belgica",
+        "belgium history", "history of belgium",
+        "channing tatum", "actor channing", "actor chenning", "norway and france", "noruega y francia",
+        "uruguay vuelve firmar", "dolorosa eliminacion fase grupos", "dolorosa eliminacion", "fase de grupos",
+
         # НЕ футбол (EN)
         "tennis", "nba", "nhl", "nfl", "mlb", "cricket", "cycling", "golf",
         "boxing", "ufc", "mma", "formula 1", "f1", "motogp",
