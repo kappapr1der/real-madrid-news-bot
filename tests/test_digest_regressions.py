@@ -2,6 +2,8 @@ from types import SimpleNamespace
 
 from digest import digest_llm_hard_deny, format_news_entry
 from filters import passes_filters
+from content_quality import rank_digest_candidates
+from news_fingerprint import semantic_news_key
 from text_cleaner import clean_text
 
 
@@ -13,6 +15,16 @@ def _item(title: str, summary: str = ""):
         link="https://example.com",
     )
     return SimpleNamespace(candidate=candidate)
+
+
+def _candidate(title: str, source: str, link: str, summary: str = ""):
+    return SimpleNamespace(
+        title=title,
+        summary=summary,
+        source=source,
+        link=link,
+        published_at=None,
+    )
 
 
 def test_world_cup_player_noise_is_filtered():
@@ -54,6 +66,52 @@ def test_celebrity_world_cup_noise_is_filtered():
 
     assert passes_filters(title, source="test") is False
     assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_evening_digest_national_team_noise_is_filtered():
+    cases = [
+        "Kylian Mbappe flipped the narrative during France vs Norway",
+        "De apellido verdugo del Real Madrid a expulsion contra Espana: la historia de Agustin Canobbio",
+    ]
+
+    for title in cases:
+        assert passes_filters(title, source="test") is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_cross_language_duplicate_semantic_keys():
+    assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
+        "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
+    )
+    assert semantic_news_key("Real Madrid academy goalkeeper wanted by several La Liga clubs") == semantic_news_key(
+        "Equipos de Primera luchan por Fran Gonzalez, meta del Castilla"
+    )
+
+
+def test_rank_digest_groups_cross_language_duplicates():
+    candidates = [
+        _candidate("Real Madrid doctor resigns 2026", "Managing Madrid", "https://example.com/doctor-en"),
+        _candidate(
+            "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid",
+            "Sport - Real Madrid",
+            "https://example.com/doctor-es",
+        ),
+        _candidate(
+            "Real Madrid academy goalkeeper wanted by several La Liga clubs",
+            "Madrid Universal",
+            "https://example.com/fran-en",
+        ),
+        _candidate(
+            "Equipos de Primera luchan por Fran Gonzalez, meta del Castilla",
+            "Mundo Deportivo - Real Madrid",
+            "https://example.com/fran-es",
+        ),
+    ]
+
+    ranked = rank_digest_candidates(candidates, limit=10)
+
+    assert len(ranked) == 2
+    assert sorted(len(item.grouped_links) for item in ranked) == [2, 2]
 
 
 def test_digest_entry_uses_html_link():

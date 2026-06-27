@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from news_fingerprint import semantic_news_key
+
 TOKEN_RE = re.compile(r"[a-zа-яё0-9]+", re.IGNORECASE)
 
 STOPWORDS = {
@@ -243,6 +245,7 @@ class CandidateProfile:
     tokens: set[str]
     entities: set[str]
     topics: set[str]
+    semantic_key: str
     score: int
     reason: str
     category: str = "general"
@@ -353,10 +356,12 @@ def recency_weight(published_at: datetime | None, now: datetime) -> int:
 
 def candidate_profile(candidate: Any, now: datetime) -> CandidateProfile:
     title = text_attr(candidate, "title")
+    summary = text_attr(candidate, "summary")
     source = source_attr(candidate)
-    tokens = tokenize(f"{title} {source}")
+    tokens = tokenize(f"{title} {summary} {source}")
     entities = {token for token in tokens if token in ENTITY_TOKENS}
-    topics = matched_topics(title)
+    topics = matched_topics(f"{title} {summary}")
+    semantic_key = semantic_news_key(title, summary)
 
     score = 50
     reasons = []
@@ -389,6 +394,7 @@ def candidate_profile(candidate: Any, now: datetime) -> CandidateProfile:
         tokens=tokens,
         entities=entities,
         topics=topics,
+        semantic_key=semantic_key,
         score=score,
         reason=", ".join(dict.fromkeys(reasons)) or "freshness",
     )
@@ -401,6 +407,14 @@ def token_overlap(left: set[str], right: set[str]) -> float:
 
 
 def similar_enough(profile: CandidateProfile, group: CandidateGroup, similarity_threshold: float) -> bool:
+    if (
+        profile.semantic_key
+        and group.profile.semantic_key
+        and profile.semantic_key == group.profile.semantic_key
+        and not profile.semantic_key.startswith("generic:")
+    ):
+        return True
+
     overlap = token_overlap(profile.tokens, group.profile.tokens)
     if overlap >= similarity_threshold:
         return True
@@ -426,6 +440,8 @@ def add_to_group(group: CandidateGroup, candidate: Any, profile: CandidateProfil
     group.profile.tokens |= profile.tokens
     group.profile.entities |= profile.entities
     group.profile.topics |= profile.topics
+    if group.profile.semantic_key.startswith("generic:") and not profile.semantic_key.startswith("generic:"):
+        group.profile.semantic_key = profile.semantic_key
     group.scores[link_attr(candidate)] = profile.score
     group.reasons[link_attr(candidate)] = profile.reason
 
@@ -528,6 +544,7 @@ def rank_digest_candidates(
                             tokens=set(profile.tokens),
                             entities=set(profile.entities),
                             topics=set(profile.topics),
+                            semantic_key=profile.semantic_key,
                             score=profile.score,
                             reason=profile.reason,
                         ),

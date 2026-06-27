@@ -70,6 +70,24 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     ):
         return "legal:laliga-cvc-rights"
 
+    if contains_any(text, ("manuel arroyo", "doctor", "medico", "medico primer equipo")) and contains_any(
+        text,
+        ("resigns", "resign", "dimite", "dimision", "renuncia", "real madrid"),
+    ):
+        return "staff:doctor-resigns:manuel-arroyo"
+
+    if contains_any(text, ("academy goalkeeper", "cantera goalkeeper", "goalkeeper wanted")) and contains_any(
+        text,
+        ("la liga clubs", "several la liga", "primera"),
+    ):
+        return "academy:fran-gonzalez-la-liga-interest"
+
+    if contains_any(text, ("fran gonzalez", "fran")) and contains_any(
+        text,
+        ("goalkeeper", "portero", "meta", "castilla", "academy"),
+    ) and contains_any(text, ("wanted", "luchan", "clubes", "clubs", "primera", "la liga", "laliga")):
+        return "academy:fran-gonzalez-la-liga-interest"
+
     player = player_key(text)
     if player and contains_any(text, ("no fichara", "no firmara", "no sign", "not sign", "не подпиш", "не перейдет")):
         return f"transfer:no-sign:{player}"

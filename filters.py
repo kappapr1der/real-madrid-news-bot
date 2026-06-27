@@ -85,6 +85,9 @@ FILTERS = {
         "world cup spotlight", "madrid world cup spotlight",
         "entra historia belgica", "historia belgica", "historia de belgica",
         "belgium history", "history of belgium",
+        "france vs norway", "france against norway", "francia contra noruega", "francia noruega",
+        "flipped the narrative", "during france vs norway",
+        "agustin canobbio", "canobbio", "apellido verdugo real madrid", "expulsion contra espana",
         "channing tatum", "actor channing", "actor chenning", "norway and france", "noruega y francia",
         "uruguay vuelve firmar", "dolorosa eliminacion fase grupos", "dolorosa eliminacion", "fase de grupos",
 
