@@ -90,6 +90,12 @@ FILTERS = {
         "agustin canobbio", "canobbio", "apellido verdugo real madrid", "expulsion contra espana",
         "channing tatum", "actor channing", "actor chenning", "norway and france", "noruega y francia",
         "uruguay vuelve firmar", "dolorosa eliminacion fase grupos", "dolorosa eliminacion", "fase de grupos",
+        "bernardo silva stays on the bench", "portugal's 0-0 draw with colombia", "portugals 0-0 draw with colombia",
+        "portugal 0-0 draw with colombia", "portugal colombia",
+        "rodrygo appears in miami", "rodrygo aparece en miami", "saca primera foto de equipo",
+        "saca la primera foto de equipo", "primera foto equipo", "first team photo with bernardo",
+        "dani carvajal 34 anos sobre futbol", "jovenes deben disfrutar deporte", "redes sociales ya quieren ser futbolistas",
+        "young people should enjoy sport",
 
         # НЕ футбол (EN)
         "tennis", "nba", "nhl", "nfl", "mlb", "cricket", "cycling", "golf",
@@ -209,6 +215,9 @@ FILTERS = {
         "one game confirmed everything", "одна игра подтвердила все",
         "it didn't take long for fede valverde", "center of controversy",
         "centre of controversy", "controversy again", "controversia", "polemica", "polémica",
+        "micah richards told it like it is", "trent alexander-arnold controversy",
+        "addressing trent alexander-arnold controversy",
+        "toni kroos said what liverpool and bayern", "fans are terrified to confess",
         "champions league nightmare", "кошмар в лиге чемпионов",
         "xabi alonso's chelsea", "former real madrid defender", "бывшему защитнику мадридского \"реала\"",
         "juancho hernangomez", "juancho hernangómez", "хуанчо эрнангомес",

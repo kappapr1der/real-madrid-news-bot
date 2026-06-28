@@ -79,6 +79,30 @@ def test_evening_digest_national_team_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_morning_digest_low_signal_items_are_filtered():
+    cases = [
+        ("Bernardo Silva stays on the bench in Portugal's 0-0 draw with Colombia", "Managing Madrid"),
+        ("Rodrygo aparece en Miami y saca la primera foto de equipo con Bernardo Silva", "Marca - Real Madrid"),
+        (
+            "Dani Carvajal, 34 anos, sobre futbol: jovenes deben disfrutar deporte, ahora con 15 anos "
+            "con redes sociales ya quieren ser futbolistas",
+            "Defensa Central",
+        ),
+        (
+            "Toni Kroos said what Liverpool and Bayern Munich fans are terrified to confess",
+            "The Real Champs",
+        ),
+        (
+            "Micah Richards told it like it is when addressing Trent Alexander-Arnold controversy",
+            "The Real Champs",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
@@ -153,3 +177,12 @@ def test_mbappe_role_headline_is_shortened():
     )
 
     assert clean_text(title) == "Мбаппе может получить желаемую роль в «Реале»"
+
+
+def test_morning_digest_translation_glitches_are_cleaned():
+    assert clean_text(
+        "Родриги появляется в Майами и делает первое командное с Бернардо Силвой"
+    ) == "Родриго появляется в Майами и делает первое командное фото с Бернарду Силвой"
+    assert clean_text(
+        "Мика Ричардс рассказал все как есть, обращаясь к спору между Трентом Александром и Арнольдом"
+    ) == "Мика Ричардс рассказал все как есть, обращаясь к спору между Трентом Александер-Арнольдом"
