@@ -103,6 +103,37 @@ def test_morning_digest_low_signal_items_are_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_day_digest_live_low_signal_items_are_filtered():
+    cases = [
+        ("Image: Real Madrid winger shares first photo with summer signing", "Madrid Universal"),
+        (
+            "Gary Neville affirmed what Real Madrid fans have been saying for weeks about Trent Alexander-Arnold",
+            "The Real Champs",
+        ),
+        ("La bienvenida de Rodrygo a Bernardo Silva", "Mundo Deportivo - Real Madrid"),
+        (
+            "Laporta contra cuerdas: Barcelona debe este año 123 millones a Goldman Sachs "
+            "y necesita pedir 500 mas para pagar el Camp Nou",
+            "Defensa Central",
+        ),
+        ("Bienvenida Rodrygo Bernardo Silva", "Mundo Deportivo - Real Madrid"),
+        ("Giro Mundial de Brahim: lider con Marruecos y renovado para Mourinho", "Sport - Real Madrid"),
+        (
+            "Месси, Мбаппе, Возинья — в символической сборной группового этапа ЧМ-2026 по версии Opta",
+            "Чемпионат - Футбол",
+        ),
+        (
+            "El rincon de Madrid en el que Bellingham tiene dos casas: antiguo coto de caza, zonas verdes "
+            "y a 10 minutos del Santiago Bernabeu",
+            "Defensa Central",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
