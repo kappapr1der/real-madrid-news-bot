@@ -110,6 +110,11 @@ def test_day_digest_live_low_signal_items_are_filtered():
             "Gary Neville affirmed what Real Madrid fans have been saying for weeks about Trent Alexander-Arnold",
             "The Real Champs",
         ),
+        (
+            "Gary Neville, exfutbolista, 51 anos: Tuchel no ha querido en Mundial a Alexander-Arnold, "
+            "es clase mundial y ha cogido laterales propensos a lesionarse",
+            "Defensa Central",
+        ),
         ("La bienvenida de Rodrygo a Bernardo Silva", "Mundo Deportivo - Real Madrid"),
         (
             "Laporta contra cuerdas: Barcelona debe este año 123 millones a Goldman Sachs "
@@ -211,6 +216,12 @@ def test_mbappe_role_headline_is_shortened():
 
 
 def test_morning_digest_translation_glitches_are_cleaned():
+    assert clean_text(
+        "Флорентино запускает 'глобальную стратегию' для «Реала»"
+    ) == "Флорентино запускает «глобальную стратегию» для «Реала»"
+    assert clean_text(
+        "Мидфилдер Реала станет капитаном клуба"
+    ) == "Вальверде станет капитаном «Реала»"
     assert clean_text(
         "Родриги появляется в Майами и делает первое командное с Бернардо Силвой"
     ) == "Родриго появляется в Майами и делает первое командное фото с Бернарду Силвой"
