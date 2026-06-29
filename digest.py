@@ -110,10 +110,18 @@ DIGEST_LLM_HARD_DENY_TERMS = (
     "португалец беспокоился о своей травме",
     "ronaldo nazario",
     "ronaldo nazário",
+    "ronaldo-nazario-mbappe",
+    "ronaldo-nazario-mbappe-me-recuerda",
     "mbappe recuerda mi prime",
+    "mbappé recuerda mi prime",
     "mbappe me recuerda",
+    "mbappé me recuerda",
     "мбаппе напоминает мне меня",
     "роналду назарио: мбаппе",
+    "роналду забыл о винисиусе",
+    "забыл о винисиусе",
+    "я не вижу другого такого, как неймар",
+    "другого такого, как неймар",
     "me encanta venir",
     "estas vistas",
     "cuando marco gol",
@@ -123,6 +131,21 @@ DIGEST_LLM_HARD_DENY_TERMS = (
     "бьелса",
     "valverde y estrellas uruguay",
     "вальверде и звезды уругвая",
+    "carlo ancelotti refuses engage japan mind games",
+    "brazil manager carlo ancelotti refuses",
+    "brazil-manager-carlo-ancelotti",
+    "japan mind games",
+    "japan-mind-games",
+    "round 32 clash world cup",
+    "японских интеллектуальных играх",
+    "анчелотти отказывается участвовать",
+    "интеллектуальных играх",
+    "как формируется новая бразилия",
+    "new brazil taking shape",
+    "new brazil is taking shape",
+    "how new brazil is taking shape",
+    "cunha plays key role",
+    "кунья играет ключевую роль",
     "fede valverde's uruguay eliminated",
     "valverde's uruguay",
     "uruguay eliminated",
@@ -265,6 +288,15 @@ DIGEST_LLM_HARD_DENY_TERMS = (
     "camp nou",
     "Р»Р°РїРѕСЂС‚Р°",
     "РіРѕР»РґРјР°РЅ СЃР°РєСЃ",
+    "antonio rudiger 33 anos futbolista real madrid infancia pobreza",
+    "antonio rüdiger 33 anos futbolista real madrid infancia pobreza",
+    "infancia pobreza",
+    "infancia estuvo marcada",
+    "pobreza",
+    "si habia pollo en la mesa",
+    "si había pollo en la mesa",
+    "если на столе была курица",
+    "детство было отмечено бедностью",
 )
 
 DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
@@ -297,7 +329,22 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "возвращение криштиану и родриго",
     "ronaldo nazario",
     "ronaldo nazário",
+    "ronaldo-nazario-mbappe",
     "мбаппе напоминает мне меня",
+    "роналду забыл о винисиусе",
+    "забыл о винисиусе",
+    "japan mind games",
+    "japan-mind-games",
+    "анчелотти отказывается участвовать",
+    "интеллектуальных играх",
+    "new brazil taking shape",
+    "new brazil is taking shape",
+    "how new brazil is taking shape",
+    "cunha plays key role",
+    "infancia pobreza",
+    "infancia estuvo marcada",
+    "pobreza",
+    "si habia pollo en la mesa",
     "players still going strong at the world cup",
     "round of 32",
     "alexander-arnold es clase mundial",
@@ -696,6 +743,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
         [
             str(candidate.title or ""),
             str(getattr(candidate, "summary", "") or ""),
+            str(getattr(candidate, "link", "") or ""),
+            str(getattr(candidate, "source", "") or ""),
             str(headline or ""),
         ]
     ).casefold()
@@ -759,12 +808,15 @@ def apply_llm_digest_editor(selected: list[RankedDigestItem], label: str) -> tup
             continue
 
         headline = str(decision.get("headline_ru") or "").strip()
-        if digest_llm_hard_deny(item, headline):
+        cleaned_headline = clean_text(headline) if headline else ""
+        if digest_llm_hard_deny(item, headline) or (
+            cleaned_headline and digest_llm_hard_deny(item, cleaned_headline)
+        ):
             dropped += 1
             logging.info("[LLM DIGEST] hard dropped: %s | %s", item.candidate.source, item.candidate.title)
             continue
-        if headline:
-            title_overrides[item.candidate.link] = clean_text(headline)
+        if cleaned_headline:
+            title_overrides[item.candidate.link] = cleaned_headline
         filtered.append(item)
 
     if not filtered:

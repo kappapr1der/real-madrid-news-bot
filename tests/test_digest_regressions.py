@@ -80,6 +80,8 @@ def test_evening_digest_national_team_noise_is_filtered():
         "8 Real Madrid players still going strong at the World Cup for the round of 32",
         "Возвращение Криштиану и Родриго",
         "Роналду Назарио: «Мбаппе напоминает мне меня в расцвете сил»",
+        "Анчелотти отказывается участвовать в японских «интеллектуальных играх»",
+        "Роналду «забыл» о Винисиусе: «Я не вижу другого такого, как Неймар, чтобы выиграть матч»",
     ]
 
     for title in cases:
@@ -103,6 +105,22 @@ def test_morning_digest_low_signal_items_are_filtered():
         (
             "Micah Richards told it like it is when addressing Trent Alexander-Arnold controversy",
             "The Real Champs",
+        ),
+        (
+            "Brazil manager Carlo Ancelotti refuses to engage in Japan mind games ahead of round 32 clash",
+            "ESPN FC",
+        ),
+        (
+            "How new Brazil is taking shape and why Cunha plays a key role",
+            "BBC Sport Football",
+        ),
+        (
+            "Ronaldo Nazário: Mbappe me recuerda a mi en mi mejor momento",
+            "Marca - Real Madrid",
+        ),
+        (
+            "Antonio Rudiger, 33 anos, futbolista del Real Madrid: mi infancia estuvo marcada por la pobreza",
+            "Sport - Real Madrid",
         ),
     ]
 
@@ -231,6 +249,12 @@ def test_morning_digest_translation_glitches_are_cleaned():
         "Хаби Алонсо может насолить Флорентино Пересу с планом по Энцо Фернандесу"
     ) == "Хаби Алонсо может помешать планам Флорентино по Энцо Фернандесу"
     assert clean_text(
+        "«Реал» знает, что подписание крупного контракта с полузащитником потребует продажи с тремя звездами на руках"
+    ) == "«Реал» понимает: крупный трансфер в центр поля потребует продаж"
+    assert clean_text(
+        "Клуб Ла Лиги рассматривает возможность перехода защитника мадридского «Реала» на правах аренды"
+    ) == "Клуб Ла Лиги рассматривает аренду защитника «Реала»"
+    assert clean_text(
         "Реал закладывает основу для Энцо Фернандеса решением по Камавинге"
     ) == "«Реал» готовит почву для Энцо Фернандеса решением по Камавинге"
     assert clean_text(
@@ -242,6 +266,9 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "ПСЖ вмешивается в борьбу за игрока, которого хочет Мадрид"
     ) == "ПСЖ вмешался в борьбу за трансферную цель «Реала»"
+    assert clean_text(
+        "Рампа выхода для двух неприкасаемых: «Реал» нужно продать"
+    ) == "У двух недавних неприкасаемых появился шанс на уход: «Реалу» нужны продажи"
     assert clean_text(
         "ПСЖ беспокоится о конце Бундеслиги, которого хочет Мадрид"
     ) == "ПСЖ вмешался в борьбу за вингера из Бундеслиги, которого хочет «Реал»"
@@ -266,6 +293,9 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Мидфилдер Реала станет капитаном клуба"
     ) == "Вальверде станет капитаном «Реала»"
+    assert clean_text(
+        "«Реал» исполнит желание Винисиуса Жуниора раньше, чем Михаэль Олизе"
+    ) == "«Реал» исполнит желание Винисиуса Жуниора раньше, чем Майкл Олисе"
     assert clean_text(
         "Родриги появляется в Майами и делает первое командное с Бернардо Силвой"
     ) == "Родриго появляется в Майами и делает первое командное фото с Бернарду Силвой"

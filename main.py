@@ -7,18 +7,22 @@ import time
 import threading
 import schedule
 from collections import deque
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from colorama import init, Fore, Style
 
 from runtime_config import (
     DIGEST_DAY_TIME,
     DIGEST_EVENING_TIME,
+    DIGEST_MISSED_CATCHUP_ENABLED,
+    DIGEST_MISSED_GRACE_MINUTES,
     DIGEST_MORNING_TIME,
     DIGEST_TIMEZONE,
     DRY_RUN,
     MATCHDAY_ENABLED,
     get_log_file,
 )
-from status_manager import record_error, record_status
+from status_manager import load_status, parse_iso, record_error, record_status
 
 init(autoreset=True)
 
@@ -178,6 +182,68 @@ def run_digest_with_label(label: str):
     start_process(f"digest:{label}", [PYTHON, "digest.py", label], restart=False)
 
 
+def parse_digest_clock(at_time: str) -> tuple[int, int] | None:
+    try:
+        hour_raw, minute_raw = at_time.split(":", 1)
+        hour = int(hour_raw)
+        minute = int(minute_raw)
+    except (ValueError, AttributeError):
+        return None
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return hour, minute
+
+
+def digest_completed_today(label: str, now: datetime) -> bool:
+    entry = load_status().get("services", {}).get(f"digest:{label}", {})
+    if not isinstance(entry, dict) or entry.get("state") != "completed":
+        return False
+    completed_at = parse_iso(str(entry.get("updated_at") or ""))
+    if not completed_at:
+        return False
+    return completed_at.astimezone(now.tzinfo).date() == now.date()
+
+
+def run_missed_digest_if_needed(label: str, at_time: str):
+    if not DIGEST_MISSED_CATCHUP_ENABLED:
+        return
+
+    clock = parse_digest_clock(at_time)
+    if not clock:
+        logging.warning("Невозможно проверить пропущенный %s дайджест: некорректное время %s", label, at_time)
+        return
+
+    tz = ZoneInfo(DIGEST_TIMEZONE)
+    now = datetime.now(tz)
+    hour, minute = clock
+    scheduled_at = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if now < scheduled_at:
+        return
+
+    late_minutes = int((now - scheduled_at).total_seconds() // 60)
+    if late_minutes > DIGEST_MISSED_GRACE_MINUTES:
+        logging.info(
+            "Пропущенный %s дайджест не догоняем: прошло %s мин, лимит %s мин",
+            label,
+            late_minutes,
+            DIGEST_MISSED_GRACE_MINUTES,
+        )
+        return
+
+    if f"digest:{label}" in processes or digest_completed_today(label, now):
+        return
+
+    logging.warning(
+        "Догоняем пропущенный %s дайджест: план %s %s, опоздание %s мин",
+        label,
+        at_time,
+        DIGEST_TIMEZONE,
+        late_minutes,
+    )
+    print(Fore.YELLOW + f"[MAIN] Догоняем пропущенный {label} дайджест ({late_minutes} мин)")
+    run_digest_with_label(label)
+
+
 def schedule_digest(label: str, at_time: str):
     job = schedule.every().day.at(at_time, DIGEST_TIMEZONE).do(run_digest_with_label, label=label)
     logging.info("Запланирован %s дайджест на %s %s", label, at_time, DIGEST_TIMEZONE)
@@ -198,6 +264,9 @@ def main():
         schedule_digest("утреннего", DIGEST_MORNING_TIME)
         schedule_digest("дневного", DIGEST_DAY_TIME)
         schedule_digest("вечернего", DIGEST_EVENING_TIME)
+        run_missed_digest_if_needed("утреннего", DIGEST_MORNING_TIME)
+        run_missed_digest_if_needed("дневного", DIGEST_DAY_TIME)
+        run_missed_digest_if_needed("вечернего", DIGEST_EVENING_TIME)
 
         print(
             Fore.CYAN
