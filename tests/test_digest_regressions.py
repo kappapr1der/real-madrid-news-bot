@@ -187,6 +187,28 @@ def test_day_digest_latest_low_signal_items_are_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_evening_digest_personal_former_player_noise_is_filtered():
+    cases = [
+        ("Fallece el padre de Ricardo Carvalho", "Marca - Real Madrid"),
+        ("Скончался отец Рикарду Карвалью", "Marca - Real Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_evening_digest_clickbait_and_lifestyle_noise_is_filtered():
+    cases = [
+        ("Does Carlo Ancelotti hate Endrick? Is it really a thing?", "FourFourTwo"),
+        ("Divertido momento entre Marcelo y Linda Caicedo", "Mundo Deportivo - Real Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
@@ -205,9 +227,26 @@ def test_cross_language_duplicate_semantic_keys():
         "Valencia pregunta por Joan Martinez"
     )
     assert semantic_news_key(
+        "Real Madrid again skip key La Liga and RFEF meeting"
+    ) == semantic_news_key(
+        "Real Madrid no acudira a la reunion de todos los clubes en la sede de LaLiga"
+    )
+    assert semantic_news_key(
+        "Michael Olise to hold talks with Bayern while Real Madrid continue to monitor situation"
+    ) == semantic_news_key(
+        "Real Madrid and Galactico set for important talks with Bayern Munich amid future speculation"
+    )
+    assert semantic_news_key(
+        "Herbert Hainer, presidente del Bayern, tajante con el Real Madrid: pueden ahorrarse el esfuerzo"
+    ) == semantic_news_key(
+        "Olise solicita una reunion con el Bayern"
+    )
+    assert semantic_news_key(
         "Confirmed: Real Madrid donate EUR1 million to support those affected by Venezuela earthquakes"
     ) == "club:donation:venezuela-earthquake"
     assert semantic_news_key("Valencia want to take Joan Martinez on loan") == "transfer:loan:joan-martinez-valencia"
+    assert semantic_news_key("Real Madrid again skip key La Liga and RFEF meeting") == "club:laliga-rfef-meeting-skip"
+    assert semantic_news_key("Michael Olise to hold talks with Bayern while Real Madrid monitor situation") == "transfer:olise-bayern-talks-real-monitoring"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -248,6 +287,58 @@ def test_rank_digest_groups_latest_live_duplicates():
                 "Valencia pregunta por Joan Martinez",
                 "Marca - Real Madrid",
                 "https://example.com/joan-interest",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == 2
+
+
+def test_rank_digest_groups_evening_live_duplicates():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid again skip key La Liga and RFEF meeting",
+                "Madrid Universal",
+                "https://example.com/laliga-rfef",
+            ),
+            _candidate(
+                "Real Madrid no acudira a la reunion de todos los clubes en la sede de LaLiga",
+                "Marca - Real Madrid",
+                "https://example.com/laliga-meeting",
+            ),
+            _candidate(
+                "Michael Olise to hold talks with Bayern while Real Madrid continue to monitor situation",
+                "Managing Madrid",
+                "https://example.com/olise-talks",
+            ),
+            _candidate(
+                "Real Madrid and Galactico set for important talks with Bayern Munich amid future speculation",
+                "Madrid Universal",
+                "https://example.com/olise-bayern",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 2
+    assert sorted(len(item.grouped_links) for item in ranked) == [2, 2]
+
+
+def test_rank_digest_groups_olise_bayern_hainer_duplicate():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Herbert Hainer, presidente del Bayern, tajante con el Real Madrid: pueden ahorrarse el esfuerzo",
+                "Bernabeu Digital",
+                "https://example.com/hainer-olise",
+            ),
+            _candidate(
+                "Olise solicita una reunion con el Bayern",
+                "Sport - Real Madrid",
+                "https://example.com/olise-meeting",
             ),
         ],
         limit=10,
@@ -332,6 +423,27 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Реал восстановит 90 миллионов, потраченных на трансферы"
     ) == "«Реал» может вернуть 90 млн евро, вложенные в трансферы"
+    assert clean_text(
+        "Реал открыт к аренде Рауля Асенсио с обязательной опцией выкупа"
+    ) == "«Реал» готов отдать Рауля Асенсио в аренду с обязательным выкупом"
+    assert clean_text(
+        "«Реал» вновь пропускает ключевое собрание Ла Лиги и RFEF"
+    ) == "«Реал» снова пропустит встречу Ла Лиги и RFEF"
+    assert clean_text(
+        "«Реал» и «Галактико» намерены провести важные переговоры с мюнхенской «Баварией» на фоне будущих спекуляций"
+    ) == "Олисе обсудит будущее с «Баварией», «Реал» следит за ситуацией"
+    assert clean_text(
+        "Душан Влахович переходит в «Реал»"
+    ) == "Душана Влаховича связывают с «Реалом»"
+    assert clean_text(
+        "Марк Меншен, эксперт по экономике: «Концерты» Бернабеу «не являются экономической проблемой для«Реала», они приносят 1% дохода, и те, кто зарабатывает деньги, - это артисты»"
+    ) == "Эксперт: концерты на «Бернабеу» дают около 1% дохода «Реала»"
+    assert clean_text(
+        "Верховный суд закрывает ворота на парковках «Бернабеу» и закрывает ресурс «Реал»"
+    ) == "Верховный суд отклонил апелляцию «Реала» по парковкам у «Бернабеу»"
+    assert clean_text(
+        "Герберт Хайнер, президент «Баварии», резко высказался о«Реале»: «Они могут сэкономить усилия»"
+    ) == "Президент «Баварии» дал понять: по Олисе «Реалу» будет сложно"
     assert clean_text(
         "Бетис заинтересован в трансфере Фран Гарсии, Реал требует 10 миллионов евро"
     ) == "«Бетис» интересуется Франом Гарсией, «Реал» хочет 10 млн евро"

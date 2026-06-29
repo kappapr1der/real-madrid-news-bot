@@ -103,6 +103,52 @@ def is_joan_martinez_valencia_text(text: str) -> bool:
     )
 
 
+def is_laliga_rfef_meeting_text(text: str) -> bool:
+    return (
+        contains_any(text, ("laliga", "la liga", "rfef", "federacion", "federation", "лига", "rfe"))
+        and contains_any(text, ("meeting", "summit", "reunion", "reunion", "asamblea", "sede", "clubs", "clubes", "собрани", "встреч"))
+        and contains_any(text, ("skip", "miss", "absent", "no asist", "no acud", "no estara", "no estará", "пропуска", "не приед", "не поед"))
+    )
+
+
+def is_olise_bayern_talks_text(text: str) -> bool:
+    return (
+        contains_any(text, ("olise", "олисе", "galactico", "галактико", "hainer", "ahorrarse esfuerzo", "save effort", "сэкономить усилия"))
+        and contains_any(text, ("bayern", "бавари"))
+        and contains_any(
+            text,
+            (
+                "talk",
+                "negotiat",
+                "conversation",
+                "future",
+                "situation",
+                "monitor",
+                "speculation",
+                "conversacion",
+                "conversaciones",
+                "reunion",
+                "futuro",
+                "переговор",
+                "будущ",
+                "ситуац",
+                "следит",
+                "effort",
+                "esfuerzo",
+                "усили",
+            ),
+        )
+    )
+
+
+def is_asencio_loan_buy_text(text: str) -> bool:
+    return (
+        contains_any(text, ("asencio", "асенсио"))
+        and contains_any(text, ("loan", "cesion", "cedido", "аренд"))
+        and contains_any(text, ("buy", "mandatory", "oblig", "compra", "выкуп"))
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -111,6 +157,15 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_joan_martinez_valencia_text(text):
         return "transfer:loan:joan-martinez-valencia"
+
+    if is_laliga_rfef_meeting_text(text):
+        return "club:laliga-rfef-meeting-skip"
+
+    if is_olise_bayern_talks_text(text):
+        return "transfer:olise-bayern-talks-real-monitoring"
+
+    if is_asencio_loan_buy_text(text):
+        return "transfer:loan:asencio-mandatory-buy"
 
     if (
         contains_any(text, ("cvc", "tebas", "тебас", "audiovisual", "audiovisuales", "аудиовизуаль"))
@@ -183,6 +238,12 @@ def canonical_news_key(key: str) -> str:
         return "club:donation:venezuela-earthquake"
     if is_joan_martinez_valencia_text(text):
         return "transfer:loan:joan-martinez-valencia"
+    if is_laliga_rfef_meeting_text(text):
+        return "club:laliga-rfef-meeting-skip"
+    if is_olise_bayern_talks_text(text):
+        return "transfer:olise-bayern-talks-real-monitoring"
+    if is_asencio_loan_buy_text(text):
+        return "transfer:loan:asencio-mandatory-buy"
     return clean
 
 

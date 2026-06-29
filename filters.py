@@ -241,6 +241,8 @@ FILTERS = {
         # Личная драма вокруг соперников/бывших конфликтов без полезной клубной новости.
         "alex baena", "баэна", "fijacion conmigo", "fijación conmigo",
         "rencor", "обижаться", "простил", "привязан ко мне",
+        "fallece padre ricardo carvalho", "padre de ricardo carvalho", "ricardo carvalho father",
+        "father of ricardo carvalho", "скончался отец рикарду карвалью",
 
         # Ставки/букмекерка и около-Mbappe/MLS инфошум не подходят для канала.
         "best bets", "betting", "free 2026 world cup", "anytime goalscorer",
@@ -258,6 +260,10 @@ FILTERS = {
         "watching paint dry", "non-update", "non update", "spark", "transfer trap",
         "crystal-clear statement", "devastating news", "dream transfer target", "put on notice",
         "one game confirmed everything", "одна игра подтвердила все",
+        "does carlo ancelotti hate endrick", "carlo ancelotti hate endrick", "hate endrick",
+        "ненавидит эндрика", "так ли это на самом деле",
+        "divertido momento marcelo linda caicedo", "divertido momento entre marcelo", "marcelo linda caicedo",
+        "забавный момент между марсело и линдой кайседо",
         "it didn't take long for fede valverde", "center of controversy",
         "centre of controversy", "controversy again", "controversia", "polemica", "polémica",
         "micah richards told it like it is", "trent alexander-arnold controversy",
