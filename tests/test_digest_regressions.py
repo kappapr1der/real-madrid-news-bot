@@ -165,6 +165,28 @@ def test_day_digest_live_low_signal_items_are_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_day_digest_latest_low_signal_items_are_filtered():
+    cases = [
+        (
+            "Manolo Lama, 64 anos, periodista: la lesion Raphinha ha venido bien a Vinicius, "
+            "no a Brasil, ahora se siente superestrella y todos van a jugar para el",
+            "Defensa Central",
+        ),
+        (
+            "Hora y cuando juegan los madridistas en el Mundial",
+            "Mundo Deportivo - Real Madrid",
+        ),
+        (
+            "Reranking Europe's top clubs by player performance at the World Cup: Bayern, Real Madrid, Liverpool",
+            "ESPN FC",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
@@ -172,6 +194,20 @@ def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid academy goalkeeper wanted by several La Liga clubs") == semantic_news_key(
         "Equipos de Primera luchan por Fran Gonzalez, meta del Castilla"
     )
+    assert semantic_news_key(
+        "Confirmed: Real Madrid donate EUR1 million to support those affected by Venezuela earthquakes"
+    ) == semantic_news_key(
+        "Madrid lanza campana solidaria con Venezuela, club y Florentino donan un millon de euros"
+    )
+    assert semantic_news_key(
+        "Valencia want to take Joan Martinez on loan"
+    ) == semantic_news_key(
+        "Valencia pregunta por Joan Martinez"
+    )
+    assert semantic_news_key(
+        "Confirmed: Real Madrid donate EUR1 million to support those affected by Venezuela earthquakes"
+    ) == "club:donation:venezuela-earthquake"
+    assert semantic_news_key("Valencia want to take Joan Martinez on loan") == "transfer:loan:joan-martinez-valencia"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -198,6 +234,27 @@ def test_rank_digest_groups_cross_language_duplicates():
 
     assert len(ranked) == 2
     assert sorted(len(item.grouped_links) for item in ranked) == [2, 2]
+
+
+def test_rank_digest_groups_latest_live_duplicates():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Valencia quiere a Joan Martinez cedido",
+                "Managing Madrid",
+                "https://example.com/joan-loan",
+            ),
+            _candidate(
+                "Valencia pregunta por Joan Martinez",
+                "Marca - Real Madrid",
+                "https://example.com/joan-interest",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == 2
 
 
 def test_digest_entry_uses_html_link():
@@ -272,6 +329,27 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "ПСЖ беспокоится о конце Бундеслиги, которого хочет Мадрид"
     ) == "ПСЖ вмешался в борьбу за вингера из Бундеслиги, которого хочет «Реал»"
+    assert clean_text(
+        "Реал восстановит 90 миллионов, потраченных на трансферы"
+    ) == "«Реал» может вернуть 90 млн евро, вложенные в трансферы"
+    assert clean_text(
+        "Бетис заинтересован в трансфере Фран Гарсии, Реал требует 10 миллионов евро"
+    ) == "«Бетис» интересуется Франом Гарсией, «Реал» хочет 10 млн евро"
+    assert clean_text(
+        "Родриго рассказывает Криштиану Роналду о своей травме колена: «Это немного раздражает и утомляет, но все идет хорошо»"
+    ) == "Родриго рассказал о состоянии колена"
+    assert clean_text(
+        "«Реал» установил цену в 50 миллионов евро за расторжение контракта летом 2025 года"
+    ) == "«Реал» оценил возможный уход летнего новичка-2025 в 50 млн евро"
+    assert clean_text(
+        "Рынок может спровоцировать неожиданный уход в «Реал»"
+    ) == "Рынок может спровоцировать неожиданный уход из «Реала»"
+    assert clean_text(
+        "Хосе Феликс Диас, журналист: «Реал» намерен выложить 100 миллионов за одного из этих трех игроков между Феде Вальверде, Тчуамени и Камавингой»"
+    ) == "Хосе Феликс Диас: «Реал» хочет выручить 100 млн евро за Вальверде, Тчуамени или Камавингу"
+    assert clean_text(
+        "Хосе Феликс Диас, журналист: «Реал» намерен выложить 100 миллионов за одного из этих трех игроков-Феде Вальверде, Тчуамени и Камавингу»"
+    ) == "Хосе Феликс Диас: «Реал» хочет выручить 100 млн евро за Вальверде, Тчуамени или Камавингу"
     assert clean_text(
         "«Реал» устанавливает цену ухода Камавинга в 60 миллионов"
     ) == "«Реал» оценил возможный уход Камавинги в 60 млн евро"

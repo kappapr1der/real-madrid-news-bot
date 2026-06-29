@@ -61,8 +61,56 @@ def player_key(text: str) -> str | None:
     return None
 
 
+def is_venezuela_donation_text(text: str) -> bool:
+    return contains_any(text, ("venezuela", "venezuel", "венесуэл")) and contains_any(
+        text,
+        (
+            "donate",
+            "donation",
+            "donan",
+            "donar",
+            "dona",
+            "donacion",
+            "solidaria",
+            "solidarity",
+            "millon",
+            "million",
+            "пожертв",
+            "землетр",
+        ),
+    )
+
+
+def is_joan_martinez_valencia_text(text: str) -> bool:
+    return (
+        contains_any(text, ("joan mart", "жоан март"))
+        and contains_any(text, ("valencia", "валенси"))
+        and contains_any(
+            text,
+            (
+                "loan",
+                "cesion",
+                "cedido",
+                "ceder",
+                "pregunta",
+                "interes",
+                "interesa",
+                "interest",
+                "аренд",
+                "интерес",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_venezuela_donation_text(text):
+        return "club:donation:venezuela-earthquake"
+
+    if is_joan_martinez_valencia_text(text):
+        return "transfer:loan:joan-martinez-valencia"
 
     if (
         contains_any(text, ("cvc", "tebas", "тебас", "audiovisual", "audiovisuales", "аудиовизуаль"))
@@ -126,11 +174,23 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     return "generic:" + "-".join(tokens[:10])
 
 
+def canonical_news_key(key: str) -> str:
+    clean = (key or "").strip()
+    if not clean:
+        return ""
+    text = normalize_news_text(clean.replace("generic:", " ").replace(":", " ").replace("-", " "))
+    if is_venezuela_donation_text(text):
+        return "club:donation:venezuela-earthquake"
+    if is_joan_martinez_valencia_text(text):
+        return "transfer:loan:joan-martinez-valencia"
+    return clean
+
+
 def load_news_keys(path: Path) -> set[str]:
     if not path.exists():
         return set()
     try:
-        return {line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()}
+        return {canonical_news_key(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()}
     except OSError:
         return set()
 
