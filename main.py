@@ -204,23 +204,50 @@ def digest_completed_today(label: str, now: datetime) -> bool:
     return completed_at.astimezone(now.tzinfo).date() == now.date()
 
 
-def run_missed_digest_if_needed(label: str, at_time: str):
-    if not DIGEST_MISSED_CATCHUP_ENABLED:
-        return
-
+def missed_digest_candidate(label: str, at_time: str, now: datetime) -> dict | None:
     clock = parse_digest_clock(at_time)
     if not clock:
         logging.warning("Невозможно проверить пропущенный %s дайджест: некорректное время %s", label, at_time)
+        return None
+
+    hour, minute = clock
+    scheduled_at = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if now < scheduled_at:
+        return None
+
+    late_minutes = int((now - scheduled_at).total_seconds() // 60)
+    return {
+        "label": label,
+        "at_time": at_time,
+        "scheduled_at": scheduled_at,
+        "late_minutes": late_minutes,
+    }
+
+
+def select_missed_digest_candidate(slots: list[tuple[str, str]], now: datetime) -> dict | None:
+    candidates = [
+        candidate
+        for label, at_time in slots
+        if (candidate := missed_digest_candidate(label, at_time, now)) is not None
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda candidate: candidate["scheduled_at"])
+
+
+def run_missed_digest_if_needed(slots: list[tuple[str, str]]):
+    if not DIGEST_MISSED_CATCHUP_ENABLED:
         return
 
     tz = ZoneInfo(DIGEST_TIMEZONE)
     now = datetime.now(tz)
-    hour, minute = clock
-    scheduled_at = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if now < scheduled_at:
+    candidate = select_missed_digest_candidate(slots, now)
+    if not candidate:
         return
 
-    late_minutes = int((now - scheduled_at).total_seconds() // 60)
+    label = candidate["label"]
+    at_time = candidate["at_time"]
+    late_minutes = candidate["late_minutes"]
     if late_minutes > DIGEST_MISSED_GRACE_MINUTES:
         logging.info(
             "Пропущенный %s дайджест не догоняем: прошло %s мин, лимит %s мин",
@@ -261,12 +288,14 @@ def main():
         run_breaking()
         run_matchday()
 
-        schedule_digest("утреннего", DIGEST_MORNING_TIME)
-        schedule_digest("дневного", DIGEST_DAY_TIME)
-        schedule_digest("вечернего", DIGEST_EVENING_TIME)
-        run_missed_digest_if_needed("утреннего", DIGEST_MORNING_TIME)
-        run_missed_digest_if_needed("дневного", DIGEST_DAY_TIME)
-        run_missed_digest_if_needed("вечернего", DIGEST_EVENING_TIME)
+        digest_slots = [
+            ("утреннего", DIGEST_MORNING_TIME),
+            ("дневного", DIGEST_DAY_TIME),
+            ("вечернего", DIGEST_EVENING_TIME),
+        ]
+        for label, at_time in digest_slots:
+            schedule_digest(label, at_time)
+        run_missed_digest_if_needed(digest_slots)
 
         print(
             Fore.CYAN
