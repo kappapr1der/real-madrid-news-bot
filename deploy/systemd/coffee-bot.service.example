@@ -1,0 +1,25 @@
+[Unit]
+Description=Coffee with Cream Real Madrid Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=coffee
+Group=coffee
+WorkingDirectory=/opt/coffee-bot
+EnvironmentFile=/opt/coffee-bot/.env
+ExecStart=/opt/coffee-bot/.venv/bin/python /opt/coffee-bot/main.py
+Restart=always
+RestartSec=15
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/coffee-bot/logs /opt/coffee-bot/state /opt/coffee-bot/config
+
+[Install]
+WantedBy=multi-user.target

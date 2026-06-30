@@ -248,6 +248,7 @@ sources_ru.py                          # русскоязычные источн
 scripts/preflight.py                   # проверка синтаксиса, зависимостей и .env
 scripts/check_sources.py               # проверка доступности RSS-источников
 deploy/systemd/coffee-bot.service.example # systemd-шаблон для VPS
+docs/failover.md                       # аварийный перенос на новый VPS
 requirements.txt                       # зависимости
 ```
 
