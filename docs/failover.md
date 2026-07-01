@@ -50,6 +50,9 @@ TARGET_CHAT_ID=@slivochniyfootball
 DRY_RUN=false
 DIGEST_MISSED_CATCHUP_ENABLED=true
 DIGEST_MISSED_GRACE_MINUTES=360
+HEARTBEAT_HOST=0.0.0.0
+HEARTBEAT_PORT=8000
+HEARTBEAT_TOKEN=replace_with_long_random_string
 ```
 
 Also add Yandex Translate and YandexGPT variables if they are used in production.
@@ -79,6 +82,12 @@ Health check:
 
 ```bash
 curl -fsS http://127.0.0.1:8000/
+```
+
+If `HEARTBEAT_TOKEN` is set:
+
+```bash
+curl -fsS "http://127.0.0.1:8000/health?token=replace_with_long_random_string"
 ```
 
 ## When the old VPS returns

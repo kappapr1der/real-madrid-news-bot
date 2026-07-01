@@ -166,6 +166,11 @@ def check_env():
         if is_placeholder(config.get("TARGET_CHAT_ID")):
             errors.append("TARGET_CHAT_ID is required for DRY_RUN=false")
 
+    heartbeat_host = (config.get("HEARTBEAT_HOST") or "127.0.0.1").strip()
+    heartbeat_token = (config.get("HEARTBEAT_TOKEN") or "").strip()
+    if heartbeat_host in {"0.0.0.0", "::"} and not heartbeat_token:
+        warnings.append("HEARTBEAT_TOKEN is recommended when HEARTBEAT_HOST is public")
+
     for name in HASHTAG_CONFIG_NAMES:
         if name in config and not (config.get(name) or "").strip():
             warnings.append(f"{name} is empty; quote values that start with #")

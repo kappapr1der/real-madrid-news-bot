@@ -279,7 +279,9 @@ STATE_DIR=state
 LOG_DIR=logs
 STATUS_FILE=state/status.json
 BREAKING_INTERVAL_SECONDS=120
+HEARTBEAT_HOST=127.0.0.1
 HEARTBEAT_PORT=8000
+HEARTBEAT_TOKEN=
 HEARTBEAT_MAIN_STALE_SECONDS=180
 HEARTBEAT_BREAKING_STALE_SECONDS=420
 HEARTBEAT_MATCHDAY_STALE_SECONDS=600
@@ -449,7 +451,7 @@ sudo systemctl status coffee-bot.service
 
 ## Мониторинг
 
-`main.py`, `breaking.py`, `digest.py` и `matchday.py` пишут runtime-состояние в `STATUS_FILE` (`state/status.json` по умолчанию). `heartbeat.py` читает этот файл и отвечает JSON по порту из `HEARTBEAT_PORT` (`8000` по умолчанию).
+`main.py`, `breaking.py`, `digest.py` и `matchday.py` пишут runtime-состояние в `STATUS_FILE` (`state/status.json` по умолчанию). `heartbeat.py` читает этот файл и отвечает JSON на `HEARTBEAT_HOST:HEARTBEAT_PORT` (`127.0.0.1:8000` по умолчанию).
 
 Проверить локально:
 
@@ -457,7 +459,7 @@ sudo systemctl status coffee-bot.service
 curl http://127.0.0.1:8000/
 ```
 
-Heartbeat возвращает `200`, если обязательные сервисы свежие, и `503`, если сервис еще не отчитался, упал или давно не обновлялся. Обязательные сервисы:
+Heartbeat возвращает `200`, если обязательные сервисы свежие, и `503`, если сервис еще не отчитался, упал или давно не обновлялся. Если задан `HEARTBEAT_TOKEN`, запросы без токена в query-параметре `token` или заголовке `X-Heartbeat-Token` получат `403`.
 
 - `main`;
 - `breaking`;
@@ -467,6 +469,9 @@ Heartbeat возвращает `200`, если обязательные серв
 Пороги свежести настраиваются через `.env`:
 
 ```env
+HEARTBEAT_HOST=127.0.0.1
+HEARTBEAT_PORT=8000
+HEARTBEAT_TOKEN=
 HEARTBEAT_MAIN_STALE_SECONDS=180
 HEARTBEAT_BREAKING_STALE_SECONDS=420
 HEARTBEAT_MATCHDAY_STALE_SECONDS=600
@@ -475,7 +480,23 @@ HEARTBEAT_LIVE_STALE_SECONDS=900
 
 Если запустить только `heartbeat.py` без `main.py`, он честно вернет `503`: это нормально, потому что менеджер и воркеры еще не записали статус.
 
-`uptime_webhook.py` можно использовать для webhook-уведомлений от UptimeRobot. Он берет Telegram-токен и канал из `.env`, а не из кода.
+Для UptimeRobot на VPS нужно открыть heartbeat наружу и задать токен:
+
+```env
+HEARTBEAT_HOST=0.0.0.0
+HEARTBEAT_PORT=8000
+HEARTBEAT_TOKEN=replace_with_long_random_string
+```
+
+Monitor URL:
+
+```text
+http://SERVER_IP:8000/health?token=replace_with_long_random_string
+```
+
+Тип монитора: HTTP(s). UptimeRobot будет видеть и полную сетевую недоступность сервера, и `503` от самого бота, если процесс жив, но сервисы устарели или упали.
+
+`uptime_webhook.py` можно использовать для webhook-уведомлений от UptimeRobot, но не запускай его на том же VPS как единственный канал тревог: если этот VPS лежит, webhook тоже не примет уведомление. Для аварий ЦОДа надежнее alert contacts на стороне UptimeRobot.
 
 ## Runtime-файлы
 
