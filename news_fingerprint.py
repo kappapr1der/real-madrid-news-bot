@@ -149,8 +149,67 @@ def is_asencio_loan_buy_text(text: str) -> bool:
     )
 
 
+def is_nico_paz_como_text(text: str) -> bool:
+    return (
+        contains_any(text, ("nico paz", "нико пас", "paz"))
+        and contains_any(text, ("como", "комо"))
+        and contains_any(
+            text,
+            (
+                "queda",
+                "quedara",
+                "quedará",
+                "stays",
+                "stay",
+                "continua",
+                "continúa",
+                "seguira",
+                "seguirá",
+                "deja",
+                "leaves",
+                "sale",
+                "salida",
+                "traspaso",
+                "transfer",
+                "покидает",
+                "остается",
+                "останется",
+                "переходит",
+                "переход",
+            ),
+        )
+    )
+
+
+def is_laporta_attacks_real_text(text: str) -> bool:
+    return (
+        contains_any(text, ("laporta", "лапорта"))
+        and contains_any(text, ("real madrid", "florentino", "реал", "флорентино"))
+        and contains_any(
+            text,
+            (
+                "attacks",
+                "takes aim",
+                "critica",
+                "critico",
+                "critic",
+                "ataca",
+                "deja vu",
+                "критик",
+                "атак",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_nico_paz_como_text(text):
+        return "transfer:nico-paz-como"
+
+    if is_laporta_attacks_real_text(text):
+        return "barca:laporta-attacks-real"
 
     if is_venezuela_donation_text(text):
         return "club:donation:venezuela-earthquake"
@@ -244,6 +303,10 @@ def canonical_news_key(key: str) -> str:
         return "transfer:olise-bayern-talks-real-monitoring"
     if is_asencio_loan_buy_text(text):
         return "transfer:loan:asencio-mandatory-buy"
+    if is_nico_paz_como_text(text):
+        return "transfer:nico-paz-como"
+    if is_laporta_attacks_real_text(text):
+        return "barca:laporta-attacks-real"
     return clean
 
 

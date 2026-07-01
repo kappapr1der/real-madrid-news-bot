@@ -470,6 +470,7 @@ def fetch_breaking(sources):
                 if use_llm_editor:
                     queue_llm_breaking(title, summary, link, label, fingerprint)
                     pending_links.add(link)
+                    seen_fingerprints.add(fingerprint)
                     queued += 1
                     logging.info("[LLM BREAKING] queued: %s | %s", label, title)
                     continue

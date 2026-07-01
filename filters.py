@@ -125,6 +125,7 @@ FILTERS = {
 
         # Женская команда и академические/секционные новости пока не для основной ленты.
         "futbol femenino", "fútbol femenino", "real madrid femenino", "femenino", "femenina",
+        "liga f", "grupo pau gasol", "pau gasol", "primera division femenina",
         "felicia schroder", "felicia schröder", "фелисия шредер", "фелиция шредер",
         "женский реал", "женская команда", "женского реала",
 
@@ -291,6 +292,17 @@ FILTERS = {
         "lectores defensa central", "lectores", "aprueban forma masiva", "rechazan vender",
         "encuesta", "87%", "60%", "se opone", "palo de arda", "palo arda", "un palo",
         "anti-endrick", "anti endrick", "anti-endrik", "anti endrik",
+        "chelsea sign italian defender", "chelsea signs italian defender", "palestra",
+        "juanma rodriguez filtros mbappe francia", "juanma rodriguez without filters",
+        "sin filtros sobre mbappe en francia",
+        "mbappe in france", "мбаппе в сборной франции", "комментарии родригеса",
+        "toni kroos got brutally honest", "florian wirtz and jamal musiala",
+        "wirtz and musiala", "jamal musiala stack up with jude bellingham",
+        "флориан виртц и джамал музиала", "виртц и джамал мусиала",
+        "david alaba claro jugar espana", "jugar espana especial mi",
+        "jugar en espana es especial", "jugar en españa es especial",
+        "alaba claro: jugar",
+        "alaba claro jugar espana", "играть в испании особенно",
 
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",

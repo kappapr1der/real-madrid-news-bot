@@ -209,10 +209,39 @@ def test_evening_digest_clickbait_and_lifestyle_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_recovered_digest_noise_from_july_first_is_filtered():
+    cases = [
+        ("Real Madrid queda fuera del acuerdo de inversion del grupo Pau Gasol en Liga F", "Marca - Real Madrid"),
+        ("Chelsea signs Italian defender Palestra for 47 million pounds", "BBC Sport Football"),
+        ("Juanma Rodriguez sin filtros sobre Mbappe en Francia", "Sport - Real Madrid"),
+        (
+            "Toni Kroos got brutally honest about how Florian Wirtz and Jamal Musiala stack up with Jude Bellingham",
+            "The Real Champs",
+        ),
+        ("David Alaba claro: jugar en Espana es especial para mi", "Marca - Real Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
     )
+    assert semantic_news_key(
+        "Oficial: Nico Paz queda otra temporada en Como"
+    ) == semantic_news_key(
+        "Oficial: Nico Paz deja el Real Madrid y pasa al Como"
+    )
+    assert semantic_news_key("Oficial: Nico Paz queda otra temporada en Como") == "transfer:nico-paz-como"
+    assert semantic_news_key(
+        "Joan Laporta takes aim at Florentino Perez and Real Madrid"
+    ) == semantic_news_key(
+        "Laporta attacks Real Madrid quotes 2026"
+    )
+    assert semantic_news_key("Laporta attacks Real Madrid quotes 2026") == "barca:laporta-attacks-real"
     assert semantic_news_key("Real Madrid academy goalkeeper wanted by several La Liga clubs") == semantic_news_key(
         "Equipos de Primera luchan por Fran Gonzalez, meta del Castilla"
     )
