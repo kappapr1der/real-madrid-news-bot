@@ -226,6 +226,22 @@ def test_recovered_digest_noise_from_july_first_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_evening_july_first_low_signal_items_are_filtered():
+    cases = [
+        ("4 Champions eclipsan eliminatoria seleccion jugador", "Bernabeu Digital"),
+        ("So much for the Endrick breakout under Carlo Ancelotti", "The Real Champs"),
+        ("Real Madrid C puede mantener plaza en Segunda RFEF pese a haber descendido", "Mundo Deportivo - Real Madrid"),
+        (
+            "George Weah said what Real Madrid fans have been whispering about Kylian Mbappe and Lamine Yamal",
+            "The Real Champs",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
@@ -240,6 +256,11 @@ def test_cross_language_duplicate_semantic_keys():
         "Joan Laporta takes aim at Florentino Perez and Real Madrid"
     ) == semantic_news_key(
         "Laporta attacks Real Madrid quotes 2026"
+    )
+    assert semantic_news_key(
+        "Barcelona president hits back at Real Madrid over complaint to UEFA"
+    ) == semantic_news_key(
+        "Laporta dispara al Real Madrid"
     )
     assert semantic_news_key("Laporta attacks Real Madrid quotes 2026") == "barca:laporta-attacks-real"
     assert semantic_news_key("Real Madrid academy goalkeeper wanted by several La Liga clubs") == semantic_news_key(

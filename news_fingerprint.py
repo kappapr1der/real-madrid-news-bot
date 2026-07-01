@@ -183,18 +183,23 @@ def is_nico_paz_como_text(text: str) -> bool:
 
 def is_laporta_attacks_real_text(text: str) -> bool:
     return (
-        contains_any(text, ("laporta", "лапорта"))
+        contains_any(text, ("laporta", "лапорта", "barcelona president", "president barcelona", "президент барселоны"))
         and contains_any(text, ("real madrid", "florentino", "реал", "флорентино"))
         and contains_any(
             text,
             (
                 "attacks",
                 "takes aim",
+                "hits back",
+                "hit back",
                 "critica",
                 "critico",
                 "critic",
                 "ataca",
+                "dispara",
                 "deja vu",
+                "ответный удар",
+                "нанес ответ",
                 "критик",
                 "атак",
             ),
