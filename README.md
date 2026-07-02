@@ -286,6 +286,7 @@ HEARTBEAT_MAIN_STALE_SECONDS=180
 HEARTBEAT_BREAKING_STALE_SECONDS=420
 HEARTBEAT_MATCHDAY_STALE_SECONDS=600
 HEARTBEAT_LIVE_STALE_SECONDS=900
+PREFLIGHT_STATUS_TTL_SECONDS=1800
 
 # HTTP и Telegram-лимиты.
 HTTP_USER_AGENT=CoffeeBot/1.0 (+https://t.me/slivochniyfootball)
@@ -319,6 +320,10 @@ DIGEST_DEDUPE_ENABLED=true
 DIGEST_PRIORITY_SORT_ENABLED=true
 DIGEST_SHOW_RELATED_SOURCES=true
 DIGEST_DEDUPE_SIMILARITY=42
+DIGEST_PREFLIGHT_ENABLED=true
+DIGEST_PREFLIGHT_MINUTES=5
+DIGEST_PREFLIGHT_WARN_MIN_CANDIDATES=6
+BREAKING_PREFLIGHT_PENDING_WARN=10
 
 # Матч-день и текстовые трансляции.
 MATCHDAY_ENABLED=true
@@ -417,6 +422,8 @@ python digest.py вечернего
 
 `main.py` запускает `heartbeat.py`, `breaking.py` и `matchday.py` как процессы с рестартом, а `digest.py` — как одноразовую задачу без автоперезапуска после успешного завершения. Дайджесты планируются по настройкам `DIGEST_MORNING_TIME`, `DIGEST_DAY_TIME`, `DIGEST_EVENING_TIME` в таймзоне `DIGEST_TIMEZONE`. По умолчанию это `09:00`, `15:00`, `21:00` по Москве.
 
+Если `DIGEST_PREFLIGHT_ENABLED=true`, менеджер запускает `preflight.py digest <label>` за `DIGEST_PREFLIGHT_MINUTES` минут до каждого дайджеста. Preflight не публикует пост и не вызывает LLM-редактор: он собирает свежие кандидаты, проверяет дедупликацию, hard-deny, тонкие выпуски и очередь breaking, а затем пишет результат в `STATUS_FILE`. Свежие warning/error из preflight видны в heartbeat в течение `PREFLIGHT_STATUS_TTL_SECONDS`.
+
 Если VPS был выключен или недоступен в момент запуска дайджеста, менеджер при старте проверяет пропущенные слоты. При `DIGEST_MISSED_CATCHUP_ENABLED=true` он догонит только последний актуальный выпуск дня, если с его планового времени прошло не больше `DIGEST_MISSED_GRACE_MINUTES` минут и этот дайджест сегодня ещё не завершался. Это защищает канал от пачки устаревших утренних/дневных выпусков после долгой аварии. По умолчанию окно — `360` минут.
 
 ## Live-режим
@@ -465,6 +472,8 @@ Heartbeat возвращает `200`, если обязательные серв
 - `breaking`;
 - `matchday`, если `MATCHDAY_ENABLED=true`;
 - `live`, если `MATCHDAY_LIVE_ENABLED=true`.
+
+Свежие `preflight:*` статусы не считаются обязательными сервисами, но heartbeat добавляет их warning/error в общий ответ, пока они не старше `PREFLIGHT_STATUS_TTL_SECONDS`.
 
 Пороги свежести настраиваются через `.env`:
 

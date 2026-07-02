@@ -17,6 +17,8 @@ from runtime_config import (
     DIGEST_MISSED_CATCHUP_ENABLED,
     DIGEST_MISSED_GRACE_MINUTES,
     DIGEST_MORNING_TIME,
+    DIGEST_PREFLIGHT_ENABLED,
+    DIGEST_PREFLIGHT_MINUTES,
     DIGEST_TIMEZONE,
     DRY_RUN,
     MATCHDAY_ENABLED,
@@ -182,6 +184,10 @@ def run_digest_with_label(label: str):
     start_process(f"digest:{label}", [PYTHON, "digest.py", label], restart=False)
 
 
+def run_preflight_with_label(label: str):
+    start_process(f"preflight:{label}", [PYTHON, "preflight.py", "digest", label], restart=False)
+
+
 def parse_digest_clock(at_time: str) -> tuple[int, int] | None:
     try:
         hour_raw, minute_raw = at_time.split(":", 1)
@@ -192,6 +198,15 @@ def parse_digest_clock(at_time: str) -> tuple[int, int] | None:
     if not (0 <= hour <= 23 and 0 <= minute <= 59):
         return None
     return hour, minute
+
+
+def preflight_time_for_digest(at_time: str, lead_minutes: int) -> str | None:
+    clock = parse_digest_clock(at_time)
+    if not clock:
+        return None
+    hour, minute = clock
+    total_minutes = (hour * 60 + minute - max(lead_minutes, 0)) % (24 * 60)
+    return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
 
 
 def digest_completed_today(label: str, now: datetime) -> bool:
@@ -277,6 +292,24 @@ def schedule_digest(label: str, at_time: str):
     return job
 
 
+def schedule_digest_preflight(label: str, at_time: str):
+    if not DIGEST_PREFLIGHT_ENABLED or DIGEST_PREFLIGHT_MINUTES <= 0:
+        return None
+    preflight_time = preflight_time_for_digest(at_time, DIGEST_PREFLIGHT_MINUTES)
+    if not preflight_time:
+        logging.warning("Не удалось запланировать preflight для %s: некорректное время %s", label, at_time)
+        return None
+    job = schedule.every().day.at(preflight_time, DIGEST_TIMEZONE).do(run_preflight_with_label, label=label)
+    logging.info(
+        "Запланирован preflight %s дайджеста на %s %s (%s мин до выпуска)",
+        label,
+        preflight_time,
+        DIGEST_TIMEZONE,
+        DIGEST_PREFLIGHT_MINUTES,
+    )
+    return job
+
+
 def main():
     install_signal_handlers()
     try:
@@ -294,6 +327,7 @@ def main():
             ("вечернего", DIGEST_EVENING_TIME),
         ]
         for label, at_time in digest_slots:
+            schedule_digest_preflight(label, at_time)
             schedule_digest(label, at_time)
         run_missed_digest_if_needed(digest_slots)
 
@@ -302,6 +336,8 @@ def main():
             + f"[MAIN] Дайджесты: {DIGEST_MORNING_TIME}, {DIGEST_DAY_TIME}, "
             + f"{DIGEST_EVENING_TIME} ({DIGEST_TIMEZONE})"
         )
+        if DIGEST_PREFLIGHT_ENABLED:
+            print(Fore.CYAN + f"[MAIN] Preflight: за {DIGEST_PREFLIGHT_MINUTES} мин до дайджеста")
 
         while not stop_event.is_set():
             schedule.run_pending()

@@ -15,6 +15,7 @@ from runtime_config import (
     LLM_EDITOR_MAX_DIGEST_ITEMS,
     MATCHDAY_ENABLED,
     MATCHDAY_LIVE_ENABLED,
+    PREFLIGHT_STATUS_TTL_SECONDS,
     STATE_DIR,
     STATUS_FILE,
     YANDEX_LLM_ENABLED,
@@ -222,6 +223,19 @@ def health_snapshot() -> tuple[dict[str, Any], int]:
             issues.append(f"{name} has invalid updated_at")
         elif age > max_age:
             issues.append(f"{name} stale for {age}s, limit {max_age}s")
+
+    for name, entry in services.items():
+        if not str(name).startswith("preflight:") or not isinstance(entry, dict):
+            continue
+        age = service_age_seconds(entry, now)
+        if age is None or age > PREFLIGHT_STATUS_TTL_SECONDS:
+            continue
+        state = str(entry.get("state") or "unknown")
+        message = str(entry.get("message") or "").strip()
+        if state in BAD_STATES:
+            issues.append(f"{name} is {state}: {message}".strip())
+        elif state == "degraded":
+            warnings.append(f"{name}: {message}".strip())
 
     llm_utilization = usage.get("llm_editor", {}).get("utilization", {})
     if float(llm_utilization.get("requests_percent", 0) or 0) >= 90:

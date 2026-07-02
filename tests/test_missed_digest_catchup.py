@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from main import select_missed_digest_candidate
+from main import preflight_time_for_digest, select_missed_digest_candidate
 
 
 TZ = ZoneInfo("Europe/Moscow")
@@ -36,3 +36,12 @@ def test_missed_catchup_waits_before_first_slot():
     now = datetime(2026, 6, 30, 8, 30, tzinfo=TZ)
 
     assert select_missed_digest_candidate(DIGEST_SLOTS, now) is None
+
+
+def test_preflight_time_is_before_digest_slot():
+    assert preflight_time_for_digest("15:00", 5) == "14:55"
+    assert preflight_time_for_digest("09:00", 15) == "08:45"
+
+
+def test_preflight_time_wraps_previous_day():
+    assert preflight_time_for_digest("00:03", 5) == "23:58"
