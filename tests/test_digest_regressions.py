@@ -113,6 +113,7 @@ def test_preflight_noise_from_social_and_national_team_items_is_filtered():
             "‘A head scratcher’",
             "Madrid Universal",
         ),
+        ("Dardo de Courtois a Cucurella", "Mundo Deportivo – Real Madrid"),
     ]
 
     for title, source in cases:
