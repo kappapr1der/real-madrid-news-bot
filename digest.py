@@ -339,6 +339,12 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "real madrid fans have been saying for weeks",
     "gary neville exfutbolista",
     "tuchel no ha querido en mundial",
+    "ya no cree en el fichaje de este jugador",
+    "no cree en el fichaje de este jugador",
+    "больше не верит в трансфер этого игрока",
+    "больше не верит в переход этого игрока",
+    "трансфер этого игрока",
+    "переход этого игрока",
     "manolo lama",
     "lesion raphinha ha venido bien",
     "lesión raphinha ha venido bien",
@@ -564,8 +570,8 @@ SHORT_TEMPLATES = {
         "<b>К этому часу коротко</b>\n{intro}\n\n{news}",
     ],
     "вечернего": [
-        "<b>Короткие сливочные итоги</b>\n{intro}\n\n{news}",
-        "<b>Вечер без воды</b>\n{intro}\n\n{news}",
+        "<b>Сливочные итоги дня</b>\n{intro}\n\n{news}",
+        "<b>Вечерняя белая сводка</b>\n{intro}\n\n{news}",
     ],
     "ночного": [
         "<b>Ночная короткая сводка</b>\n{intro}\n\n{news}",
@@ -608,8 +614,8 @@ SHORT_INTRO_LINES = {
         "Коротко по делу из дневной белой ленты.",
     ],
     "вечернего": [
-        "Главные белые сюжеты дня в коротком формате.",
-        "К вечеру собрались несколько важных пунктов.",
+        "Главное из белой ленты к концу дня.",
+        "К вечеру собрались несколько важных сюжетов вокруг клуба.",
     ],
     "ночного": [
         "Поздняя белая лента в коротком формате.",

@@ -106,6 +106,9 @@ FILTERS = {
         "rodrygo a bernardo silva",
         "dani carvajal 34 anos sobre futbol", "jovenes deben disfrutar deporte", "redes sociales ya quieren ser futbolistas",
         "young people should enjoy sport",
+        "ya no cree en el fichaje de este jugador", "no cree en el fichaje de este jugador",
+        "больше не верит в трансфер этого игрока", "больше не верит в переход этого игрока",
+        "трансфер этого игрока", "переход этого игрока",
 
         # НЕ футбол (EN)
         "tennis", "nba", "nhl", "nfl", "mlb", "cricket", "cycling", "golf",

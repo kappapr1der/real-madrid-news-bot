@@ -93,6 +93,14 @@ def test_evening_digest_national_team_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_vague_bernabeu_transfer_clickbait_is_filtered():
+    title = "El Real Madrid ya no cree en el fichaje de este jugador"
+    headline = "«Реал» больше не верит в трансфер этого игрока"
+
+    assert passes_filters(title, source="Bernabéu Digital") is False
+    assert digest_llm_hard_deny(_item(title), headline) is True
+
+
 def test_morning_digest_low_signal_items_are_filtered():
     cases = [
         ("Bernardo Silva stays on the bench in Portugal's 0-0 draw with Colombia", "Managing Madrid"),
@@ -395,6 +403,14 @@ def test_digest_render_plan_uses_short_format_for_thin_digest():
     assert not any("добивк" in line or "наполнител" in line or "тонк" in line for line in intro_lines)
 
 
+def test_evening_short_digest_avoids_meta_copy():
+    render_format, templates, intro_lines = digest_render_plan("вечернего", 4)
+
+    assert render_format == "short"
+    assert not any("Корот" in template or "формат" in template for template in templates)
+    assert not any("формат" in line or "пункт" in line for line in intro_lines)
+
+
 def test_digest_render_plan_uses_full_format_for_normal_digest():
     render_format, templates, intro_lines = digest_render_plan("дневного", 6)
 
@@ -629,6 +645,9 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Фальк о ситуации Оливье: «Реал — команда, о которой стоит мечтать»"
     ) == "Фальк об Олисе: «Реал» - клуб мечты"
+    assert clean_text(
+        "Суд отклонил просьбу Реала о приостановке протокола против насилия Ла Лиги"
+    ) == "Суд отклонил просьбу «Реала» приостановить протокол Ла Лиги против домогательств"
     assert clean_text(
         "«Продать Виниция и привезти Олисе? Все говорят» да«»"
     ) == "В Испании обсуждают вариант: продать Винисиуса и подписать Олисе"
