@@ -101,6 +101,25 @@ def test_vague_bernabeu_transfer_clickbait_is_filtered():
     assert digest_llm_hard_deny(_item(title), headline) is True
 
 
+def test_preflight_noise_from_social_and_national_team_items_is_filtered():
+    cases = [
+        (
+            "Cucurella responde a la queja de Courtois por no seguirle en Instagram: "
+            "el nuevo defensa del Madrid tardó 10 horas en hacerlo",
+            "Defensa Central",
+        ),
+        (
+            "Man United legends question Tuchel’s decision to omit Real Madrid superstar: "
+            "‘A head scratcher’",
+            "Madrid Universal",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_morning_digest_low_signal_items_are_filtered():
     cases = [
         ("Bernardo Silva stays on the bench in Portugal's 0-0 draw with Colombia", "Managing Madrid"),
