@@ -74,6 +74,9 @@ def test_evening_digest_national_team_noise_is_filtered():
         "De apellido verdugo del Real Madrid a expulsion contra Espana: la historia de Agustin Canobbio",
         "Bellingham has become Tuchel's most important player",
         "What Thomas Tuchel did to Trent Alexander-Arnold feels like a fireable offense",
+        "Icons Luka Modric and Cristiano Ronaldo hope to avoid World Cup elimination",
+        "Croatia Portugal Luka Modric Cristiano Ronaldo 2026 World Cup",
+        "«Иконы» Модрич и Роналду надеются избежать удаления с чемпионата Мира",
         "Bonito reencuentro Cristiano Ronaldo y Rodrygo: el portugues se preocupo por su lesion",
         "La familia cule de Cucurella",
         "El reencuentro Cristiano-Rodrygo",
@@ -337,6 +340,10 @@ def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Valencia want to take Joan Martinez on loan") == "transfer:loan:joan-martinez-valencia"
     assert semantic_news_key("Real Madrid again skip key La Liga and RFEF meeting") == "club:laliga-rfef-meeting-skip"
     assert semantic_news_key("Michael Olise to hold talks with Bayern while Real Madrid monitor situation") == "transfer:olise-bayern-talks-real-monitoring"
+    assert semantic_news_key(
+        "Tribunal rechaza peticion del Real Madrid para suspender protocolo frente acoso sexual de LaLiga"
+    ) == "legal:laliga-harassment-protocol"
+    assert semantic_news_key("Otro reves judicial para el Real Madrid por el protocolo de acoso sexual de LaLiga") == "legal:laliga-harassment-protocol"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -385,6 +392,7 @@ def test_digest_render_plan_uses_short_format_for_thin_digest():
     assert render_format == "short"
     assert any("Корот" in template for template in templates)
     assert intro_lines
+    assert not any("добивк" in line or "наполнител" in line or "тонк" in line for line in intro_lines)
 
 
 def test_digest_render_plan_uses_full_format_for_normal_digest():
@@ -618,3 +626,9 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Мика Ричардс рассказал все как есть, обращаясь к спору между Трентом Александром и Арнольдом"
     ) == "Мика Ричардс рассказал все как есть, обращаясь к спору между Трентом Александер-Арнольдом"
+    assert clean_text(
+        "Фальк о ситуации Оливье: «Реал — команда, о которой стоит мечтать»"
+    ) == "Фальк об Олисе: «Реал» - клуб мечты"
+    assert clean_text(
+        "«Продать Виниция и привезти Олисе? Все говорят» да«»"
+    ) == "В Испании обсуждают вариант: продать Винисиуса и подписать Олисе"

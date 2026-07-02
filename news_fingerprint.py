@@ -111,6 +111,31 @@ def is_laliga_rfef_meeting_text(text: str) -> bool:
     )
 
 
+def is_laliga_harassment_protocol_text(text: str) -> bool:
+    return (
+        contains_any(text, ("laliga", "la liga", "лига", "лиги"))
+        and contains_any(text, ("protocolo", "protocol", "протокол"))
+        and contains_any(text, ("acoso sexual", "sexual harassment", "домогательств"))
+        and contains_any(
+            text,
+            (
+                "tribunal",
+                "court",
+                "judicial",
+                "rechaza",
+                "reves",
+                "revés",
+                "suspender",
+                "suspension",
+                "суд",
+                "юридичес",
+                "отклонил",
+                "приостанов",
+            ),
+        )
+    )
+
+
 def is_olise_bayern_talks_text(text: str) -> bool:
     return (
         contains_any(text, ("olise", "олисе", "galactico", "галактико", "hainer", "ahorrarse esfuerzo", "save effort", "сэкономить усилия"))
@@ -268,6 +293,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_laliga_rfef_meeting_text(text):
         return "club:laliga-rfef-meeting-skip"
 
+    if is_laliga_harassment_protocol_text(text):
+        return "legal:laliga-harassment-protocol"
+
     if is_olise_bayern_talks_text(text):
         return "transfer:olise-bayern-talks-real-monitoring"
 
@@ -347,6 +375,8 @@ def canonical_news_key(key: str) -> str:
         return "transfer:loan:joan-martinez-valencia"
     if is_laliga_rfef_meeting_text(text):
         return "club:laliga-rfef-meeting-skip"
+    if is_laliga_harassment_protocol_text(text):
+        return "legal:laliga-harassment-protocol"
     if is_camavinga_manchester_city_text(text):
         return "transfer:camavinga-manchester-city"
     if is_olise_bayern_talks_text(text):

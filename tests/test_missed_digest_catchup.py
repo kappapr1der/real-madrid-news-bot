@@ -1,7 +1,8 @@
 from datetime import datetime
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
-from main import preflight_time_for_digest, select_missed_digest_candidate
+from main import digest_completed_today, preflight_time_for_digest, select_missed_digest_candidate
 
 
 TZ = ZoneInfo("Europe/Moscow")
@@ -45,3 +46,36 @@ def test_preflight_time_is_before_digest_slot():
 
 def test_preflight_time_wraps_previous_day():
     assert preflight_time_for_digest("00:03", 5) == "23:58"
+
+
+def test_digest_completed_today_reads_label_status():
+    now = datetime(2026, 7, 2, 13, 43, tzinfo=TZ)
+    status = {
+        "services": {
+            "digest:утреннего": {
+                "state": "completed",
+                "updated_at": "2026-07-02T06:00:17+00:00",
+                "metrics": {"label": "утреннего"},
+            }
+        }
+    }
+
+    with patch("main.load_status", return_value=status):
+        assert digest_completed_today("утреннего", now) is True
+
+
+def test_digest_completed_today_reads_aggregate_digest_status():
+    now = datetime(2026, 7, 2, 13, 43, tzinfo=TZ)
+    status = {
+        "services": {
+            "digest": {
+                "state": "ok",
+                "updated_at": "2026-07-02T06:00:14+00:00",
+                "metrics": {"label": "утреннего"},
+            }
+        }
+    }
+
+    with patch("main.load_status", return_value=status):
+        assert digest_completed_today("утреннего", now) is True
+        assert digest_completed_today("дневного", now) is False

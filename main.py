@@ -210,13 +210,24 @@ def preflight_time_for_digest(at_time: str, lead_minutes: int) -> str | None:
 
 
 def digest_completed_today(label: str, now: datetime) -> bool:
-    entry = load_status().get("services", {}).get(f"digest:{label}", {})
-    if not isinstance(entry, dict) or entry.get("state") != "completed":
-        return False
-    completed_at = parse_iso(str(entry.get("updated_at") or ""))
-    if not completed_at:
-        return False
-    return completed_at.astimezone(now.tzinfo).date() == now.date()
+    services = load_status().get("services", {})
+    entries = [
+        services.get(f"digest:{label}", {}),
+        services.get("digest", {}),
+    ]
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        state = entry.get("state")
+        metrics = entry.get("metrics") if isinstance(entry.get("metrics"), dict) else {}
+        if state not in {"completed", "ok"}:
+            continue
+        if entry is services.get("digest") and metrics.get("label") != label:
+            continue
+        completed_at = parse_iso(str(entry.get("updated_at") or ""))
+        if completed_at and completed_at.astimezone(now.tzinfo).date() == now.date():
+            return True
+    return False
 
 
 def missed_digest_candidate(label: str, at_time: str, now: datetime) -> dict | None:
