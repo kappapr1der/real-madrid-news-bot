@@ -73,6 +73,7 @@ def test_evening_digest_national_team_noise_is_filtered():
         "Kylian Mbappe flipped the narrative during France vs Norway",
         "De apellido verdugo del Real Madrid a expulsion contra Espana: la historia de Agustin Canobbio",
         "Bellingham has become Tuchel's most important player",
+        "What Thomas Tuchel did to Trent Alexander-Arnold feels like a fireable offense",
         "Bonito reencuentro Cristiano Ronaldo y Rodrygo: el portugues se preocupo por su lesion",
         "La familia cule de Cucurella",
         "El reencuentro Cristiano-Rodrygo",
