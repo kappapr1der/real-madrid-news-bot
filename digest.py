@@ -23,6 +23,7 @@ from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from llm_editor import review_digest_items
+from source_quality import update_digest_source_quality
 from status_manager import record_error, record_status
 from translator import translate_text
 from text_cleaner import clean_text
@@ -36,9 +37,11 @@ from runtime_config import (
     DIGEST_HASHTAGS,
     DIGEST_INCLUDE_UNDATED,
     DIGEST_LIMIT,
+    DIGEST_MIN_ITEMS_TO_POST,
     DIGEST_MORNING_LOOKBACK_HOURS,
     DIGEST_NIGHT_LOOKBACK_HOURS,
     DIGEST_PRIORITY_SORT_ENABLED,
+    DIGEST_SHORT_FORMAT_THRESHOLD,
     DIGEST_SHOW_RELATED_SOURCES,
     DIGEST_TIMEZONE,
     DRY_RUN,
@@ -536,6 +539,27 @@ TEMPLATES = {
     ],
 }
 
+SHORT_TEMPLATES = {
+    "утреннего": [
+        "<b>Короткое белое утро</b>\n{intro}\n\n{news}",
+        "<b>Утро без лишнего шума</b>\n{intro}\n\n{news}",
+    ],
+    "дневного": [
+        "<b>Короткая белая сводка</b>\n{intro}\n\n{news}",
+        "<b>К этому часу коротко</b>\n{intro}\n\n{news}",
+    ],
+    "вечернего": [
+        "<b>Короткие сливочные итоги</b>\n{intro}\n\n{news}",
+        "<b>Вечер без воды</b>\n{intro}\n\n{news}",
+    ],
+    "ночного": [
+        "<b>Ночная короткая сводка</b>\n{intro}\n\n{news}",
+    ],
+    "default": [
+        "<b>Короткая белая сводка</b>\n{intro}\n\n{news}",
+    ],
+}
+
 INTRO_LINES = {
     "утреннего": [
         "Свежие новости о «Реале» за ночь и утро.",
@@ -556,6 +580,27 @@ INTRO_LINES = {
     "default": [
         "Главное вокруг «Реала» из свежей ленты.",
         "Сливочная подборка без случайного футбольного шума.",
+    ],
+}
+
+SHORT_INTRO_LINES = {
+    "утреннего": [
+        "Лента тонкая, поэтому только то, что реально стоит внимания.",
+        "Без добивки ради количества: несколько свежих пунктов по делу.",
+    ],
+    "дневного": [
+        "Пока свежака немного, оставляю только нормальные пункты.",
+        "Коротко: без наполнителя и случайного футбольного шума.",
+    ],
+    "вечернего": [
+        "День был негустой, поэтому только главное.",
+        "Без искусственного топ-10: несколько пунктов, которые прошли фильтр.",
+    ],
+    "ночного": [
+        "Поздняя лента тонкая, держу формат коротким.",
+    ],
+    "default": [
+        "Свежака немного, поэтому только проверенный минимум.",
     ],
 }
 
@@ -792,12 +837,13 @@ def save_quarantine(rows: list[dict]) -> None:
     )
 
 
-def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[RankedDigestItem], label: str) -> int:
+def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[RankedDigestItem], label: str) -> tuple[int, dict[str, int]]:
     selected_links = {item.candidate.link for item in selected}
     now = datetime.now(timezone.utc)
     rows = load_quarantine()
     existing = {row.get("link") for row in rows}
     added = 0
+    by_source: dict[str, int] = {}
 
     for candidate in candidates:
         if candidate.link in selected_links or candidate.link in existing:
@@ -818,10 +864,11 @@ def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[R
         )
         existing.add(candidate.link)
         added += 1
+        by_source[candidate.source] = by_source.get(candidate.source, 0) + 1
 
     if added:
         save_quarantine(rows)
-    return added
+    return added, by_source
 
 
 def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
@@ -932,7 +979,13 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
     )
     selected, title_overrides, editor_metrics = apply_llm_digest_editor(selected, label)
     selected = selected[:limit]
-    quarantined = update_digest_quarantine(candidates, selected, label)
+    quarantined, quarantined_by_source = update_digest_quarantine(candidates, selected, label)
+    source_quality = update_digest_source_quality(
+        sources=sources,
+        candidates=candidates,
+        selected=selected,
+        quarantined_by_source=quarantined_by_source,
+    )
     news_items = [
         format_news_entry(i, item, title_overrides.get(item.candidate.link))
         for i, item in enumerate(selected, start=1)
@@ -965,9 +1018,24 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         "priority_sort": DIGEST_PRIORITY_SORT_ENABLED,
         "quarantined": quarantined,
         "semantic_keys": len(new_fingerprints),
+        "source_quality": {
+            "tracked_sources": source_quality.get("tracked_sources", 0),
+            "noisy": source_quality.get("noisy", [])[:3],
+            "quiet": source_quality.get("quiet", [])[:3],
+        },
         **editor_metrics,
     }
     return news_items, new_links, new_fingerprints, metrics
+
+
+def digest_render_plan(label: str, item_count: int) -> tuple[str, list[str], list[str]]:
+    if item_count < DIGEST_SHORT_FORMAT_THRESHOLD:
+        return (
+            "short",
+            SHORT_TEMPLATES.get(label, SHORT_TEMPLATES["default"]),
+            SHORT_INTRO_LINES.get(label, SHORT_INTRO_LINES["default"]),
+        )
+    return "full", TEMPLATES.get(label, TEMPLATES["default"]), INTRO_LINES.get(label, INTRO_LINES["default"])
 
 
 def post_telegram_message(message: str) -> bool:
@@ -1017,9 +1085,19 @@ def send_digest(label: str = "auto"):
         print(f"[DIGEST] Нет свежих новостей для {label} дайджеста")
         return
 
+    if len(news_items) < DIGEST_MIN_ITEMS_TO_POST:
+        metrics["format"] = "skipped_thin"
+        metrics["min_items_to_post"] = DIGEST_MIN_ITEMS_TO_POST
+        record_status("digest", "skipped", f"Слишком тонкая лента для {label} дайджеста", metrics)
+        logging.info("Дайджест %s пропущен: слишком мало новостей (%s)", label, len(news_items))
+        print(f"[DIGEST] Пропущен {label}: слишком мало новостей ({len(news_items)})")
+        return
+
     joined_news = "\n\n".join(news_items)
-    templates = TEMPLATES.get(label, TEMPLATES["default"])
-    intro = random.choice(INTRO_LINES.get(label, INTRO_LINES["default"]))
+    render_format, templates, intro_lines = digest_render_plan(label, len(news_items))
+    metrics["format"] = render_format
+    metrics["short_format_threshold"] = DIGEST_SHORT_FORMAT_THRESHOLD
+    intro = random.choice(intro_lines)
     message = random.choice(templates).format(news=joined_news, intro=intro)
     message = append_hashtags(message, DIGEST_HASHTAGS)
     chunks = split_message(message)

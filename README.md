@@ -14,6 +14,7 @@
 
 - RSS-источники на русском, английском и испанском.
 - Профильные Real Madrid RSS в приоритете: Managing Madrid, Madrid Universal, The Real Champs, Defensa Central, Bernabéu Digital, Marca, Mundo Deportivo, Sport и другие.
+- Опциональные X/Twitter-источники через внешний RSS-шлюз (`X_RSS_BASE_URL`), чтобы ловить цитаты официальных аккаунтов и инсайдеров без платного X API.
 - Фильтр релевантности по Real Madrid, игрокам, турнирам, профильным источникам и стоп-словам.
 - Перевод через DeepL API Free, если задан `DEEPL_API_KEY`; иначе fallback на `deep-translator` / MyMemory.
 - Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
@@ -24,6 +25,7 @@
 - Длинные Telegram-сообщения режутся на части до `TELEGRAM_MESSAGE_LIMIT`.
 - RSS читается через HTTP timeout и `HTTP_USER_AGENT`, чтобы плохой источник не подвешивал процесс.
 - Свежие дайджесты: бот берет дату публикации из RSS, отбрасывает старые новости и сортирует новые сверху внутри редакторского ранжирования.
+- Если свежая лента тонкая, бот публикует короткий формат или пропускает слот вместо искусственного топ-10.
 - Автоматический тип дайджеста по времени: утренний, дневной, вечерний или ночной.
 - Расписание дайджестов настраивается через `.env` и работает в `DIGEST_TIMEZONE`, а не в случайной таймзоне VPS.
 - Если сервер был недоступен во время слота, `main.py` может догнать последний актуальный дайджест при старте в пределах `DIGEST_MISSED_GRACE_MINUTES`.
@@ -67,10 +69,13 @@
 - поднимает выше официальные сообщения, травмы, составы, матчевые новости, ЛЧ и трансферы;
 - группирует похожие заголовки от разных RSS, чтобы одна травма или один трансфер не занимали три пункта;
 - сохраняет все ссылки из группы как отправленные, чтобы дубли не всплывали в следующем дайджесте.
+- ведет статистику качества источников в `state/source_quality.json`: кандидаты, попадания в дайджест, карантин и тихие источники.
 
 Настройки:
 
 ```env
+DIGEST_MIN_ITEMS_TO_POST=3
+DIGEST_SHORT_FORMAT_THRESHOLD=6
 DIGEST_DEDUPE_ENABLED=true
 DIGEST_PRIORITY_SORT_ENABLED=true
 DIGEST_SHOW_RELATED_SOURCES=true
@@ -78,6 +83,19 @@ DIGEST_DEDUPE_SIMILARITY=42
 ```
 
 `DIGEST_DEDUPE_SIMILARITY` задается от `0` до `100`: чем выше значение, тем строже бот считает новости дублями. Если бот склеивает лишнее, подними значение, например до `55`. Если пропускает очевидные повторы, опусти до `35`.
+
+`DIGEST_MIN_ITEMS_TO_POST` задает нижнюю границу публикации. Если после фильтров осталось меньше пунктов, слот пропускается. `DIGEST_SHORT_FORMAT_THRESHOLD` включает короткий формат: по умолчанию 3-5 нормальных новостей публикуются как короткая сводка, а 6+ — как обычный дайджест.
+
+## X-источники
+
+Официальный X API требует Bearer token, поэтому бот не зависит от него напрямую. Вместо этого можно подключить любой RSS-шлюз, который превращает публичные X-аккаунты в RSS.
+
+```env
+X_RSS_BASE_URL=https://rsshub.app/twitter/user/{handle}
+X_RSS_HANDLES=realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,AranchaMOBILE,melchorcope,JLSanchez78,Ramon_AlvarezMM,GuillermoRai_
+```
+
+Если `X_RSS_BASE_URL` пустой, X-источники полностью выключены. В шаблоне можно использовать `{handle}`; если плейсхолдера нет, бот добавит handle в конец URL.
 
 ## Хэштеги
 
@@ -316,6 +334,8 @@ DIGEST_EVENING_TIME=21:00
 DIGEST_MISSED_CATCHUP_ENABLED=true
 DIGEST_MISSED_GRACE_MINUTES=360
 DIGEST_LIMIT=10
+DIGEST_MIN_ITEMS_TO_POST=3
+DIGEST_SHORT_FORMAT_THRESHOLD=6
 DIGEST_ENTRY_SCAN_LIMIT=5
 DIGEST_DEFAULT_LOOKBACK_HOURS=8
 DIGEST_MORNING_LOOKBACK_HOURS=14
@@ -331,6 +351,10 @@ DIGEST_PREFLIGHT_ENABLED=true
 DIGEST_PREFLIGHT_MINUTES=5
 DIGEST_PREFLIGHT_WARN_MIN_CANDIDATES=6
 BREAKING_PREFLIGHT_PENDING_WARN=10
+
+# Опционально: X/Twitter через внешний RSS-шлюз.
+X_RSS_BASE_URL=
+X_RSS_HANDLES=realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,AranchaMOBILE,melchorcope,JLSanchez78,Ramon_AlvarezMM,GuillermoRai_
 
 # Матч-день и текстовые трансляции.
 MATCHDAY_ENABLED=true

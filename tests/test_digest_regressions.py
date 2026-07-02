@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from digest import digest_llm_hard_deny, digest_semantic_keys, format_news_entry
+from digest import digest_llm_hard_deny, digest_render_plan, digest_semantic_keys, format_news_entry
 from filters import passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
@@ -362,6 +362,36 @@ def test_rank_digest_groups_cross_language_duplicates():
 
     assert len(ranked) == 2
     assert sorted(len(item.grouped_links) for item in ranked) == [2, 2]
+
+
+def test_rank_digest_does_not_fill_deferred_sources():
+    ranked = rank_digest_candidates(
+        [
+            _candidate("Real Madrid want midfielder one", "Madrid Universal", "https://example.com/one"),
+            _candidate("Real Madrid want midfielder two", "Madrid Universal", "https://example.com/two"),
+            _candidate("Real Madrid want midfielder three", "Madrid Universal", "https://example.com/three"),
+            _candidate("Real Madrid want midfielder four", "Madrid Universal", "https://example.com/four"),
+        ],
+        limit=4,
+    )
+
+    assert len(ranked) == 2
+
+
+def test_digest_render_plan_uses_short_format_for_thin_digest():
+    render_format, templates, intro_lines = digest_render_plan("дневного", 4)
+
+    assert render_format == "short"
+    assert any("Корот" in template for template in templates)
+    assert intro_lines
+
+
+def test_digest_render_plan_uses_full_format_for_normal_digest():
+    render_format, templates, intro_lines = digest_render_plan("дневного", 6)
+
+    assert render_format == "full"
+    assert any("Дневная" in template or "К этому часу" in template for template in templates)
+    assert intro_lines
 
 
 def test_rank_digest_groups_latest_live_duplicates():

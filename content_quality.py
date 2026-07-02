@@ -202,6 +202,18 @@ SOURCE_WEIGHTS = (
     ("as", 4),
     ("relevo", 4),
     ("defensa central", 3),
+    ("x – @realmadrid", 8),
+    ("x - @realmadrid", 8),
+    ("x – @realmadriden", 8),
+    ("x - @realmadriden", 8),
+    ("x – @mariocortegana", 5),
+    ("x - @mariocortegana", 5),
+    ("x – @aranchamobile", 5),
+    ("x - @aranchamobile", 5),
+    ("x – @melchorcope", 5),
+    ("x - @melchorcope", 5),
+    ("x – @jlsanchez78", 4),
+    ("x - @jlsanchez78", 4),
     ("the real champs", 1),
 )
 
@@ -491,12 +503,6 @@ def apply_diversity_limits(ranked: list[RankedDigestItem], limit: int) -> list[R
 
         if len(selected) >= limit:
             return selected[:limit]
-
-    # If the news day is thin, fill the remaining slots rather than publishing an anemic digest.
-    for item in deferred:
-        if len(selected) >= limit:
-            break
-        selected.append(item)
 
     return selected[:limit]
 

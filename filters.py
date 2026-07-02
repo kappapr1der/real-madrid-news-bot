@@ -347,6 +347,16 @@ REAL_SOURCE_MARKERS = [
     "bernabéu digital",
     "mundo deportivo - real madrid",
     "sport - real madrid",
+    "x - @realmadrid",
+    "x – @realmadrid",
+    "x - @realmadriden",
+    "x – @realmadriden",
+    "x - @mariocortegana",
+    "x – @mariocortegana",
+    "x - @aranchamobile",
+    "x – @aranchamobile",
+    "x - @melchorcope",
+    "x – @melchorcope",
 ]
 
 REAL_SOURCE_TOPIC_MARKERS = [

@@ -1,3 +1,31 @@
+from runtime_config import X_RSS_BASE_URL, X_RSS_HANDLES
+
+
+def _x_rss_url(handle: str) -> str:
+    template = X_RSS_BASE_URL.rstrip("/")
+    if "{handle}" in template:
+        return template.format(handle=handle)
+    return f"{template}/{handle}"
+
+
+def build_x_sources() -> list[dict]:
+    if not X_RSS_BASE_URL:
+        return []
+    sources = []
+    for handle in X_RSS_HANDLES:
+        clean = handle.strip().lstrip("@")
+        if not clean:
+            continue
+        sources.append(
+            {
+                "url": _x_rss_url(clean),
+                "label": f"X – @{clean}",
+                "kind": "x",
+            }
+        )
+    return sources
+
+
 REAL_MADRID_SOURCES = [
     {"url": "https://www.managingmadrid.com/rss/index.xml", "label": "Managing Madrid"},
     {"url": "https://madriduniversal.com/feed/", "label": "Madrid Universal"},
@@ -25,4 +53,6 @@ GENERAL_FOOTBALL_SOURCES = [
     {"url": "https://www.cbssports.com/rss/headlines/soccer/", "label": "CBS Soccer"},
 ]
 
-SOURCES_INTERNATIONAL = REAL_MADRID_SOURCES + GENERAL_FOOTBALL_SOURCES
+X_SOURCES = build_x_sources()
+
+SOURCES_INTERNATIONAL = REAL_MADRID_SOURCES + GENERAL_FOOTBALL_SOURCES + X_SOURCES
