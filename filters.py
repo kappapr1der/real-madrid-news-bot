@@ -310,6 +310,8 @@ FILTERS = {
         "jugar en espana es especial", "jugar en españa es especial",
         "alaba claro: jugar",
         "alaba claro jugar espana", "играть в испании особенно",
+        "yamal cucurella", "lamine yamal cucurella",
+        "я его съем", "противостоянии с кукурельей",
         "barca copia real madrid desesperada firmar julian alvarez",
         "barca copia al real madrid desesperada firmar",
         "barca copia al real madrid desesperada por firmar",
@@ -317,6 +319,8 @@ FILTERS = {
         "desesperada firmar julian alvarez",
         "desesperada por firmar julian alvarez",
         "хулиана маньяра альвареса",
+        "rincon donde desconecta luka modric", "rincón donde desconecta luka modric",
+        "comer carne a la brasa", "7 minutos del estadio santiago bernabeu",
 
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",

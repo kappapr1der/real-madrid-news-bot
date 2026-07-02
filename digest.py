@@ -437,6 +437,10 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "alaba claro: jugar",
     "alaba claro jugar espana",
     "играть в испании особенно",
+    "yamal cucurella",
+    "lamine yamal cucurella",
+    "я его съем",
+    "противостоянии с кукурельей",
     "barca copia real madrid desesperada firmar julian alvarez",
     "barca copia al real madrid desesperada firmar",
     "barca copia al real madrid desesperada por firmar",
@@ -444,6 +448,10 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "desesperada firmar julian alvarez",
     "desesperada por firmar julian alvarez",
     "хулиана маньяра альвареса",
+    "rincon donde desconecta luka modric",
+    "rincón donde desconecta luka modric",
+    "comer carne a la brasa",
+    "7 minutos del estadio santiago bernabeu",
 )
 
 DIGEST_LLM_CLUB_IMPACT_TERMS = (

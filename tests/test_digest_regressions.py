@@ -254,6 +254,20 @@ def test_barcelona_julian_alvarez_rival_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_preflight_low_signal_items_are_filtered():
+    cases = [
+        "«Я его съем». Ямаль — о противостоянии с Кукурельей в Ла Лиге",
+        (
+            "El rincón donde desconecta Luka Modric en Madrid tiene 54 años y está a 7 minutos "
+            "del estadio Santiago Bernabéu: Es ideal para comer carne a la brasa"
+        ),
+    ]
+
+    for title in cases:
+        assert passes_filters(title, source="test") is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
