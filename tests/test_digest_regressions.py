@@ -367,10 +367,10 @@ def test_rank_digest_groups_cross_language_duplicates():
 def test_rank_digest_does_not_fill_deferred_sources():
     ranked = rank_digest_candidates(
         [
-            _candidate("Real Madrid want midfielder one", "Madrid Universal", "https://example.com/one"),
-            _candidate("Real Madrid want midfielder two", "Madrid Universal", "https://example.com/two"),
-            _candidate("Real Madrid want midfielder three", "Madrid Universal", "https://example.com/three"),
-            _candidate("Real Madrid want midfielder four", "Madrid Universal", "https://example.com/four"),
+            _candidate("Real Madrid confirm Courtois injury diagnosis", "Madrid Universal", "https://example.com/one"),
+            _candidate("Real Madrid prepare Vinicius renewal talks", "Madrid Universal", "https://example.com/two"),
+            _candidate("Real Madrid study Enzo Fernandez transfer", "Madrid Universal", "https://example.com/three"),
+            _candidate("Real Madrid name squad for Bayern match", "Madrid Universal", "https://example.com/four"),
         ],
         limit=4,
     )
