@@ -262,6 +262,13 @@ cp .env.example .env
 cp config/matches.example.json config/matches.json
 ```
 
+Для запуска тестов:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
 В `.env` нужно указать:
 
 ```env
