@@ -242,6 +242,18 @@ def test_evening_july_first_low_signal_items_are_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_barcelona_julian_alvarez_rival_noise_is_filtered():
+    cases = [
+        "Barca copia al Real Madrid desesperada por firmar a Julian Alvarez",
+        "Barcelona copies Real Madrid in desperate attempt to sign Julian Alvarez",
+        "«Барселона» копирует «Реал», отчаянно пытаясь подписать Хулиана Маньяра Альвареса",
+    ]
+
+    for title in cases:
+        assert passes_filters(title, source="Bernabeu Digital") is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key("Real Madrid doctor resigns 2026") == semantic_news_key(
         "Dimite Manuel Arroyo, medico del primer equipo del Real Madrid"
@@ -291,6 +303,19 @@ def test_cross_language_duplicate_semantic_keys():
     ) == semantic_news_key(
         "Olise solicita una reunion con el Bayern"
     )
+    assert semantic_news_key(
+        "Real Madrid offer 23-year-old midfielder to Manchester City"
+    ) == semantic_news_key(
+        "Real Madrid and Manchester City discuss Camavinga deal"
+    )
+    assert semantic_news_key(
+        "Real Madrid offer Camavinga a top Premier League option"
+    ) == semantic_news_key(
+        "Madrid ofrece a Camavinga al City"
+    )
+    assert semantic_news_key(
+        "Real Madrid offer 23-year-old midfielder to Manchester City"
+    ) == "transfer:camavinga-manchester-city"
     assert semantic_news_key(
         "Confirmed: Real Madrid donate EUR1 million to support those affected by Venezuela earthquakes"
     ) == "club:donation:venezuela-earthquake"
@@ -530,6 +555,12 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Флорентино запускает 'глобальную стратегию' для «Реала»"
     ) == "Флорентино запускает «глобальную стратегию» для «Реала»"
+    assert clean_text(
+        "El Mundial поддерживает Флорентино Переса"
+    ) == "Чемпионат мира играет на руку Флорентино Пересу"
+    assert clean_text(
+        "Майкл Олайс думает о переходе в «Реал»"
+    ) == "Майкл Олисе думает о переходе в «Реал»"
     assert clean_text(
         "Мидфилдер Реала станет капитаном клуба"
     ) == "Вальверде станет капитаном «Реала»"

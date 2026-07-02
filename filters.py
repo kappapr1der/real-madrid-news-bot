@@ -310,6 +310,13 @@ FILTERS = {
         "jugar en espana es especial", "jugar en españa es especial",
         "alaba claro: jugar",
         "alaba claro jugar espana", "играть в испании особенно",
+        "barca copia real madrid desesperada firmar julian alvarez",
+        "barca copia al real madrid desesperada firmar",
+        "barca copia al real madrid desesperada por firmar",
+        "barcelona copies real madrid",
+        "desesperada firmar julian alvarez",
+        "desesperada por firmar julian alvarez",
+        "хулиана маньяра альвареса",
 
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",

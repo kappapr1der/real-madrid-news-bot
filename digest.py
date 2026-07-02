@@ -437,6 +437,13 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "alaba claro: jugar",
     "alaba claro jugar espana",
     "играть в испании особенно",
+    "barca copia real madrid desesperada firmar julian alvarez",
+    "barca copia al real madrid desesperada firmar",
+    "barca copia al real madrid desesperada por firmar",
+    "barcelona copies real madrid",
+    "desesperada firmar julian alvarez",
+    "desesperada por firmar julian alvarez",
+    "хулиана маньяра альвареса",
 )
 
 DIGEST_LLM_CLUB_IMPACT_TERMS = (

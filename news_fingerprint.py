@@ -207,8 +207,51 @@ def is_laporta_attacks_real_text(text: str) -> bool:
     )
 
 
+def is_camavinga_manchester_city_text(text: str) -> bool:
+    return (
+        contains_any(
+            text,
+            (
+                "camavinga",
+                "камавинг",
+                "23 year old midfielder",
+                "23 летнего полузащитника",
+                "23 летний полузащитник",
+                "23 летним полузащитником",
+            ),
+        )
+        and contains_any(text, ("manchester city", "man city", "city", "сити", "premier", "премьер", "апл"))
+        and contains_any(
+            text,
+            (
+                "offer",
+                "ofrece",
+                "offered",
+                "discuss",
+                "talk",
+                "contact",
+                "option",
+                "deal",
+                "transfer",
+                "move",
+                "предлага",
+                "обсужд",
+                "сделк",
+                "контакт",
+                "опци",
+                "вариант",
+                "переход",
+                "трансфер",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_camavinga_manchester_city_text(text):
+        return "transfer:camavinga-manchester-city"
 
     if is_nico_paz_como_text(text):
         return "transfer:nico-paz-como"
@@ -304,6 +347,8 @@ def canonical_news_key(key: str) -> str:
         return "transfer:loan:joan-martinez-valencia"
     if is_laliga_rfef_meeting_text(text):
         return "club:laliga-rfef-meeting-skip"
+    if is_camavinga_manchester_city_text(text):
+        return "transfer:camavinga-manchester-city"
     if is_olise_bayern_talks_text(text):
         return "transfer:olise-bayern-talks-real-monitoring"
     if is_asencio_loan_buy_text(text):
