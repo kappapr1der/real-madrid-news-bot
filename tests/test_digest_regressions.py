@@ -83,6 +83,7 @@ def test_evening_digest_national_team_noise_is_filtered():
         "Ronaldo Nazario: Mbappe me recuerda a mi prime",
         "8 Real Madrid players still going strong at the World Cup for the round of 32",
         "Возвращение Криштиану и Родриго",
+        "Cristiano Ronaldo delivers a clear message to the football world",
         "Роналду Назарио: «Мбаппе напоминает мне меня в расцвете сил»",
         "Анчелотти отказывается участвовать в японских «интеллектуальных играх»",
         "Роналду «забыл» о Винисиусе: «Я не вижу другого такого, как Неймар, чтобы выиграть матч»",
@@ -400,6 +401,12 @@ def test_cross_language_duplicate_semantic_keys():
     ) == semantic_news_key(
         "Oficial: Real Madrid desmiente estar negociando con Enzo Fernandez"
     )
+    assert semantic_news_key(
+        "De Neymar a Enzo Fernandez: el Madrid ha emitido 5 comunicados oficiales en su historia anunciando que no estaba negociando con los jugadores"
+    ) == "transfer:no-sign:enzo-fernandez"
+    assert semantic_news_key(
+        "Enzo Fernandez just got hit with the most brutal Real Madrid reality check imaginable"
+    ) == "transfer:no-sign:enzo-fernandez"
     assert semantic_news_key(
         "«Реал» не планирует подписывать Энцо Фернандеса"
     ) == "transfer:no-sign:enzo-fernandez"
@@ -766,3 +773,24 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Тчуамени и Скотт входят в шорт-лист полузащитников «Манчестер Юнайтед»."
     ) == "Тчуамени попал в шорт-лист «Манчестер Юнайтед» по центру поля"
+    assert clean_text(
+        "«Реал» официально опроверг переговоры с игроками"
+    ) == "«Реал» напомнил о своих официальных опровержениях по трансферам"
+    assert clean_text(
+        "Новоиспеченный клуб Ла Лиги ведет переговоры с мадридским «Реалом» о приобретении высококлассного полузащитника академии"
+    ) == "Новичок Ла Лиги ведёт переговоры с «Реалом» по талантливому полузащитнику академии"
+    assert clean_text(
+        "Реал заинтересован в подписании Олисе"
+    ) == "«Реал» сохраняет интерес к Олисе"
+    assert clean_text(
+        "Трансферные сделки Реала активизировались"
+    ) == "Трансферы «Реала»: время поджимает"
+    assert clean_text(
+        "«Реал» доволен своим центром поля, несмотря на невозможность новых приобретений"
+    ) == "«Реал» доволен центром поля, несмотря на сложности с новыми трансферами"
+    assert clean_text(
+        "«Реал» продолжает укрепляться благодаря своей академии"
+    ) == "«Реал» продолжает зарабатывать на «Ла Фабрике»"
+    assert clean_text(
+        "Первый шаг к переквалификации земель Реала в Вальдебебас"
+    ) == "Первый шаг к изменению статуса земель «Реала» в Вальдебебасе"
