@@ -272,8 +272,75 @@ def is_camavinga_manchester_city_text(text: str) -> bool:
     )
 
 
+def is_valverde_stays_real_text(text: str) -> bool:
+    if not contains_any(text, ("valverde", "вальверде")):
+        return False
+    if not contains_any(text, ("real madrid", "madrid", "реал", "мадрид")):
+        return False
+    return (
+        contains_any(text, ("firme", "firm at", "firm in", "firm with", "firmly", "твёрд", "тверд"))
+        or (
+            contains_any(text, ("destino", "future", "futuro", "будущ"))
+            and contains_any(text, ("confirmado", "confirmed", "confirma", "подтвержд"))
+        )
+        or (
+            contains_any(text, ("continuara", "continua", "seguira", "se queda", "stays", "stay", "остает", "остан"))
+            and not contains_any(text, ("uruguay", "уругвай"))
+        )
+    )
+
+
+def is_modric_career_decision_noise_text(text: str) -> bool:
+    if not contains_any(text, ("luka modric", "modric", "модрич")):
+        return False
+    if not contains_any(text, ("decision", "decisión", "career", "carrera", "решени", "карьер")):
+        return False
+    return (
+        contains_any(text, ("world cup exit", "mundial", "championship", "чемпионат", "вылет", "elimin"))
+        or contains_any(text, ("real madrid monitor", "real madrid atento", "real atento", "следит", "в бегах"))
+    )
+
+
+def is_enzo_denial_text(text: str) -> bool:
+    return contains_any(text, ("enzo fernandez", "enzo fernández", "энцо фернандес")) and contains_any(
+        text,
+        (
+            "no plan",
+            "no planning",
+            "not plan",
+            "not planning",
+            "do not plan",
+            "not sign",
+            "no sign",
+            "no fich",
+            "no firm",
+            "desmiente",
+            "deny",
+            "denies",
+            "ruling out",
+            "no tiene ninguna intencion",
+            "no tiene ninguna intención",
+            "no negoc",
+            "опроверг",
+            "не планирует подпис",
+            "не подпиш",
+            "не ведет переговор",
+            "не ведёт переговор",
+        ),
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_valverde_stays_real_text(text):
+        return "player:valverde-stays-real-madrid"
+
+    if is_modric_career_decision_noise_text(text):
+        return "noise:modric-career-decision-after-world-cup"
+
+    if is_enzo_denial_text(text):
+        return "transfer:no-sign:enzo-fernandez"
 
     if is_camavinga_manchester_city_text(text):
         return "transfer:camavinga-manchester-city"
@@ -379,6 +446,12 @@ def canonical_news_key(key: str) -> str:
         return "legal:laliga-harassment-protocol"
     if is_camavinga_manchester_city_text(text):
         return "transfer:camavinga-manchester-city"
+    if is_valverde_stays_real_text(text):
+        return "player:valverde-stays-real-madrid"
+    if is_modric_career_decision_noise_text(text):
+        return "noise:modric-career-decision-after-world-cup"
+    if is_enzo_denial_text(text):
+        return "transfer:no-sign:enzo-fernandez"
     if is_olise_bayern_talks_text(text):
         return "transfer:olise-bayern-talks-real-monitoring"
     if is_asencio_loan_buy_text(text):

@@ -93,6 +93,31 @@ def test_evening_digest_national_team_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_modric_career_decision_noise_is_filtered():
+    cases = [
+        (
+            "Luka Modric faces major career decision after World Cup exit as Real Madrid monitor situation",
+            "Madrid Universal",
+        ),
+        (
+            "Real Madrid atento a la decision de Modric",
+            "Mundo Deportivo - Real Madrid",
+        ),
+        (
+            "Луке Модричу предстоит принять важное карьерное решение после вылета с чемпионата мира, а «Реал» следит за ситуацией",
+            "Madrid Universal",
+        ),
+        (
+            "Модрич должен принять решение: «Реал» в бегах",
+            "Mundo Deportivo - Real Madrid",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_vague_bernabeu_transfer_clickbait_is_filtered():
     title = "El Real Madrid ya no cree en el fichaje de este jugador"
     headline = "«Реал» больше не верит в трансфер этого игрока"
@@ -363,6 +388,22 @@ def test_cross_language_duplicate_semantic_keys():
         "Real Madrid offer 23-year-old midfielder to Manchester City"
     ) == "transfer:camavinga-manchester-city"
     assert semantic_news_key(
+        "Fede Valverde: firme en el Real Madrid"
+    ) == semantic_news_key(
+        "El destino de Fede Valverde en el Real Madrid esta confirmado"
+    )
+    assert semantic_news_key(
+        "Будущее Феде Вальверде в «Реале» подтверждено"
+    ) == "player:valverde-stays-real-madrid"
+    assert semantic_news_key(
+        "Real Madrid do not plan to sign Enzo Fernandez"
+    ) == semantic_news_key(
+        "Oficial: Real Madrid desmiente estar negociando con Enzo Fernandez"
+    )
+    assert semantic_news_key(
+        "«Реал» не планирует подписывать Энцо Фернандеса"
+    ) == "transfer:no-sign:enzo-fernandez"
+    assert semantic_news_key(
         "Confirmed: Real Madrid donate EUR1 million to support those affected by Venezuela earthquakes"
     ) == "club:donation:venezuela-earthquake"
     assert semantic_news_key("Valencia want to take Joan Martinez on loan") == "transfer:loan:joan-martinez-valencia"
@@ -544,6 +585,24 @@ def test_digest_semantic_key_blocks_later_breaking_variant():
     ) in keys
 
 
+def test_digest_semantic_key_blocks_valverde_breaking_variant():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Fede Valverde: firme en el Real Madrid",
+                "Marca - Real Madrid",
+                "https://example.com/valverde-digest",
+            )
+        ],
+        limit=10,
+    )
+
+    keys = digest_semantic_keys(ranked)
+
+    assert "player:valverde-stays-real-madrid" in keys
+    assert semantic_news_key("El destino de Fede Valverde en el Real Madrid esta confirmado") in keys
+
+
 def test_mbappe_role_headline_is_shortened():
     title = (
         "Роль, которую Килиан Мбаппе больше всего хочет получить в мадридском "
@@ -692,3 +751,18 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "«Продать Виниция и привезти Олисе? Все говорят» да«»"
     ) == "В Испании обсуждают вариант: продать Винисиуса и подписать Олисе"
+    assert clean_text(
+        "Феде Вальверде: твёрд в «Реале»"
+    ) == "Вальверде твёрдо намерен остаться в «Реале»"
+    assert clean_text(
+        "Будущее Феде Вальверде в «Реале» подтверждено"
+    ) == "Вальверде остаётся в «Реале»"
+    assert clean_text(
+        "Еще одна жемчужина Фабрики привлекает внимание в Европе"
+    ) == "Еще один талант «Ла Фабрики» привлекает внимание в Европе"
+    assert clean_text(
+        "Томас Ронсеро о звезде чемпионата мира, который хочет подписать Флорентийца: «Я жду его до 31 августа, мечта Олисе-приехать в Мадрид со своим другом Мбаппе»"
+    ) == "Томас Ронсеро об Олисе: «Жду его до 31 августа; его мечта - приехать в Мадрид к Мбаппе»"
+    assert clean_text(
+        "Тчуамени и Скотт входят в шорт-лист полузащитников «Манчестер Юнайтед»."
+    ) == "Тчуамени попал в шорт-лист «Манчестер Юнайтед» по центру поля"
