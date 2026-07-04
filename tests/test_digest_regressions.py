@@ -180,6 +180,18 @@ def test_morning_digest_low_signal_items_are_filtered():
             "Antonio Rudiger, 33 anos, futbolista del Real Madrid: mi infancia estuvo marcada por la pobreza",
             "Sport - Real Madrid",
         ),
+        (
+            "Fede Valverde accepts responsibility after Uruguay's World Cup exit: I know I wasn't up to it",
+            "Managing Madrid",
+        ),
+        (
+            "A Bernardo Silva no le sienta bien el Mundial",
+            "Mundo Deportivo - Real Madrid",
+        ),
+        (
+            "Появились подробности по травме Джона Кордобы и его шансах сыграть на ЧМ",
+            "Чемпионат - Футбол",
+        ),
     ]
 
     for title, source in cases:
@@ -794,3 +806,12 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Первый шаг к переквалификации земель Реала в Вальдебебас"
     ) == "Первый шаг к изменению статуса земель «Реала» в Вальдебебасе"
+    assert clean_text(
+        "«Реал» работает над трансферами"
+    ) == "«Реал» получил передышку на трансферном рынке"
+    assert clean_text(
+        "Un BMV «идеал» для Моуринью"
+    ) == "BMV — идеальное трио для Моуринью"
+    assert clean_text(
+        "Моу и «горячий картофель», который оставляет ему Арбелоа"
+    ) == "Моуринью получил от Арбелоа сложную задачу"
