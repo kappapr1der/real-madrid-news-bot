@@ -250,6 +250,22 @@ def test_day_digest_latest_low_signal_items_are_filtered():
             "Reranking Europe's top clubs by player performance at the World Cup: Bayern, Real Madrid, Liverpool",
             "ESPN FC",
         ),
+        (
+            "An incredible man: how Carlo Ancelotti has turned Brazil into potential World Cup winner",
+            "Guardian Football",
+        ),
+        (
+            "Cucurella vuela en el Mundial... y en el Madrid se frotan las manos",
+            "Marca - Real Madrid",
+        ),
+        (
+            "El Real Madrid, protagonista en la tanda de penaltis del Australia-Egipto",
+            "Mundo Deportivo - Real Madrid",
+        ),
+        (
+            "Bellingham (23 anos), sobre lo que mas le gusta de Espana: Para caminar por una gran ciudad",
+            "Defensa Central",
+        ),
     ]
 
     for title, source in cases:
@@ -432,6 +448,25 @@ def test_cross_language_duplicate_semantic_keys():
         "Tribunal rechaza peticion del Real Madrid para suspender protocolo frente acoso sexual de LaLiga"
     ) == "legal:laliga-harassment-protocol"
     assert semantic_news_key("Otro reves judicial para el Real Madrid por el protocolo de acoso sexual de LaLiga") == "legal:laliga-harassment-protocol"
+    assert semantic_news_key(
+        "Real Madrid, Vinicius will meet after FIFA World Cup to discuss contract negotiations"
+    ) == semantic_news_key(
+        "Acercamiento definitivo del Real Madrid y Vini para renovar"
+    )
+    assert semantic_news_key(
+        "60 millones para cerrar la renovacion de la defensa y cerrar la renovacion de Vini Jr"
+    ) == "contract:vinicius-renewal"
+    assert semantic_news_key(
+        "Real Madrid set for EUR12.5 million windfall from former defender's transfer"
+    ) != "transfer:rumour:rodri"
+    assert semantic_news_key(
+        "Mario Gila le deja al Real Madrid una buena cantidad de millones"
+    ) == semantic_news_key(
+        "La Fabrica que financia al Real Madrid con 600 millones"
+    )
+    assert semantic_news_key(
+        "Ruben Martin sobre las ventas del Madrid: Florentino va a recaudar mas de 200 millones"
+    ) == "finance:player-sales-revenue"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -458,6 +493,42 @@ def test_rank_digest_groups_cross_language_duplicates():
 
     assert len(ranked) == 2
     assert sorted(len(item.grouped_links) for item in ranked) == [2, 2]
+
+
+def test_rank_digest_groups_daily_contract_and_revenue_threads():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid, Vinicius will meet after FIFA World Cup to discuss contract negotiations",
+                "Managing Madrid",
+                "https://example.com/vini-contract-en",
+            ),
+            _candidate(
+                "Acercamiento definitivo del Real Madrid y Vini para renovar",
+                "Bernabeu Digital",
+                "https://example.com/vini-contract-es",
+            ),
+            _candidate(
+                "Mario Gila le deja al Real Madrid una buena cantidad de millones",
+                "Mundo Deportivo - Real Madrid",
+                "https://example.com/gila-money",
+            ),
+            _candidate(
+                "La Fabrica que financia al Real Madrid con 600 millones",
+                "Sport - Real Madrid",
+                "https://example.com/fabrica-money",
+            ),
+            _candidate(
+                "Ruben Martin sobre las ventas del Madrid: Florentino va a recaudar mas de 200 millones",
+                "Defensa Central",
+                "https://example.com/sales-money",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 2
+    assert sorted(len(item.grouped_links) for item in ranked) == [2, 3]
 
 
 def test_rank_digest_does_not_fill_deferred_sources():
@@ -815,3 +886,27 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Моу и «горячий картофель», который оставляет ему Арбелоа"
     ) == "Моуринью получил от Арбелоа сложную задачу"
+    assert clean_text(
+        "60 миллионов для завершения обновления защиты и продления контракта с Вини Джуниором"
+    ) == "60 млн на обновление защиты и продление Винисиуса"
+    assert clean_text(
+        "Тчуамени пропустит матч против Парагвая из-за травмы бедра"
+    ) == "Тчуамени пропустит матч Франции с Парагваем из-за травмы бедра"
+    assert clean_text(
+        "Полузащитник мадридского «Реала» активизировал предсезонную подготовку на фоне неопределенного будущего"
+    ) == "Камавинга начал предсезонную подготовку на фоне неопределенного будущего"
+    assert clean_text(
+        "Рубен Мартин о продажах игроков Реала: Флорентино заработает более 200 миллионов"
+    ) == "Рубен Мартин: Флорентино может выручить более 200 млн евро на продажах"
+    assert clean_text(
+        "Марио Хила принес Реалу значительную сумму денег"
+    ) == "Марио Хила принесёт «Реалу» солидный доход"
+    assert clean_text(
+        "Фабрика, которая финансирует «Реал» на 600 миллионов"
+    ) == "«Ла Фабрика» принесла «Реалу» около 600 млн евро"
+    assert clean_text(
+        "Винисиус обсудит продление контракта с «Реалом» после Кубка мира"
+    ) == "Винисиус обсудит продление с «Реалом» после ЧМ"
+    assert clean_text(
+        "«Реал» и Винисиус близки к продлению контракта"
+    ) == "«Реал» и Винисиус близки к продлению"

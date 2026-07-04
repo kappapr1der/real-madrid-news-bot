@@ -54,9 +54,13 @@ def contains_any(text: str, terms: tuple[str, ...]) -> bool:
     return any(term in text for term in terms)
 
 
+def contains_alias(text: str, alias: str) -> bool:
+    return re.search(rf"(?<![a-zа-я0-9]){re.escape(alias)}(?![a-zа-я0-9])", text) is not None
+
+
 def player_key(text: str) -> str | None:
     for key, aliases in PLAYER_ALIASES.items():
-        if any(alias in text for alias in aliases):
+        if any(contains_alias(text, alias) for alias in aliases):
             return key
     return None
 
@@ -335,8 +339,53 @@ def is_enzo_denial_text(text: str) -> bool:
     )
 
 
+def is_vinicius_renewal_text(text: str) -> bool:
+    return (
+        contains_any(text, ("vinicius", "vini", "винисиус", "вини джуниор"))
+        and contains_any(text, ("renew", "renovar", "renovacion", "renovación", "contract", "contrato", "продлен", "контракт"))
+    )
+
+
+def is_player_sales_revenue_text(text: str) -> bool:
+    return (
+        contains_any(text, ("real madrid", "madrid", "реал", "мадрид", "la fabrica", "fabrica", "фабрика", "gila", "хила"))
+        and contains_any(
+            text,
+            (
+                "sales",
+                "sale",
+                "ventas",
+                "venta",
+                "revenue",
+                "windfall",
+                "recaudar",
+                "ingres",
+                "embols",
+                "financia",
+                "million",
+                "millon",
+                "millones",
+                "kilos",
+                "млн",
+                "миллион",
+                "продаж",
+                "доход",
+                "заработ",
+                "финанс",
+            ),
+        )
+        and contains_any(text, ("academy", "cantera", "la fabrica", "fabrica", "фабрик", "gila", "хила", "ventas", "sales", "продаж"))
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_vinicius_renewal_text(text):
+        return "contract:vinicius-renewal"
+
+    if is_player_sales_revenue_text(text):
+        return "finance:player-sales-revenue"
 
     if is_valverde_stays_real_text(text):
         return "player:valverde-stays-real-madrid"
@@ -451,6 +500,10 @@ def canonical_news_key(key: str) -> str:
         return "legal:laliga-harassment-protocol"
     if is_camavinga_manchester_city_text(text):
         return "transfer:camavinga-manchester-city"
+    if is_vinicius_renewal_text(text):
+        return "contract:vinicius-renewal"
+    if is_player_sales_revenue_text(text):
+        return "finance:player-sales-revenue"
     if is_valverde_stays_real_text(text):
         return "player:valverde-stays-real-madrid"
     if is_modric_career_decision_noise_text(text):
