@@ -273,6 +273,32 @@ def test_day_digest_latest_low_signal_items_are_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_absence_noise_items_are_filtered():
+    cases = [
+        ("Jaime Pradilla jugador del Real Madrid", "Bernabeu Digital"),
+        ("Прямая трансляция матча Парагвай - Франция: Мбаппе вывел «Синие» в четвертьфинал", "Independent Football"),
+        ("Парагвай не сломил Мбаппе, даже отрезав от мяча. Репортаж Романцова", "Sports.ru"),
+        ("Как Анчелотти переворачивает матчи ЧМ", "Sports.ru"),
+        ("Секретная лаборатория Анчелотти: поиск пути к Гекса", "Marca - Real Madrid"),
+        ("Рынок трансферов сегодня, 6 июля, в прямом эфире | Последние новости о переходах Реала Мадрид", "Marca - Real Madrid"),
+        ("Бывший игрок «Мадрида» выпотрошил Анчелотти после поражения от Бразилии", "Marca - Real Madrid"),
+        ("Уже сейчас до боли очевидно, что Винисиус проходит курс лечения у Неймара", "The Real Champs"),
+        ("Сборная Испании в составе Марка Кукуреллы обыграла Португалию на победной 90-й минуте", "Managing Madrid"),
+        ("Криштиану Роналду рассказал о своем португальском наследии без всякой лжи", "The Real Champs"),
+        ("«Ни капли осуждения». Генич отреагировал на трансфер Сперцяна в «Аль-Ахли»", "Чемпионат - Футбол"),
+        ("Бывший житель Мадрида: «Люди ели очень мало; мы, дети, ели спагетти с помидорами»", "Mundo Deportivo - Real Madrid"),
+        ("Гарет Бэйл (36 лет), бывший футболист: «Я играл за Луку Модрича 13 лет»", "Defensa Central"),
+        ("«Колонизированный камерунец». Парагвай ненавидит Мбаппе", "Sports.ru"),
+        ("Тени Кина и Джеррарда на показе в Беллингеме - Руни", "BBC Sport Football"),
+        ("Марк Кукурелла отразил всех болельщиков мадридского «Реала» после поражения Криштиану Роналду", "The Real Champs"),
+        ("«Реал» будет иметь минимум одного игрока в финале чемпионата мира", "Defensa Central"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_evening_digest_personal_former_player_noise_is_filtered():
     cases = [
         ("Fallece el padre de Ricardo Carvalho", "Marca - Real Madrid"),
@@ -467,6 +493,42 @@ def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key(
         "Ruben Martin sobre las ventas del Madrid: Florentino va a recaudar mas de 200 millones"
     ) == "finance:player-sales-revenue"
+    assert semantic_news_key(
+        "Real Madrid's La Liga opener against Real Sociedad set to be postponed"
+    ) == semantic_news_key(
+        "Primer partido Liga Real Madrid aplazado por el Mundial"
+    )
+    assert semantic_news_key(
+        "Confirmado: se atrasa debut Real Madrid en Liga en Bernabeu"
+    ) == "schedule:laliga-opener-postponed"
+    assert semantic_news_key(
+        "Alvaro Arbeloa oficialmente entrenador del Fulham"
+    ) == semantic_news_key(
+        "Es oficial: Arbeloa nuevo entrenador Fulham firma hasta 2029"
+    )
+    assert semantic_news_key("Alvaro Arbeloa oficialmente entrenador del Fulham") == "staff:arbeloa-fulham-manager"
+    assert semantic_news_key(
+        "Oficial: Fran Garcia marcha al Betis"
+    ) == semantic_news_key(
+        "Es oficial: Madrid anuncia traspaso Fran Garcia Betis"
+    )
+    assert semantic_news_key("Oficial: Fran Garcia marcha al Betis") == "transfer:fran-garcia-betis"
+    assert semantic_news_key(
+        "Padre Haaland deja claro que quiere jugar en Madrid"
+    ) == semantic_news_key(
+        "Clan Haaland vincula Real Madrid novedades blancos"
+    )
+    assert semantic_news_key("Bombazo Haaland: es probable que juegue en Real Madrid") == "transfer:haaland-family-real-links"
+    assert semantic_news_key(
+        "Real Madrid to host under-20 Intercontinental Cup final at the Bernabeu"
+    ) == semantic_news_key(
+        "Real Madrid y Santiago Wanderers lucharan Intercontinental sub-20"
+    )
+    assert semantic_news_key(
+        "Fijan fecha limite para que Real Madrid mueva ficha por Bastoni"
+    ) == semantic_news_key(
+        "Bloqueo salida Asencio ofertas insuficientes Bastoni"
+    )
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -529,6 +591,47 @@ def test_rank_digest_groups_daily_contract_and_revenue_threads():
 
     assert len(ranked) == 2
     assert sorted(len(item.grouped_links) for item in ranked) == [2, 3]
+
+
+def test_rank_digest_groups_july_absence_duplicate_threads():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid's La Liga opener against Real Sociedad set to be postponed",
+                "Madrid Universal",
+                "https://example.com/laliga-opener-en",
+            ),
+            _candidate(
+                "Confirmado: se atrasa debut Real Madrid en Liga en Bernabeu",
+                "Defensa Central",
+                "https://example.com/laliga-opener-es",
+            ),
+            _candidate(
+                "Padre Haaland deja claro que quiere jugar en Madrid",
+                "Mundo Deportivo - Real Madrid",
+                "https://example.com/haaland-father",
+            ),
+            _candidate(
+                "Clan Haaland vincula Real Madrid novedades blancos",
+                "Bernabeu Digital",
+                "https://example.com/haaland-clan",
+            ),
+            _candidate(
+                "Real Madrid to host under-20 Intercontinental Cup final at the Bernabeu",
+                "Madrid Universal",
+                "https://example.com/u20-final-en",
+            ),
+            _candidate(
+                "Real Madrid y Santiago Wanderers lucharan Intercontinental sub-20",
+                "Marca - Real Madrid",
+                "https://example.com/u20-final-es",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 3
+    assert sorted(len(item.grouped_links) for item in ranked) == [2, 2, 2]
 
 
 def test_rank_digest_does_not_fill_deferred_sources():
@@ -691,6 +794,31 @@ def test_digest_semantic_key_blocks_valverde_breaking_variant():
 
     assert "player:valverde-stays-real-madrid" in keys
     assert semantic_news_key("El destino de Fede Valverde en el Real Madrid esta confirmado") in keys
+
+
+def test_digest_semantic_key_blocks_july_breaking_variants():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Alvaro Arbeloa oficialmente entrenador del Fulham",
+                "Bernabeu Digital",
+                "https://example.com/arbeloa-fulham",
+            ),
+            _candidate(
+                "Oficial: Fran Garcia marcha al Betis",
+                "Sport - Real Madrid",
+                "https://example.com/fran-betis",
+            ),
+        ],
+        limit=10,
+    )
+
+    keys = digest_semantic_keys(ranked)
+
+    assert "staff:arbeloa-fulham-manager" in keys
+    assert semantic_news_key("Es oficial: Arbeloa nuevo entrenador Fulham firma hasta 2029") in keys
+    assert "transfer:fran-garcia-betis" in keys
+    assert semantic_news_key("Es oficial: Madrid anuncia traspaso Fran Garcia Betis") in keys
 
 
 def test_mbappe_role_headline_is_shortened():
@@ -910,3 +1038,27 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "«Реал» и Винисиус близки к продлению контракта"
     ) == "«Реал» и Винисиус близки к продлению"
+    assert clean_text(
+        "Мбаппе выходит из тупика, пропуская Францию мимо Парагвая"
+    ) == "Мбаппе вывел Францию в четвертьфинал, забив Парагваю"
+    assert clean_text(
+        "Открытие Ла Лиги для «Реала» против Реал Сосьедад отменено"
+    ) == "Старт «Реала» в Ла Лиге против «Реал Сосьедад» могут перенести"
+    assert clean_text(
+        "Подтверждена отсрочка дебюта «Реала» в лиге чемпионов"
+    ) == "Подтверждён перенос первого матча «Реала» в Ла Лиге"
+    assert clean_text(
+        "Тчуамени сообщил об травме, которая напугает Реал"
+    ) == "Тчуамени сообщил о травме, которая тревожит «Реал»"
+    assert clean_text(
+        "Защитник Реала рассматривается «Арсенал» ом"
+    ) == "Защитник «Реала» попал в список «Арсенала»"
+    assert clean_text(
+        "Бомбазо Хааланд: «С большой вероятностью буду играть в» Реале«»"
+    ) == "Холанда снова связывают с «Реалом»"
+    assert clean_text(
+        "«Реал» у нужны игроки в аренду для Альваро Арбелоа и Фулхэма"
+    ) == "Три игрока «Реала», которым могла бы помочь аренда в «Фулхэм»"
+    assert clean_text(
+        "Фран Гарсия перешёл в Реал Бетис"
+    ) == "Фран Гарсия перешёл в «Бетис»"

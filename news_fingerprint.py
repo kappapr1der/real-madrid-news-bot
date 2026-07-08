@@ -378,8 +378,85 @@ def is_player_sales_revenue_text(text: str) -> bool:
     )
 
 
+def is_laliga_opener_postponed_text(text: str) -> bool:
+    return (
+        contains_any(text, ("laliga", "la liga", "liga", "лиги", "лалига", "лига"))
+        and contains_any(text, ("opener", "debut", "first match", "primer partido", "debut liguero", "inicio", "старт", "первый матч", "дебют", "открытие"))
+        and contains_any(text, ("postpon", "aplaz", "atrasa", "delay", "перенес", "перенос", "отлож", "отсроч"))
+        and contains_any(text, ("real madrid", "madrid", "реал", "мадрид", "real sociedad", "сосьедад", "bernabeu", "бернабеу"))
+    )
+
+
+def is_haaland_family_real_text(text: str) -> bool:
+    return (
+        contains_any(text, ("haaland", "haaland", "холанд", "хааланд"))
+        and contains_any(text, ("father", "padre", "clan", "семья", "отец", "клан", "bombazo"))
+        and contains_any(text, ("real madrid", "madrid", "реал", "мадрид"))
+    )
+
+
+def is_arbeloa_fulham_text(text: str) -> bool:
+    return (
+        contains_any(text, ("arbeloa", "арбелоа"))
+        and contains_any(text, ("fulham", "фулхэм", "фулхема"))
+        and contains_any(text, ("coach", "manager", "entrenador", "successor", "predecesor", "тренер", "преемник", "назнач"))
+    )
+
+
+def is_fran_garcia_betis_text(text: str) -> bool:
+    return (
+        contains_any(text, ("fran garcia", "fran garcía", "фран гарсия"))
+        and contains_any(text, ("betis", "бетис"))
+        and contains_any(text, ("transfer", "traspaso", "marcha", "joins", "sign", "fich", "переш", "переход", "трансфер", "подтверд"))
+    )
+
+
+def is_intercontinental_u20_text(text: str) -> bool:
+    return (
+        contains_any(text, ("intercontinental", "интерконтинент"))
+        and contains_any(text, ("u20", "sub 20", "under 20", "до 20", "юнош"))
+        and contains_any(text, ("bernabeu", "бернабеу", "santiago wanderers", "сантьяго уондерерс", "final", "финал"))
+    )
+
+
+def is_bastoni_deadline_text(text: str) -> bool:
+    return contains_any(text, ("bastoni", "бастони")) and contains_any(
+        text,
+        ("deadline", "fecha limite", "fecha límite", "bloqueo", "limite", "límite", "дедлайн", "крайний срок", "блок"),
+    )
+
+
+def is_midfield_duo_premier_interest_text(text: str) -> bool:
+    return (
+        contains_any(text, ("camavinga", "камавинг", "tchouameni", "tchouameni", "тчуамени"))
+        and contains_any(text, ("premier", "manchester united", "united", "манчестер", "премьер"))
+        and contains_any(text, ("interest", "target", "offer", "sale", "transfer", "interes", "oferta", "интерес", "предлож", "продаж", "трансфер"))
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_laliga_opener_postponed_text(text):
+        return "schedule:laliga-opener-postponed"
+
+    if is_arbeloa_fulham_text(text):
+        return "staff:arbeloa-fulham-manager"
+
+    if is_fran_garcia_betis_text(text):
+        return "transfer:fran-garcia-betis"
+
+    if is_haaland_family_real_text(text):
+        return "transfer:haaland-family-real-links"
+
+    if is_intercontinental_u20_text(text):
+        return "academy:u20-intercontinental-cup-final"
+
+    if is_bastoni_deadline_text(text):
+        return "transfer:bastoni-deadline"
+
+    if is_midfield_duo_premier_interest_text(text):
+        return "transfer:midfield-duo-premier-interest"
 
     if is_vinicius_renewal_text(text):
         return "contract:vinicius-renewal"
@@ -500,6 +577,20 @@ def canonical_news_key(key: str) -> str:
         return "legal:laliga-harassment-protocol"
     if is_camavinga_manchester_city_text(text):
         return "transfer:camavinga-manchester-city"
+    if is_laliga_opener_postponed_text(text):
+        return "schedule:laliga-opener-postponed"
+    if is_arbeloa_fulham_text(text):
+        return "staff:arbeloa-fulham-manager"
+    if is_fran_garcia_betis_text(text):
+        return "transfer:fran-garcia-betis"
+    if is_haaland_family_real_text(text):
+        return "transfer:haaland-family-real-links"
+    if is_intercontinental_u20_text(text):
+        return "academy:u20-intercontinental-cup-final"
+    if is_bastoni_deadline_text(text):
+        return "transfer:bastoni-deadline"
+    if is_midfield_duo_premier_interest_text(text):
+        return "transfer:midfield-duo-premier-interest"
     if is_vinicius_renewal_text(text):
         return "contract:vinicius-renewal"
     if is_player_sales_revenue_text(text):

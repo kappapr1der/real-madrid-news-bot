@@ -131,9 +131,12 @@ REAL_SOURCE_TERMS = (
 BREAKING_DENY_TERMS = (
     "basketball", "baloncesto", "liga endesa", "euroleague",
     "trey lyles", "scariolo", "баскетбол", "евролига", "трей лайлс", "скариоло",
+    "jaime pradilla", "pradilla", "хайме прадилья", "прадилья",
     "brasil en mundial", "con brasil en mundial", "за сборную бразилии",
     "сборной бразилии", "ronaldo nazario", "rivaldo", "romario",
     "роналду назарио", "ривалдо", "ромарио",
+    "minimum one player in final mundial", "menos jugador en final mundial",
+    "минимум одного игрока в финале чемпионата мира",
 )
 
 TEMPLATES = [
