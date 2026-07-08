@@ -379,6 +379,7 @@ FILTERS = {
         "секретная лаборатория анчелотти", "поиск пути к гекса",
         "ex madrid destripa ancelotti", "basta vergueenza", "basta vergüenza",
         "бывший игрок мадрида выпотрошил анчелотти",
+        "бывший игрок «мадрида» выпотрошил анчелотти",
         "real madrid c mantener plaza segunda rfef", "real madrid c mantener", "segunda rfef",
         "втором дивизионе рфпл", "втором дивизионе rfef", "реал c может",
         "george weah", "weah said what", "fans have been whispering",

@@ -427,8 +427,11 @@ def is_bastoni_deadline_text(text: str) -> bool:
 
 
 def is_midfield_duo_premier_interest_text(text: str) -> bool:
+    has_camavinga = contains_any(text, ("camavinga", "камавинг"))
+    has_tchouameni = contains_any(text, ("tchouameni", "tchouameni", "тчуамени"))
+    has_duo = contains_any(text, ("midfield duo", "duo", "dueto", "дуэт", "дуо"))
     return (
-        contains_any(text, ("camavinga", "камавинг", "tchouameni", "tchouameni", "тчуамени"))
+        ((has_camavinga and has_tchouameni) or has_duo)
         and contains_any(text, ("premier", "manchester united", "united", "манчестер", "премьер"))
         and contains_any(text, ("interest", "target", "offer", "sale", "transfer", "interes", "oferta", "интерес", "предлож", "продаж", "трансфер"))
     )
