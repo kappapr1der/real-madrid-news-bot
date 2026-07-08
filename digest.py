@@ -581,6 +581,7 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "basta vergüenza",
     "бывший игрок мадрида выпотрошил анчелотти",
     "бывший игрок «мадрида» выпотрошил анчелотти",
+    "выпотрошил анчелотти",
     "прорыв эндрика под руководством карло анчелотти",
     "real madrid c mantener plaza segunda rfef",
     "real madrid c mantener",
