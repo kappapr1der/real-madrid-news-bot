@@ -347,8 +347,13 @@ def is_vinicius_renewal_text(text: str) -> bool:
 
 
 def is_tchouameni_extension_text(text: str) -> bool:
+    has_tchouameni = contains_any(text, ("tchouameni", "tchouaméni", "тчуамени", "чуамени"))
+    has_tchouameni_hint = (
+        contains_any(text, ("midfield mainstay", "mainstay", "основн"))
+        and contains_any(text, ("manchester united", "united", "манчестер"))
+    )
     return (
-        contains_any(text, ("tchouameni", "tchouaméni", "тчуамени", "чуамени"))
+        (has_tchouameni or has_tchouameni_hint)
         and contains_any(text, ("extend", "extension", "renew", "renovacion", "renovación", "contract", "contrato", "продл", "продление", "контракт"))
         and contains_any(text, ("2031", "real madrid", "madrid", "реал", "мадрид"))
     )
