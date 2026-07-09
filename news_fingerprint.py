@@ -400,6 +400,14 @@ def is_laliga_opener_postponed_text(text: str) -> bool:
     )
 
 
+def is_teresa_herrera_deportivo_text(text: str) -> bool:
+    return (
+        contains_any(text, ("teresa herrera", "trofeo teresa", "teresa herrera trophy"))
+        and contains_any(text, ("deportivo", "la coruna", "la coruña"))
+        and contains_any(text, ("friendly", "amistoso", "pre season", "pre-season", "preseason", "pretemporada", "debut", "face", "contra"))
+    )
+
+
 def is_haaland_family_real_text(text: str) -> bool:
     return (
         contains_any(text, ("haaland", "haaland", "холанд", "хааланд"))
@@ -455,6 +463,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
+
+    if is_teresa_herrera_deportivo_text(text):
+        return "schedule:teresa-herrera-deportivo-friendly"
 
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
@@ -598,6 +609,8 @@ def canonical_news_key(key: str) -> str:
         return "transfer:camavinga-manchester-city"
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
+    if is_teresa_herrera_deportivo_text(text):
+        return "schedule:teresa-herrera-deportivo-friendly"
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
     if is_fran_garcia_betis_text(text):

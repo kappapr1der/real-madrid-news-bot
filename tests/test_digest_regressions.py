@@ -543,6 +543,14 @@ def test_cross_language_duplicate_semantic_keys():
         "Tchouameni Real Madrid contract extension 2026"
     )
     assert semantic_news_key("Tchouameni signs Real Madrid contract extension until 2031") == "contract:tchouameni-extension"
+    assert semantic_news_key(
+        "Confirmed: Real Madrid face Deportivo La Coruna in Teresa Herrera Trophy in pre-season"
+    ) == semantic_news_key(
+        "Es oficial: Real Madrid Mourinho debuta en amistoso contra Deportivo en Trofeo Teresa Herrera"
+    )
+    assert semantic_news_key(
+        "Confirmed: Real Madrid face Deportivo La Coruna in Teresa Herrera Trophy in pre-season"
+    ) == "schedule:teresa-herrera-deportivo-friendly"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -844,6 +852,11 @@ def test_digest_semantic_key_blocks_july_breaking_variants():
                 "Sport - Real Madrid",
                 "https://example.com/fran-betis",
             ),
+            _candidate(
+                "Es oficial: Real Madrid Mourinho debuta en amistoso contra Deportivo en Trofeo Teresa Herrera",
+                "Defensa Central",
+                "https://example.com/teresa-herrera-deportivo",
+            ),
         ],
         limit=10,
     )
@@ -854,6 +867,8 @@ def test_digest_semantic_key_blocks_july_breaking_variants():
     assert semantic_news_key("Es oficial: Arbeloa nuevo entrenador Fulham firma hasta 2029") in keys
     assert "transfer:fran-garcia-betis" in keys
     assert semantic_news_key("Es oficial: Madrid anuncia traspaso Fran Garcia Betis") in keys
+    assert "schedule:teresa-herrera-deportivo-friendly" in keys
+    assert semantic_news_key("Confirmed: Real Madrid face Deportivo La Coruna in Teresa Herrera Trophy in pre-season") in keys
 
 
 def test_mbappe_role_headline_is_shortened():
@@ -866,6 +881,12 @@ def test_mbappe_role_headline_is_shortened():
 
 
 def test_morning_digest_translation_glitches_are_cleaned():
+    assert clean_text(
+        "«Реал» сыграет с Депортиво Ла Корунья в рамках турнира Teresa Herrera Trophy в предсезонке"
+    ) == "«Реал» сыграет с «Депортиво» в предсезонном Трофее Тересы Эрреры"
+    assert clean_text(
+        "«Реал» дебютирует под руководством Моуринью в товарищеском матче против Депортиво"
+    ) == "Дебют Моуринью состоится в товарищеском матче с «Депортиво»"
     assert clean_text(
         "Хаби Алонсо против подписания суперзвезды Челси Реалом"
     ) == "Хаби Алонсо хочет помешать «Реалу» подписать звезду «Челси»"
