@@ -346,6 +346,14 @@ def is_vinicius_renewal_text(text: str) -> bool:
     )
 
 
+def is_tchouameni_extension_text(text: str) -> bool:
+    return (
+        contains_any(text, ("tchouameni", "tchouaméni", "тчуамени", "чуамени"))
+        and contains_any(text, ("extend", "extension", "renew", "renovacion", "renovación", "contract", "contrato", "продл", "продление", "контракт"))
+        and contains_any(text, ("2031", "real madrid", "madrid", "реал", "мадрид"))
+    )
+
+
 def is_player_sales_revenue_text(text: str) -> bool:
     return (
         contains_any(text, ("real madrid", "madrid", "реал", "мадрид", "la fabrica", "fabrica", "фабрика", "gila", "хила"))
@@ -460,6 +468,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_midfield_duo_premier_interest_text(text):
         return "transfer:midfield-duo-premier-interest"
+
+    if is_tchouameni_extension_text(text):
+        return "contract:tchouameni-extension"
 
     if is_vinicius_renewal_text(text):
         return "contract:vinicius-renewal"
@@ -594,6 +605,8 @@ def canonical_news_key(key: str) -> str:
         return "transfer:bastoni-deadline"
     if is_midfield_duo_premier_interest_text(text):
         return "transfer:midfield-duo-premier-interest"
+    if is_tchouameni_extension_text(text):
+        return "contract:tchouameni-extension"
     if is_vinicius_renewal_text(text):
         return "contract:vinicius-renewal"
     if is_player_sales_revenue_text(text):

@@ -299,6 +299,14 @@ def test_july_absence_noise_items_are_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_ninth_clickbait_is_filtered():
+    title = "Jose Mourinho just made a Real Madrid transfer decision nobody saw coming"
+    headline = "Моуринью принял неожиданное трансферное решение в «Реале»"
+
+    assert passes_filters(title, source="The Real Champs") is False
+    assert digest_llm_hard_deny(_item(title), headline) is True
+
+
 def test_evening_digest_personal_former_player_noise_is_filtered():
     cases = [
         ("Fallece el padre de Ricardo Carvalho", "Marca - Real Madrid"),
@@ -529,6 +537,12 @@ def test_cross_language_duplicate_semantic_keys():
     ) == semantic_news_key(
         "Bloqueo salida Asencio ofertas insuficientes Bastoni"
     )
+    assert semantic_news_key(
+        "Real Madrid reach agreement to extend midfield mainstay contract until 2031 amid Manchester United interest"
+    ) == semantic_news_key(
+        "Tchouameni Real Madrid contract extension 2026"
+    )
+    assert semantic_news_key("Tchouameni signs Real Madrid contract extension until 2031") == "contract:tchouameni-extension"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -632,6 +646,27 @@ def test_rank_digest_groups_july_absence_duplicate_threads():
 
     assert len(ranked) == 3
     assert sorted(len(item.grouped_links) for item in ranked) == [2, 2, 2]
+
+
+def test_rank_digest_groups_tchouameni_extension_thread():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid reach agreement to extend midfield mainstay contract until 2031 amid Manchester United interest",
+                "Madrid Universal",
+                "https://example.com/tchouameni-extension-en",
+            ),
+            _candidate(
+                "Tchouameni Real Madrid contract extension 2026",
+                "Managing Madrid",
+                "https://example.com/tchouameni-extension-mm",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == 2
 
 
 def test_rank_digest_does_not_fill_deferred_sources():
@@ -1062,3 +1097,9 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Фран Гарсия перешёл в Реал Бетис"
     ) == "Фран Гарсия перешёл в «Бетис»"
+    assert clean_text(
+        "«Реал» продлил контракт с основным полузащитником до 2031 года"
+    ) == "«Реал» продлил Тчуамени до 2031 года"
+    assert clean_text(
+        "Тчуамени подписал продление контракта с «Реалом» до 2031 года"
+    ) == "Тчуамени продлил контракт с «Реалом» до 2031 года"
