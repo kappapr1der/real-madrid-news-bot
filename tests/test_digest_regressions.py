@@ -323,6 +323,27 @@ def test_july_ninth_clickbait_is_filtered():
     assert digest_llm_hard_deny(_item(title), headline) is True
 
 
+def test_evening_digest_july_ninth_noise_is_filtered():
+    cases = [
+        (
+            "Хаби Алонсо рассказал, почему он решил возглавить Челси",
+            "Чемпионат - Футбол",
+        ),
+        (
+            "Atletico pesca talento Fabrica Alvaro Vega refuerza juvenil",
+            "Marca - Real Madrid",
+        ),
+        (
+            "Атлетико ловит талантливых игроков на Заводе: Альваро Вега усиливает молодежный состав",
+            "Marca - Real Madrid",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_evening_digest_personal_former_player_noise_is_filtered():
     cases = [
         ("Fallece el padre de Ricardo Carvalho", "Marca - Real Madrid"),
@@ -568,6 +589,14 @@ def test_cross_language_duplicate_semantic_keys():
         "Confirmed: Real Madrid face Deportivo La Coruna in Teresa Herrera Trophy in pre-season"
     ) == "schedule:teresa-herrera-deportivo-friendly"
     assert semantic_news_key(
+        "Real Madrid conoce que ganaria ano Fran Garcia"
+    ) == semantic_news_key(
+        "Asi despedido vestuario Real Madrid Fran Garcia"
+    )
+    assert semantic_news_key(
+        "Real Madrid conoce que ganaria ano Fran Garcia"
+    ) == "transfer:fran-garcia-betis"
+    assert semantic_news_key(
         "Real Madrid make sweeping medical staff changes following injury-plagued season"
     ) == semantic_news_key(
         "Реал перестраивает медицинский штаб после сезона травм и инцидента с Мбаппе"
@@ -720,6 +749,32 @@ def test_rank_digest_groups_medical_staff_overhaul_thread():
 
     assert len(ranked) == 1
     assert len(ranked[0].grouped_links) == 2
+
+
+def test_rank_digest_groups_fran_garcia_departure_followups():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid conoce que ganaria ano Fran Garcia",
+                "Bernabeu Digital",
+                "https://example.com/fran-money",
+            ),
+            _candidate(
+                "Asi despedido vestuario Real Madrid Fran Garcia",
+                "Mundo Deportivo - Real Madrid",
+                "https://example.com/fran-farewell",
+            ),
+            _candidate(
+                "Oficial: Fran Garcia marcha al Betis",
+                "Sport - Real Madrid",
+                "https://example.com/fran-betis",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == 3
 
 
 def test_rank_digest_does_not_fill_deferred_sources():

@@ -462,10 +462,40 @@ def is_arbeloa_fulham_text(text: str) -> bool:
 
 
 def is_fran_garcia_betis_text(text: str) -> bool:
-    return (
-        contains_any(text, ("fran garcia", "fran garcía", "фран гарсия"))
-        and contains_any(text, ("betis", "бетис"))
-        and contains_any(text, ("transfer", "traspaso", "marcha", "joins", "sign", "fich", "переш", "переход", "трансфер", "подтверд"))
+    if not contains_any(text, ("fran garcia", "fran garcía", "фран гарсия")):
+        return False
+    if contains_any(text, ("betis", "бетис")) and contains_any(
+        text,
+        ("transfer", "traspaso", "marcha", "joins", "sign", "fich", "переш", "переход", "трансфер", "подтверд"),
+    ):
+        return True
+    return contains_any(
+        text,
+        (
+            "despedido",
+            "despedida",
+            "vestuario",
+            "salida",
+            "se marcha",
+            "marcha",
+            "traspaso",
+            "venta",
+            "ganaria",
+            "ganaría",
+            "conoce que ganaria",
+            "conoce que ganaría",
+            "earn",
+            "would earn",
+            "left",
+            "leaves",
+            "goodbye",
+            "farewell",
+            "покинул",
+            "переход",
+            "переш",
+            "попрощ",
+            "заработ",
+        ),
     )
 
 
