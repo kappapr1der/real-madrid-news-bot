@@ -228,6 +228,22 @@ def test_day_digest_live_low_signal_items_are_filtered():
             "y a 10 minutos del Santiago Bernabeu",
             "Defensa Central",
         ),
+        (
+            "France Morocco live stream score result World Cup quarter final: Michael Olise appeal rejected by FIFA after Atlas Lions tackle",
+            "Independent Football",
+        ),
+        (
+            "Fichajes Real Madrid: ultimas noticias",
+            "Marca - Real Madrid",
+        ),
+        (
+            "Cuando juegan los jugadores del Real Madrid en cuartos del Mundial",
+            "Mundo Deportivo - Real Madrid",
+        ),
+        (
+            "Siro Lopez, periodista: me he encontrado en Estados Unidos con una estrella Real Madrid y he hablado sobre su nueva vida en Espana con Bernardo Silva",
+            "Defensa Central",
+        ),
     ]
 
     for title, source in cases:
@@ -551,6 +567,14 @@ def test_cross_language_duplicate_semantic_keys():
     assert semantic_news_key(
         "Confirmed: Real Madrid face Deportivo La Coruna in Teresa Herrera Trophy in pre-season"
     ) == "schedule:teresa-herrera-deportivo-friendly"
+    assert semantic_news_key(
+        "Real Madrid make sweeping medical staff changes following injury-plagued season"
+    ) == semantic_news_key(
+        "Реал перестраивает медицинский штаб после сезона травм и инцидента с Мбаппе"
+    )
+    assert semantic_news_key(
+        "Real perestraivaet medicinskij shtab posle sezona travm i incidenta s Mbappe"
+    ) == "staff:medical-overhaul-after-injuries"
 
 
 def test_rank_digest_groups_cross_language_duplicates():
@@ -668,6 +692,27 @@ def test_rank_digest_groups_tchouameni_extension_thread():
                 "Tchouameni Real Madrid contract extension 2026",
                 "Managing Madrid",
                 "https://example.com/tchouameni-extension-mm",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == 2
+
+
+def test_rank_digest_groups_medical_staff_overhaul_thread():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Real Madrid make sweeping medical staff changes following injury-plagued season",
+                "Madrid Universal",
+                "https://example.com/medical-staff-en",
+            ),
+            _candidate(
+                "Реал перестраивает медицинский штаб после сезона травм и инцидента с Мбаппе",
+                "Чемпионат - Футбол",
+                "https://example.com/medical-staff-ru",
             ),
         ],
         limit=10,

@@ -178,6 +178,43 @@ def is_asencio_loan_buy_text(text: str) -> bool:
     )
 
 
+def is_medical_staff_changes_text(text: str) -> bool:
+    return (
+        contains_any(
+            text,
+            (
+                "medical staff",
+                "medical team",
+                "medicinsk",
+                "medico",
+                "medicos",
+                "медицин",
+                "медштаб",
+                "мед штаб",
+                "shtab",
+                "штаб",
+            ),
+        )
+        and contains_any(
+            text,
+            (
+                "change",
+                "changes",
+                "sweeping",
+                "rebuild",
+                "restruct",
+                "cambios",
+                "reestruct",
+                "perestra",
+                "перестра",
+                "меняет",
+                "измен",
+            ),
+        )
+        and contains_any(text, ("injury", "injuries", "injury plagued", "lesion", "lesiones", "travm", "травм", "mbappe", "мбаппе"))
+    )
+
+
 def is_nico_paz_como_text(text: str) -> bool:
     return (
         contains_any(text, ("nico paz", "нико пас", "paz"))
@@ -530,6 +567,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_asencio_loan_buy_text(text):
         return "transfer:loan:asencio-mandatory-buy"
 
+    if is_medical_staff_changes_text(text):
+        return "staff:medical-overhaul-after-injuries"
+
     if (
         contains_any(text, ("cvc", "tebas", "тебас", "audiovisual", "audiovisuales", "аудиовизуаль"))
         and contains_any(text, ("laliga", "la liga", "лига", "лиги", "rights", "derechos", "права", "прав"))
@@ -641,6 +681,8 @@ def canonical_news_key(key: str) -> str:
         return "transfer:loan:asencio-mandatory-buy"
     if is_nico_paz_como_text(text):
         return "transfer:nico-paz-como"
+    if is_medical_staff_changes_text(text):
+        return "staff:medical-overhaul-after-injuries"
     if is_laporta_attacks_real_text(text):
         return "barca:laporta-attacks-real"
     return clean
