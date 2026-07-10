@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from news_fingerprint import semantic_news_key
-from source_quality import load_source_quality, source_quality_adjustment
+from source_quality import load_source_quality, source_quality_adjustment, source_quality_policy
 
 TOKEN_RE = re.compile(r"[a-zа-яё0-9]+", re.IGNORECASE)
 
@@ -523,6 +523,11 @@ def rank_digest_candidates(
 ) -> list[RankedDigestItem]:
     now = datetime.now(timezone.utc)
     source_quality_data = load_source_quality()
+    candidates = [
+        candidate
+        for candidate in candidates
+        if source_quality_policy(source_attr(candidate), source_quality_data) != "blocked"
+    ]
     profiles = {
         link_attr(candidate): candidate_profile(candidate, now, source_quality_data)
         for candidate in candidates

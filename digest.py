@@ -22,6 +22,7 @@ from match_calendar import digest_block_reason
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
+from editorial_archive import archive_digest_items
 from llm_editor import review_digest_items
 from source_quality import source_provenance_label, update_digest_source_quality
 from status_manager import record_error, record_status
@@ -1402,7 +1403,7 @@ def fetch_digest(sources, label: str, limit=DIGEST_LIMIT):
         },
         **editor_metrics,
     }
-    return news_items, new_links, new_fingerprints, metrics
+    return news_items, new_links, new_fingerprints, metrics, selected, title_overrides
 
 
 def digest_render_plan(label: str, item_count: int) -> tuple[str, list[str], list[str]]:
@@ -1493,7 +1494,11 @@ def send_digest(label: str = "auto"):
         return
 
     sources = SOURCES_INTERNATIONAL + SOURCES_RU
-    news_items, new_links, new_fingerprints, metrics = fetch_digest(sources, label=label, limit=DIGEST_LIMIT)
+    news_items, new_links, new_fingerprints, metrics, selected_items, title_overrides = fetch_digest(
+        sources,
+        label=label,
+        limit=DIGEST_LIMIT,
+    )
     metrics["dry_run"] = DRY_RUN
 
     if not news_items:
@@ -1547,6 +1552,7 @@ def send_digest(label: str = "auto"):
         sent_fingerprints = load_news_keys(SENT_BREAKING_FINGERPRINT_FILE)
         sent_fingerprints.update(new_fingerprints)
         save_news_keys(SENT_BREAKING_FINGERPRINT_FILE, sent_fingerprints)
+    archive_digest_items(label, selected_items, title_overrides)
     record_status("digest", "ok", f"Опубликован {label} дайджест", metrics)
     logging.info(f"Опубликован {label} дайджест")
 

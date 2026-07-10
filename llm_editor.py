@@ -28,6 +28,7 @@ from runtime_config import (
     YANDEX_LLM_URL,
     get_state_file,
 )
+from source_quality import source_trust_tier
 
 logger = logging.getLogger(__name__)
 
@@ -247,6 +248,7 @@ def review_digest_items(items: list[dict[str, Any]], label: str = "") -> LLMRevi
                 "index": idx,
                 "title": _compact_text(str(item.get("title", "")), 180),
                 "source": _compact_text(str(item.get("source", "")), 80),
+                "trust_tier": source_trust_tier(str(item.get("source", ""))),
                 "summary": _compact_text(str(item.get("summary", ""))),
                 "score": item.get("score"),
                 "reason": _compact_text(str(item.get("reason", "")), 160),
@@ -308,6 +310,7 @@ def review_breaking_items(items: list[dict[str, Any]]) -> LLMReviewResult:
                 "index": idx,
                 "title": _compact_text(str(item.get("title", "")), 180),
                 "source": _compact_text(str(item.get("source", "")), 80),
+                "trust_tier": source_trust_tier(str(item.get("source", ""))),
                 "summary": _compact_text(str(item.get("summary", ""))),
                 "fingerprint": _compact_text(str(item.get("fingerprint", "")), 120),
                 "first_seen_at": item.get("first_seen_at"),
@@ -320,6 +323,8 @@ def review_breaking_items(items: list[dict[str, Any]]) -> LLMReviewResult:
         "Task: decide which candidate deserves an urgent Telegram post. "
         "Post only confirmed or highly important Real Madrid football news: official club statements, "
         "confirmed transfers/departures, serious injuries, lineups, major matchday updates. "
+        "Never write 'officially' or 'confirmed' unless the candidate itself is an official source or "
+        "explicitly cites an official club statement. A trusted journalist report must be phrased as a report, not as fact. "
         "Reject duplicate variants, generic rumors, unrelated live blogs, cricket, basketball, "
         "generic national-team stories, weak opinion pieces, and clickbait. "
         "If several items describe the same event, keep only the best source. "

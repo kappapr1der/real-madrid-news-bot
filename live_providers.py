@@ -21,9 +21,13 @@ from runtime_config import (
     MATCHDAY_LIVE_ENABLED,
     MATCHDAY_LIVE_EVENT_TYPES,
     MATCHDAY_LIVE_PROVIDER,
+    MATCHDAY_LINEUP_BEFORE_MINUTES,
+    MATCHDAY_LINEUP_ENABLED,
+    MATCHDAY_RESULT_ENABLED,
 )
 
 CANCELLED_STATUSES = {"NS", "TBD", "PST", "CANC", "ABD", "AWD", "WO"}
+FINISHED_STATUSES = {"FT", "AET", "PEN"}
 REAL_NAME_RE = re.compile(r"\breal\s+madrid\b|\bреал\s+мадрид\b", re.IGNORECASE)
 
 
@@ -35,6 +39,22 @@ class LiveEvent:
     kind: str
     score: str
     text: str
+
+
+@dataclass(frozen=True)
+class ConfirmedLineup:
+    key: str
+    match: Match
+    formation: str
+    starters: list[str]
+
+
+@dataclass(frozen=True)
+class FinalResult:
+    key: str
+    match: Match
+    score: str
+    status: str
 
 
 class ApiFootballClient:
@@ -68,6 +88,9 @@ class ApiFootballClient:
     def fixture_events(self, fixture_id: str) -> list[dict[str, Any]]:
         return self.get("fixtures/events", {"fixture": fixture_id})
 
+    def fixture_lineups(self, fixture_id: str) -> list[dict[str, Any]]:
+        return self.get("fixtures/lineups", {"fixture": fixture_id})
+
 
 def live_provider_status() -> str:
     if not MATCHDAY_LIVE_ENABLED:
@@ -89,6 +112,30 @@ def matches_in_live_window(matches: list[Match]) -> list[Match]:
     for match in matches:
         kickoff = match.kickoff.astimezone(now.tzinfo)
         start = kickoff - timedelta(minutes=MATCHDAY_LIVE_BEFORE_MINUTES)
+        end = kickoff + timedelta(minutes=MATCHDAY_FULLTIME_MINUTES + MATCHDAY_LIVE_AFTER_MINUTES)
+        if start <= now <= end:
+            active.append(match)
+    return active
+
+
+def matches_in_lineup_window(matches: list[Match]) -> list[Match]:
+    now = local_now()
+    active = []
+    for match in matches:
+        kickoff = match.kickoff.astimezone(now.tzinfo)
+        start = kickoff - timedelta(minutes=MATCHDAY_LINEUP_BEFORE_MINUTES)
+        end = kickoff + timedelta(minutes=30)
+        if start <= now <= end:
+            active.append(match)
+    return active
+
+
+def matches_in_result_window(matches: list[Match]) -> list[Match]:
+    now = local_now()
+    active = []
+    for match in matches:
+        kickoff = match.kickoff.astimezone(now.tzinfo)
+        start = kickoff + timedelta(minutes=max(MATCHDAY_FULLTIME_MINUTES - 20, 90))
         end = kickoff + timedelta(minutes=MATCHDAY_FULLTIME_MINUTES + MATCHDAY_LIVE_AFTER_MINUTES)
         if start <= now <= end:
             active.append(match)
@@ -325,4 +372,83 @@ def fetch_live_events(matches: list[Match]) -> list[LiveEvent]:
         return events
     except (requests.RequestException, ValueError, TypeError) as exc:
         logging.warning("Не удалось получить live-события API-FOOTBALL: %s", exc)
+        return []
+
+
+def fetch_confirmed_lineups(matches: list[Match]) -> list[ConfirmedLineup]:
+    if not MATCHDAY_LINEUP_ENABLED or not provider_ready():
+        return []
+    active_matches = matches_in_lineup_window(matches)
+    if not active_matches:
+        return []
+
+    client = ApiFootballClient()
+    lineups: list[ConfirmedLineup] = []
+    try:
+        for match in active_matches:
+            fixture_ref = match.api_football_fixture_id
+            if not fixture_ref:
+                continue
+            fixture = client.fixture_by_id(fixture_ref)
+            if not fixture or not fixture_allowed(fixture):
+                continue
+            for row in client.fixture_lineups(fixture_ref):
+                team = row.get("team") or {}
+                team_id = str(team.get("id") or "")
+                team_label = str(team.get("name") or "")
+                if team_id != str(API_FOOTBALL_TEAM_ID) and not REAL_NAME_RE.search(team_label):
+                    continue
+                starters = [
+                    str((entry.get("player") or {}).get("name") or "").strip()
+                    for entry in (row.get("startXI") or [])
+                ]
+                starters = [name for name in starters if name]
+                if len(starters) < 8:
+                    continue
+                formation = str(row.get("formation") or "")
+                lineups.append(
+                    ConfirmedLineup(
+                        key=f"api-football:{fixture_ref}:real-madrid-lineup",
+                        match=match,
+                        formation=formation,
+                        starters=starters[:11],
+                    )
+                )
+        return lineups
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        logging.warning("Не удалось получить состав API-FOOTBALL: %s", exc)
+        return []
+
+
+def fetch_final_results(matches: list[Match]) -> list[FinalResult]:
+    if not MATCHDAY_RESULT_ENABLED or not provider_ready():
+        return []
+    active_matches = matches_in_result_window(matches)
+    if not active_matches:
+        return []
+
+    client = ApiFootballClient()
+    results: list[FinalResult] = []
+    try:
+        for match in active_matches:
+            fixture_ref = match.api_football_fixture_id
+            if not fixture_ref:
+                continue
+            fixture = client.fixture_by_id(fixture_ref)
+            if not fixture or not fixture_allowed(fixture) or fixture_status(fixture) not in FINISHED_STATUSES:
+                continue
+            score = fixture_score(fixture)
+            if not score:
+                continue
+            results.append(
+                FinalResult(
+                    key=f"api-football:{fixture_ref}:final:{score}",
+                    match=match,
+                    score=score,
+                    status=fixture_status(fixture),
+                )
+            )
+        return results
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        logging.warning("Не удалось получить итог матча API-FOOTBALL: %s", exc)
         return []

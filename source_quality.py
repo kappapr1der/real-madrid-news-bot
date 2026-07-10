@@ -3,7 +3,15 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
 
-from runtime_config import get_state_file
+from runtime_config import (
+    SOURCE_QUALITY_AUTOPILOT_ENABLED,
+    SOURCE_QUALITY_BACKUP_MIN_CANDIDATES,
+    SOURCE_QUALITY_BACKUP_QUARANTINE_RATE,
+    SOURCE_QUALITY_HARD_BLOCK_ENABLED,
+    SOURCE_QUALITY_HARD_BLOCK_MIN_CANDIDATES,
+    SOURCE_QUALITY_HARD_BLOCK_QUARANTINE_RATE,
+    get_state_file,
+)
 from status_manager import record_status
 
 SOURCE_QUALITY_FILE = get_state_file("source_quality.json")
@@ -69,6 +77,8 @@ def normalized_source_name(source: Any) -> str:
     return (
         source_label(source)
         .casefold()
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
         .replace("–", "-")
         .replace("—", "-")
         .strip()
@@ -136,6 +146,11 @@ def source_quality_adjustment(source: Any, data: dict | None = None) -> int:
     selected_rate = selected / candidates
     quarantine_rate = quarantined / candidates
 
+    policy = source_quality_policy(source, data)
+    if policy == "blocked":
+        return -24
+    if policy == "backup":
+        return -8
     if quarantine_rate >= 0.45:
         return -4
     if quarantine_rate >= 0.35:
@@ -143,6 +158,52 @@ def source_quality_adjustment(source: Any, data: dict | None = None) -> int:
     if selected >= 6 and selected_rate >= 0.50:
         return 2
     return 0
+
+
+def source_quality_policy(source: Any, data: dict | None = None) -> str:
+    """Return the current editorial treatment for a source.
+
+    The default is intentionally conservative: trusted official/reporter feeds never
+    get automatically blocked, and hard blocking needs an explicit opt-in.
+    """
+    if not SOURCE_QUALITY_AUTOPILOT_ENABLED:
+        return "normal"
+    if source_trust_tier(source) in {"official", "reporter"}:
+        return "normal"
+
+    data = data if isinstance(data, dict) else load_source_quality()
+    normalized = normalized_source_name(source)
+    row = next(
+        (
+            value
+            for label, value in (data.get("sources") or {}).items()
+            if isinstance(value, dict) and normalized_source_name(label) == normalized
+        ),
+        None,
+    )
+    if not isinstance(row, dict):
+        return "normal"
+    candidates = int(row.get("candidates") or 0)
+    selected = int(row.get("selected") or 0)
+    quarantined = int(row.get("quarantined") or 0)
+    if candidates <= 0:
+        return "normal"
+    quarantine_rate = quarantined / candidates
+    selected_rate = selected / candidates
+    if (
+        SOURCE_QUALITY_HARD_BLOCK_ENABLED
+        and candidates >= SOURCE_QUALITY_HARD_BLOCK_MIN_CANDIDATES
+        and quarantine_rate >= SOURCE_QUALITY_HARD_BLOCK_QUARANTINE_RATE
+        and selected_rate < 0.20
+    ):
+        return "blocked"
+    if (
+        candidates >= SOURCE_QUALITY_BACKUP_MIN_CANDIDATES
+        and quarantine_rate >= SOURCE_QUALITY_BACKUP_QUARANTINE_RATE
+        and selected_rate < 0.35
+    ):
+        return "backup"
+    return "normal"
 
 
 def source_snapshot(row: dict) -> dict:
@@ -160,6 +221,7 @@ def source_snapshot(row: dict) -> dict:
         "candidate_rate": round(candidates / runs, 2),
         "quarantine_rate": round(quarantined / max(candidates, 1), 3),
         "trust_tier": source_trust_tier(row.get("label", "unknown")),
+        "policy": source_quality_policy(row.get("label", "unknown"), {"sources": {row.get("label", "unknown"): row}}),
         "quality_adjustment": source_quality_adjustment(row.get("label", "unknown"), {"sources": {row.get("label", "unknown"): row}}),
     }
 

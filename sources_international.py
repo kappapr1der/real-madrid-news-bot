@@ -1,6 +1,18 @@
 from runtime_config import X_RSS_BASE_URL, X_RSS_HANDLES
 
 
+X_OFFICIAL_HANDLES = {"realmadrid", "realmadriden"}
+X_REPORTER_HANDLES = {
+    "mariocortegana",
+    "aranchamobile",
+    "melchorcope",
+    "jlsanchez78",
+    "ramon_alvarezmm",
+    "guillermorai_",
+    "fabrizioromano",
+}
+
+
 def _x_rss_url(handle: str) -> str:
     template = X_RSS_BASE_URL.rstrip("/")
     if "{handle}" in template:
@@ -16,11 +28,14 @@ def build_x_sources() -> list[dict]:
         clean = handle.strip().lstrip("@")
         if not clean:
             continue
+        normalized = clean.casefold()
+        trust = "official" if normalized in X_OFFICIAL_HANDLES else "reporter" if normalized in X_REPORTER_HANDLES else "community"
         sources.append(
             {
                 "url": _x_rss_url(clean),
                 "label": f"X – @{clean}",
-                "kind": "x",
+                "kind": f"x_{trust}",
+                "trust": trust,
             }
         )
     return sources

@@ -14,7 +14,8 @@ from html import escape
 import requests
 from colorama import Fore, Style, init
 
-from live_providers import fetch_live_events, live_provider_status
+from editorial_archive import archive_matchday_story
+from live_providers import fetch_confirmed_lineups, fetch_final_results, fetch_live_events, live_provider_status
 from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, match_calendar_status, upcoming_matches
 from post_utils import append_hashtags
 from status_manager import record_error, record_status
@@ -22,6 +23,7 @@ from runtime_config import (
     DRY_RUN,
     LIVE_HASHTAGS,
     MATCHDAY_FULLTIME_MINUTES,
+    MATCHDAY_DAY_BEFORE_MINUTES,
     MATCHDAY_HALFTIME_MINUTES,
     MATCHDAY_HASHTAGS,
     MATCHDAY_LIVE_ENABLED,
@@ -29,6 +31,8 @@ from runtime_config import (
     MATCHDAY_POLL_SECONDS,
     MATCHDAY_POST_TOLERANCE_MINUTES,
     MATCHDAY_PREVIEW_MINUTES,
+    MATCHDAY_LINEUP_ENABLED,
+    MATCHDAY_RESULT_ENABLED,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_TIMEOUT_SECONDS,
     TARGET_CHAT_ID,
@@ -49,6 +53,7 @@ logging.basicConfig(
 
 STATE_FILE = get_state_file("matchday_posts.json")
 AUTO_PHASES = {
+    "day_before": -MATCHDAY_DAY_BEFORE_MINUTES,
     "preview": -MATCHDAY_PREVIEW_MINUTES,
     "kickoff": 0,
     "halftime": MATCHDAY_HALFTIME_MINUTES,
@@ -102,6 +107,17 @@ def format_auto_message(match: Match, phase: str) -> str:
     safe_meta = escape(match_meta(match))
     safe_kickoff = escape(kickoff_label(match))
 
+    if phase == "day_before":
+        lines = [
+            f"<b>Завтра матч: {safe_title}</b>",
+            safe_meta,
+            f"Начало: {safe_kickoff}",
+            "Заранее собираем всё важное к матчу и оставляем день без лишнего шума.",
+        ]
+        if match.broadcast:
+            lines.append(f"Трансляция: {escape(match.broadcast)}")
+        return append_hashtags("\n".join(lines), MATCHDAY_HASHTAGS)
+
     if phase == "preview":
         lines = [
             f"<b>Матч-день: {safe_title}</b>",
@@ -153,6 +169,28 @@ def format_event_message(match: Match, minute: str, text: str, kind: str = "upda
     header = " · ".join(header_parts)
     message = f"<b>{header} | {safe_title}</b>\n{safe_text}"
     return append_hashtags(message, LIVE_HASHTAGS)
+
+
+def format_lineup_message(lineup) -> str:
+    formation = f" · {escape(lineup.formation)}" if lineup.formation else ""
+    names = ", ".join(escape(name) for name in lineup.starters)
+    message = "\n".join(
+        [
+            f"<b>Состав «Реала» на матч с {escape(lineup.match.away if lineup.match.is_home else lineup.match.home)}{formation}</b>",
+            names,
+        ]
+    )
+    return append_hashtags(message, MATCHDAY_HASHTAGS)
+
+
+def format_final_result_message(result) -> str:
+    message = "\n".join(
+        [
+            f"<b>Финальный свист: {escape(result.match.title)}</b>",
+            f"Счёт: <b>{escape(result.score)}</b>",
+        ]
+    )
+    return append_hashtags(message, MATCHDAY_HASHTAGS)
 
 
 def post_telegram_message(message: str) -> bool:
@@ -232,10 +270,13 @@ def run_auto_once() -> int:
             key = f"auto:{match.id}:{phase}"
             if key in posted_keys or not phase_due(match, phase, now):
                 continue
+            if phase == "fulltime" and MATCHDAY_RESULT_ENABLED and MATCHDAY_LIVE_ENABLED:
+                continue
 
             message = format_auto_message(match, phase)
             if post_telegram_message(message):
                 mark_posted(key)
+                archive_matchday_story(match, phase)
                 sent += 1
                 logging.info("Опубликован matchday phase=%s match=%s", phase, match.id)
 
@@ -286,6 +327,7 @@ def run_live_once() -> int:
         )
         if post_telegram_message(message):
             mark_posted(key)
+            archive_matchday_story(event.match, "live_event", text=event.text, score=event.score)
             sent += 1
             logging.info("Опубликовано live event key=%s match=%s", event.key, event.match.id)
 
@@ -296,6 +338,36 @@ def run_live_once() -> int:
         {"events": len(events), "sent": sent, "dry_run": DRY_RUN},
     )
     print(Fore.CYAN + f"[MATCHDAY LIVE] Проверка live-событий завершена, опубликовано: {sent}")
+    return sent
+
+
+def run_lineup_once() -> int:
+    if not MATCHDAY_LINEUP_ENABLED or live_provider_status() != "api-football ready":
+        return 0
+    sent = 0
+    for lineup in fetch_confirmed_lineups(load_matches()):
+        key = f"lineup:{lineup.key}"
+        if key in posted_keys:
+            continue
+        if post_telegram_message(format_lineup_message(lineup)):
+            mark_posted(key)
+            archive_matchday_story(lineup.match, "lineup", text=", ".join(lineup.starters))
+            sent += 1
+    return sent
+
+
+def run_result_once() -> int:
+    if not MATCHDAY_RESULT_ENABLED or live_provider_status() != "api-football ready":
+        return 0
+    sent = 0
+    for result in fetch_final_results(load_matches()):
+        key = f"result:{result.key}"
+        if key in posted_keys:
+            continue
+        if post_telegram_message(format_final_result_message(result)):
+            mark_posted(key)
+            archive_matchday_story(result.match, "final_result", score=result.score)
+            sent += 1
     return sent
 
 
@@ -321,6 +393,8 @@ def run_cycle(force_live: bool = False) -> int:
     sent = run_auto_once()
     if live_due(force=force_live):
         sent += run_live_once()
+        sent += run_lineup_once()
+        sent += run_result_once()
     elif not MATCHDAY_LIVE_ENABLED:
         record_status("live", "disabled", "MATCHDAY_LIVE_ENABLED=false")
     return sent

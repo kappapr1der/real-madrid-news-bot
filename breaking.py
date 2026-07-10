@@ -16,6 +16,7 @@ import requests
 from colorama import init, Fore, Style
 
 from article_media import fetch_article_image
+from editorial_archive import record_story
 from text_cleaner import clean_text
 from filters import passes_filters
 from feed_utils import parse_feed_url
@@ -26,6 +27,7 @@ from status_manager import record_error, record_status
 from translator import translate_text
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
+from source_quality import source_quality_policy, source_trust_tier
 from runtime_config import (
     BREAKING_HASHTAGS,
     BREAKING_INTERVAL_SECONDS,
@@ -138,6 +140,12 @@ BREAKING_DENY_TERMS = (
     "minimum one player in final mundial", "menos jugador en final mundial",
     "минимум одного игрока в финале чемпионата мира",
 )
+BREAKING_RUMOUR_TERMS = (
+    "rumour", "rumor", "could", "may", "might", "unlikely", "dream", "wish",
+    "would like", "interested", "interest", "reportedly", "report says", "собирается",
+    "может", "якобы", "слух", "интересуется", "мечтает", "возможн",
+)
+BREAKING_RELIABLE_TIERS = {"official", "reporter", "established_media"}
 
 TEMPLATES = [
     "<b>Сливочная молния</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
@@ -186,6 +194,18 @@ def is_breaking(text: str, source: str = "", summary: str = "") -> bool:
     lower_text = _breaking_normalize(text)
     if not has_breaking_context(text, source=source, summary=summary):
         logging.info("[BREAKING SKIPPED: LOW CONTEXT] %s: %s", source, text)
+        return False
+
+    tier = source_trust_tier(source)
+    source_policy = source_quality_policy(source)
+    if source_policy in {"backup", "blocked"}:
+        logging.info("[BREAKING SKIPPED: SOURCE POLICY %s] %s: %s", source_policy, source, text)
+        return False
+    if tier not in BREAKING_RELIABLE_TIERS:
+        logging.info("[BREAKING SKIPPED: UNVERIFIED SOURCE] %s: %s", source, text)
+        return False
+    if tier != "official" and any(term in lower_text for term in BREAKING_RUMOUR_TERMS):
+        logging.info("[BREAKING SKIPPED: RUMOUR] %s: %s", source, text)
         return False
 
     for word in STRONG_BREAKING_KEYWORDS:
@@ -424,6 +444,14 @@ def send_breaking(news: str, link: str, source: str = "Неизвестный и
         if fingerprint:
             sent_breaking_fingerprints.add(fingerprint)
             save_news_keys(SENT_FINGERPRINT_FILE, sent_breaking_fingerprints)
+        record_story(
+            kind="breaking",
+            title=news,
+            source=source,
+            link=link,
+            fingerprint=fingerprint,
+            category="breaking",
+        )
     else:
         record_error("breaking", "Telegram send failed for breaking post", {"source": source})
     return sent

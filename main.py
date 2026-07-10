@@ -22,6 +22,10 @@ from runtime_config import (
     DIGEST_TIMEZONE,
     DRY_RUN,
     MATCHDAY_ENABLED,
+    WEEKLY_RECAP_DAY,
+    WEEKLY_RECAP_ENABLED,
+    WEEKLY_RECAP_TIME,
+    WEEKLY_RECAP_TIMEZONE,
     get_log_file,
 )
 from status_manager import load_status, parse_iso, record_error, record_status
@@ -184,6 +188,10 @@ def run_digest_with_label(label: str):
     start_process(f"digest:{label}", [PYTHON, "digest.py", label], restart=False)
 
 
+def run_weekly_recap():
+    start_process("weekly_recap", [PYTHON, "weekly_recap.py"], restart=False)
+
+
 def run_preflight_with_label(label: str):
     start_process(f"preflight:{label}", [PYTHON, "preflight.py", "digest", label], restart=False)
 
@@ -321,6 +329,18 @@ def schedule_digest_preflight(label: str, at_time: str):
     return job
 
 
+def schedule_weekly_recap():
+    if not WEEKLY_RECAP_ENABLED:
+        record_status("weekly_recap", "disabled", "WEEKLY_RECAP_ENABLED=false")
+        return None
+    days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+    day = WEEKLY_RECAP_DAY if WEEKLY_RECAP_DAY in days else "sunday"
+    weekly_job = getattr(schedule.every(), day)
+    job = weekly_job.at(WEEKLY_RECAP_TIME, WEEKLY_RECAP_TIMEZONE).do(run_weekly_recap)
+    logging.info("Scheduled weekly recap on %s %s %s", day, WEEKLY_RECAP_TIME, WEEKLY_RECAP_TIMEZONE)
+    return job
+
+
 def main():
     install_signal_handlers()
     try:
@@ -340,6 +360,7 @@ def main():
         for label, at_time in digest_slots:
             schedule_digest_preflight(label, at_time)
             schedule_digest(label, at_time)
+        schedule_weekly_recap()
         run_missed_digest_if_needed(digest_slots)
 
         print(
