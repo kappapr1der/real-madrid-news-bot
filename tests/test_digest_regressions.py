@@ -1033,6 +1033,14 @@ def test_story_label_uses_title_context_over_broad_rank_category():
     assert "[Рынок]" in rendered
 
 
+def test_source_aware_digest_translation_cleanup():
+    assert clean_text("Моуриньо сохранит тренера по физподготовке") == "Моуринью сохранит тренера по физподготовке"
+    assert clean_text("Мака Аллистера") == "Мак Аллистера"
+    assert clean_text(
+        "Детали перехода Мак Аллистера в Реал"
+    ) == "Детали возможного трансфера Мак Аллистера в «Реал»"
+
+
 def test_source_quality_adjustment_rewards_signal_and_penalizes_noise():
     data = {
         "sources": {
