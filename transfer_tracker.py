@@ -123,6 +123,16 @@ def record_transfer_story(story: dict[str, Any]) -> dict[str, Any] | None:
     entries = data["entries"]
     current = entries.get(subject)
     now = _now()
+    if current:
+        previous_status = str(current.get("status") or "")
+        if (
+            previous_status in STATUS_WEIGHT
+            and status in STATUS_WEIGHT
+            and STATUS_WEIGHT[previous_status] > STATUS_WEIGHT[status]
+            and status != "опровергнуто"
+        ):
+            # A later repost from a weaker source must not downgrade a verified state.
+            status = previous_status
     update = current is None or current.get("status") != status
     if current is None:
         current = {"subject": subject, "history": []}

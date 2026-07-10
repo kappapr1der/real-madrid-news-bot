@@ -16,7 +16,7 @@ def test_editorial_archive_merges_breaking_and_digest_story(monkeypatch, tmp_pat
 
     editorial_archive.record_story(
         kind="breaking",
-        title="Real Madrid confirm Michael Olise signing",
+        title="Official: Real Madrid announce Michael Olise signing",
         source="X – @realmadrid",
         link="https://example.test/official",
         fingerprint="transfer:olise-real",
@@ -24,7 +24,7 @@ def test_editorial_archive_merges_breaking_and_digest_story(monkeypatch, tmp_pat
     )
     second = editorial_archive.record_story(
         kind="digest",
-        title="Real Madrid confirm Michael Olise signing",
+        title="Official: Real Madrid announce Michael Olise signing",
         source="Marca – Real Madrid",
         link="https://example.test/marca",
         fingerprint="transfer:olise-real",
