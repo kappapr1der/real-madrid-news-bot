@@ -8,12 +8,88 @@ from status_manager import record_status
 
 SOURCE_QUALITY_FILE = get_state_file("source_quality.json")
 MAX_WATCHLIST = 8
+MIN_QUALITY_SAMPLE = 12
+
+SOURCE_TIER_RULES = (
+    (
+        "official",
+        (
+            "realmadrid.com",
+            "x - @realmadrid",
+            "x - @realmadriden",
+        ),
+    ),
+    (
+        "reporter",
+        (
+            "x - @mariocortegana",
+            "x - @aranchamobile",
+            "x - @melchorcope",
+            "x - @jlsanchez78",
+            "x - @ramon_alvarezmm",
+            "x - @guillermorai_",
+        ),
+    ),
+    (
+        "established_media",
+        (
+            "marca",
+            "mundo deportivo",
+            "sport - real madrid",
+            "bbc sport",
+            "guardian football",
+            "espn fc",
+            "sky sports",
+            "ny times",
+        ),
+    ),
+    (
+        "specialized_media",
+        (
+            "managing madrid",
+            "madrid universal",
+            "bernabeu digital",
+            "defensa central",
+            "football españa",
+            "football espana",
+            "real madrid news",
+            "the real champs",
+        ),
+    ),
+)
 
 
 def source_label(source: Any) -> str:
     if isinstance(source, dict):
         return str(source.get("label") or source.get("url") or "unknown")
     return str(source or "unknown")
+
+
+def normalized_source_name(source: Any) -> str:
+    return (
+        source_label(source)
+        .casefold()
+        .replace("–", "-")
+        .replace("—", "-")
+        .strip()
+    )
+
+
+def source_trust_tier(source: Any) -> str:
+    normalized = normalized_source_name(source)
+    for tier, markers in SOURCE_TIER_RULES:
+        if any(marker in normalized for marker in markers):
+            return tier
+    return "community"
+
+
+def source_provenance_label(source: Any) -> str:
+    tier = source_trust_tier(source)
+    if tier == "official":
+        return "официальный источник"
+    if tier == "reporter":
+        return "журналист"
+    return ""
 
 
 def candidate_source(candidate: Any) -> str:
@@ -38,6 +114,37 @@ def save_source_quality(data: dict) -> None:
     SOURCE_QUALITY_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def source_quality_adjustment(source: Any, data: dict | None = None) -> int:
+    data = data if isinstance(data, dict) else load_source_quality()
+    normalized = normalized_source_name(source)
+    row = next(
+        (
+            value
+            for label, value in (data.get("sources") or {}).items()
+            if isinstance(value, dict) and normalized_source_name(label) == normalized
+        ),
+        None,
+    )
+    if not isinstance(row, dict):
+        return 0
+
+    candidates = int(row.get("candidates") or 0)
+    if candidates < MIN_QUALITY_SAMPLE:
+        return 0
+    selected = int(row.get("selected") or 0)
+    quarantined = int(row.get("quarantined") or 0)
+    selected_rate = selected / candidates
+    quarantine_rate = quarantined / candidates
+
+    if quarantine_rate >= 0.45:
+        return -4
+    if quarantine_rate >= 0.35:
+        return -2
+    if selected >= 6 and selected_rate >= 0.50:
+        return 2
+    return 0
+
+
 def source_snapshot(row: dict) -> dict:
     runs = max(int(row.get("runs") or 0), 1)
     candidates = int(row.get("candidates") or 0)
@@ -52,6 +159,8 @@ def source_snapshot(row: dict) -> dict:
         "selected_rate": round(selected / max(candidates, 1), 3),
         "candidate_rate": round(candidates / runs, 2),
         "quarantine_rate": round(quarantined / max(candidates, 1), 3),
+        "trust_tier": source_trust_tier(row.get("label", "unknown")),
+        "quality_adjustment": source_quality_adjustment(row.get("label", "unknown"), {"sources": {row.get("label", "unknown"): row}}),
     }
 
 

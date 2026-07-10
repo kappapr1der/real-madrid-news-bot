@@ -12,6 +12,7 @@ from digest import (
 from filters import passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
+from source_quality import source_provenance_label, source_quality_adjustment
 from text_cleaner import clean_text
 
 
@@ -1000,6 +1001,33 @@ def test_digest_entry_uses_html_link():
 
     assert '<a href="https://example.com/story?x=1&amp;y=2">' in rendered
     assert "](" not in rendered
+
+
+def test_digest_entry_shows_story_category_and_official_provenance():
+    item = _item("Real Madrid confirm Courtois injury diagnosis")
+    item.candidate.source = "X - @realmadrid"
+    item.candidate.link = "https://example.com/official"
+    item.related_sources = []
+    item.category = "injury"
+
+    rendered = format_news_entry(1, item)
+
+    assert "[Лазарет]" in rendered
+    assert "официальный источник" in rendered
+
+
+def test_source_quality_adjustment_rewards_signal_and_penalizes_noise():
+    data = {
+        "sources": {
+            "Signal": {"candidates": 20, "selected": 12, "quarantined": 3},
+            "Noise": {"candidates": 20, "selected": 5, "quarantined": 10},
+        }
+    }
+
+    assert source_quality_adjustment("Signal", data) == 2
+    assert source_quality_adjustment("Noise", data) == -4
+    assert source_provenance_label("X - @realmadrid") == "официальный источник"
+    assert source_provenance_label("X - @MarioCortegana") == "журналист"
 
 
 def test_digest_semantic_key_blocks_later_breaking_variant():

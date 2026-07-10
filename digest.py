@@ -23,7 +23,7 @@ from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from llm_editor import review_digest_items
-from source_quality import update_digest_source_quality
+from source_quality import source_provenance_label, update_digest_source_quality
 from status_manager import record_error, record_status
 from translator import translate_text
 from text_cleaner import clean_text
@@ -1059,13 +1059,27 @@ def related_sources_line(item: RankedDigestItem) -> str:
     return f"\nЕще источники: {', '.join(visible_sources)}{suffix}"
 
 
+CATEGORY_LABELS = {
+    "official": "Подтверждено",
+    "injury": "Лазарет",
+    "lineup": "Состав",
+    "matchday": "Матч-день",
+    "transfer": "Рынок",
+    "coach": "Штаб",
+}
+
+
 def format_news_entry(i: int, item: RankedDigestItem, title_override: str | None = None) -> str:
     candidate = item.candidate
-    safe_text = escape(title_override or polish_title(candidate.title))
+    category = CATEGORY_LABELS.get(item.category, "")
+    category_prefix = f"[{category}] " if category else ""
+    safe_text = escape(category_prefix + (title_override or polish_title(candidate.title)))
     safe_source = escape(candidate.source)
     safe_link = escape(candidate.link, quote=True)
+    provenance = source_provenance_label(candidate.source)
+    provenance_suffix = f" · {escape(provenance)}" if provenance else ""
     related = related_sources_line(item)
-    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {safe_source}{related}"
+    return f"<b>{i}. {safe_text}</b>\n<a href=\"{safe_link}\">Читать</a> · {safe_source}{provenance_suffix}{related}"
 
 
 def split_message(message: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:

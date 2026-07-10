@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from news_fingerprint import semantic_news_key
+from source_quality import load_source_quality, source_quality_adjustment
 
 TOKEN_RE = re.compile(r"[a-zа-яё0-9]+", re.IGNORECASE)
 
@@ -366,7 +367,7 @@ def recency_weight(published_at: datetime | None, now: datetime) -> int:
     return 0
 
 
-def candidate_profile(candidate: Any, now: datetime) -> CandidateProfile:
+def candidate_profile(candidate: Any, now: datetime, source_quality_data: dict | None = None) -> CandidateProfile:
     title = text_attr(candidate, "title")
     summary = text_attr(candidate, "summary")
     source = source_attr(candidate)
@@ -391,6 +392,11 @@ def candidate_profile(candidate: Any, now: datetime) -> CandidateProfile:
     if source_bonus:
         score += source_bonus
         reasons.append("source")
+
+    quality_adjustment = source_quality_adjustment(source, source_quality_data)
+    if quality_adjustment:
+        score += quality_adjustment
+        reasons.append("source_quality" if quality_adjustment > 0 else "source_noise")
 
     fresh_bonus = recency_weight(published_attr(candidate), now)
     if fresh_bonus:
@@ -516,7 +522,11 @@ def rank_digest_candidates(
     similarity_threshold: float = 0.42,
 ) -> list[RankedDigestItem]:
     now = datetime.now(timezone.utc)
-    profiles = {link_attr(candidate): candidate_profile(candidate, now) for candidate in candidates}
+    source_quality_data = load_source_quality()
+    profiles = {
+        link_attr(candidate): candidate_profile(candidate, now, source_quality_data)
+        for candidate in candidates
+    }
 
     if not dedupe_enabled:
         ranked = []
