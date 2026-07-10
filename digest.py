@@ -1071,7 +1071,7 @@ CATEGORY_LABELS = {
 
 def format_news_entry(i: int, item: RankedDigestItem, title_override: str | None = None) -> str:
     candidate = item.candidate
-    category = CATEGORY_LABELS.get(item.category, "")
+    category = CATEGORY_LABELS.get(getattr(item, "category", ""), "")
     category_prefix = f"[{category}] " if category else ""
     safe_text = escape(category_prefix + (title_override or polish_title(candidate.title)))
     safe_source = escape(candidate.source)
