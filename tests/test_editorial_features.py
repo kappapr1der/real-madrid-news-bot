@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import editorial_archive
 import transfer_tracker
 from breaking import is_breaking
+from digest import digest_llm_hard_deny
 from match_calendar import Match
 from matchday import format_auto_message, format_lineup_message
 from source_quality import source_quality_policy, source_trust_tier
@@ -101,3 +102,14 @@ def test_match_center_adds_day_before_and_confirmed_lineup_formats():
     assert "Завтра матч" in day_before
     assert "Состав «Реала»" in lineup
     assert "4-3-3" in lineup
+
+
+def test_new_old_player_anecdote_and_vague_renewal_clickbait_are_hard_denied():
+    for title in (
+        "Casillas sobre su relacion con Mourinho: fue un matrimonio que termino mal",
+        "Real Madrid activa plan renovacion firma estrellas",
+    ):
+        item = SimpleNamespace(
+            candidate=SimpleNamespace(title=title, summary="", source="test", link="https://example.test/noise")
+        )
+        assert digest_llm_hard_deny(item, title) is True

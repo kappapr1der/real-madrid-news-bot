@@ -370,6 +370,14 @@ DIGEST_LLM_HARD_DENY_TERMS = (
 )
 
 DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
+    "casillas sobre relacion con mourinho",
+    "casillas sobre su relacion con mourinho",
+    "casillas mourinho fue un matrimonio",
+    "casillas - mourinho marriage",
+    "casillas mourinho relationship",
+    "real madrid activa plan renovacion firma estrellas",
+    "real madrid activa el plan renovacion firma estrellas",
+    "activa plan renovacion firma estrellas",
     "juancho hernangomez",
     "juancho hernangómez",
     "хуанчо эрнангомес",
