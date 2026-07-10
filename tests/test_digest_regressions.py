@@ -344,6 +344,39 @@ def test_evening_digest_july_ninth_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_morning_digest_july_tenth_noise_is_filtered():
+    cases = [
+        (
+            "Nueva etapa! Asi luce Xabi Alonso en su primer entrenamiento con el Chelsea",
+            "Marca - Real Madrid",
+        ),
+        (
+            "Tope del Real Madrid con Vini, cambios de plan con Mourinho y decision clave en los fichajes",
+            "Bernabeu Digital",
+        ),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    roundup = _item("Editorial roundup")
+    roundup.candidate.link = (
+        "https://www.bernabeudigital.com/noticias/"
+        "tope-real-madrid-vini-cambios-plan-mourinho-decision-clave-fichajes-344279"
+    )
+    assert digest_llm_hard_deny(roundup) is True
+
+
+def test_morning_digest_july_tenth_titles_are_cleaned():
+    assert clean_text(
+        "Килиан Мбаппе сообщил об обновлении по травме"
+    ) == "Мбаппе рассказал о состоянии после травмы"
+    assert clean_text(
+        "Тчуамени получит на 10 миллионов больше, но всё равно будет уступать англичанам в Мадриде"
+    ) == "Тчуамени после продления будет получать 10 млн евро в год"
+
+
 def test_evening_digest_personal_former_player_noise_is_filtered():
     cases = [
         ("Fallece el padre de Ricardo Carvalho", "Marca - Real Madrid"),
