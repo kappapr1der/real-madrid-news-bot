@@ -375,6 +375,30 @@ def test_morning_digest_july_tenth_titles_are_cleaned():
     assert clean_text(
         "Тчуамени получит на 10 миллионов больше, но всё равно будет уступать англичанам в Мадриде"
     ) == "Тчуамени после продления будет получать 10 млн евро в год"
+    assert clean_text(
+        "Моуринью и его новый штаб «Реал» берут на себя управление в Вальдебебас"
+    ) == "Моуринью и его штаб приступили к работе в Вальдебебасе"
+
+
+def test_day_digest_july_tenth_noise_is_filtered():
+    cases = [
+        ("Jude Bellingham has ended a World Cup debate that should've never even existed", "The Real Champs"),
+        ("Jurgen Klopp, Kylian Mbappe and Liverpool talks on private jet PSG transfer", "ESPN FC"),
+        ("Какие рекорды уже побил ЧМ-2026: здесь не только Месси, Роналду и Очоа", "Sports.ru"),
+        ("Real Madrid presume cantera Espana Europeo sub-19", "Bernabeu Digital"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_mourinho_valdebebas_start_uses_one_semantic_key():
+    breaking_title = "Confirmado: Jose Mourinho ya se ha puesto a trabajar en Valdebebas"
+    digest_title = "IMAGES: Mourinho and his new Real Madrid staff take charge at Valdebebas"
+
+    assert semantic_news_key(breaking_title) == "staff:mourinho-starts-at-valdebebas"
+    assert semantic_news_key(digest_title) == "staff:mourinho-starts-at-valdebebas"
 
 
 def test_evening_digest_personal_former_player_noise_is_filtered():

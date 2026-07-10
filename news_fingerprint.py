@@ -525,6 +525,32 @@ def is_midfield_duo_premier_interest_text(text: str) -> bool:
     )
 
 
+def is_mourinho_valdebebas_start_text(text: str) -> bool:
+    return (
+        contains_any(text, ("mourinho", "моуринью"))
+        and contains_any(text, ("valdebebas", "вальдебебас"))
+        and contains_any(
+            text,
+            (
+                "take charge",
+                "takes charge",
+                "start work",
+                "starts work",
+                "first day",
+                "puesto a trabajar",
+                "trabajar",
+                "new real madrid staff",
+                "nuevo cuerpo tecnico",
+                "nuevo staff",
+                "приступил к работе",
+                "приступили к работе",
+                "начал работу",
+                "штаб",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -536,6 +562,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
+
+    if is_mourinho_valdebebas_start_text(text):
+        return "staff:mourinho-starts-at-valdebebas"
 
     if is_fran_garcia_betis_text(text):
         return "transfer:fran-garcia-betis"
