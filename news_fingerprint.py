@@ -448,10 +448,24 @@ def is_teresa_herrera_deportivo_text(text: str) -> bool:
 def is_fiorentina_austria_friendly_text(text: str) -> bool:
     return (
         contains_any(text, ("fiorentina", "фиорентин"))
-        and contains_any(text, ("austria", "австри"))
+        and contains_any(text, ("real madrid", "реал"))
         and contains_any(
             text,
-            ("friendly", "amistoso", "pre season", "pre-season", "preseason", "pretemporada", "match", "partido"),
+            (
+                "austria",
+                "австри",
+                "august",
+                "agosto",
+                "1 de agosto",
+                "friendly",
+                "amistoso",
+                "pre season",
+                "pre-season",
+                "preseason",
+                "pretemporada",
+                "match",
+                "partido",
+            ),
         )
     )
 

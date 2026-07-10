@@ -418,6 +418,8 @@ def test_evening_digest_july_tenth_noise_is_filtered():
         ("Ayyoub Bouaddi sent an undeniable transfer guarantee to Real Madrid", "The Real Champs"),
         ("Nico Paz cumple sueno chiquitito", "Marca - Real Madrid"),
         ("Insolito: Lukaku pudo haber llegado al Real Madrid", "Marca - Real Madrid"),
+        ("Shakira le da gracias a Mbappe", "Mundo Deportivo - Real Madrid"),
+        ("Claude Makelele throws Jude Bellingham and Fede Valverde under the bus", "The Real Champs"),
     ]
 
     for title, source in cases:
@@ -431,6 +433,7 @@ def test_fiorentina_austria_friendly_uses_one_semantic_key():
 
     assert semantic_news_key(breaking_title) == "schedule:preseason-fiorentina-austria-friendly"
     assert semantic_news_key(digest_title) == "schedule:preseason-fiorentina-austria-friendly"
+    assert semantic_news_key("Real Madrid Fiorentina August 2026") == "schedule:preseason-fiorentina-austria-friendly"
 
 
 def test_evening_digest_personal_former_player_noise_is_filtered():
@@ -1014,6 +1017,18 @@ def test_digest_entry_shows_story_category_and_official_provenance():
 
     assert "[Лазарет]" in rendered
     assert "официальный источник" in rendered
+
+
+def test_story_label_uses_title_context_over_broad_rank_category():
+    item = _item("Detalles del fichaje de Mac Allister por el Real Madrid")
+    item.candidate.source = "Bernabéu Digital"
+    item.candidate.link = "https://example.com/transfer"
+    item.related_sources = []
+    item.category = "lineup"
+
+    rendered = format_news_entry(1, item)
+
+    assert "[Рынок]" in rendered
 
 
 def test_source_quality_adjustment_rewards_signal_and_penalizes_noise():

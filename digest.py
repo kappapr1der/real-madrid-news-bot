@@ -633,6 +633,11 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "nico paz cumple sueño chiquitito",
     "lukaku pudo haber llegado real madrid",
     "lukaku pudo haber llegado al real madrid",
+    "shakira le da gracias mbappe",
+    "shakira le da gracias a mbappe",
+    "shakira thanks mbappe",
+    "claude makelele throws jude bellingham",
+    "impassioned kylian mbappe defense",
     "habi alonso rasskazal pochemu on reshil vozglavit chelsi",
     "хаби алонсо рассказал, почему он решил возглавить челси",
     "хаби алонсо рассказал почему он решил возглавить челси",
@@ -1059,19 +1064,31 @@ def related_sources_line(item: RankedDigestItem) -> str:
     return f"\nЕще источники: {', '.join(visible_sources)}{suffix}"
 
 
-CATEGORY_LABELS = {
-    "official": "Подтверждено",
-    "injury": "Лазарет",
-    "lineup": "Состав",
-    "matchday": "Матч-день",
-    "transfer": "Рынок",
-    "coach": "Штаб",
-}
+def story_label(item: RankedDigestItem) -> str:
+    candidate = item.candidate
+    text = " ".join(
+        [
+            str(getattr(candidate, "title", "") or ""),
+            str(getattr(candidate, "summary", "") or ""),
+        ]
+    ).casefold()
+
+    if any(term in text for term in ("transfer", "fichaje", "traspaso", "mercado", "переход", "трансфер")):
+        return "Рынок"
+    if any(term in text for term in ("injury", "injured", "lesion", "lesión", "травм", "диагноз")):
+        return "Лазарет"
+    if any(term in text for term in ("coaching staff", "new staff", "fitness coach", "coach", "manager", "штаб", "тренер")):
+        return "Штаб"
+    if any(term in text for term in ("lineup", "squad", "convocatoria", "starting xi", "стартовый состав", "заявка")):
+        return "Состав"
+    if any(term in text for term in ("friendly", "amistoso", "fixture", "partido", "matchday", "сыграет", "матч с")):
+        return "Матч-день"
+    return ""
 
 
 def format_news_entry(i: int, item: RankedDigestItem, title_override: str | None = None) -> str:
     candidate = item.candidate
-    category = CATEGORY_LABELS.get(getattr(item, "category", ""), "")
+    category = story_label(item)
     category_prefix = f"[{category}] " if category else ""
     safe_text = escape(category_prefix + (title_override or polish_title(candidate.title)))
     safe_source = escape(candidate.source)
