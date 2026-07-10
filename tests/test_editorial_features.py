@@ -105,11 +105,11 @@ def test_match_center_adds_day_before_and_confirmed_lineup_formats():
 
 
 def test_new_old_player_anecdote_and_vague_renewal_clickbait_are_hard_denied():
-    for title in (
-        "Касильяс об отношениях с Моуринью: это был брак, который плохо закончился",
-        "El Real Madrid activa el plan renovacion: firma sus estrellas",
+    for title, link in (
+        ("Касильяс об отношениях с Моуринью: это был брак, который плохо закончился", "https://example.test/kasilyas-ob-otnosheniyah-s-mourinyu"),
+        ("El Real Madrid activa el plan renovacion: firma sus estrellas", "https://example.test/real-madrid-activa-plan-renovacion-firma-estrellas"),
     ):
         item = SimpleNamespace(
-            candidate=SimpleNamespace(title=title, summary="", source="test", link="https://example.test/noise")
+            candidate=SimpleNamespace(title=title, summary="", source="test", link=link)
         )
         assert digest_llm_hard_deny(item, title) is True
