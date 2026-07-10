@@ -380,7 +380,7 @@ FILTERS = {
         "ayyoub bouaddi sent an undeniable transfer guarantee", "undeniable transfer guarantee to real madrid",
         "nico paz cumple sueno chiquitito", "nico paz cumple sueño chiquitito",
         "lukaku pudo haber llegado real madrid", "lukaku pudo haber llegado al real madrid",
-        "shakira le da gracias mbappe", "shakira le da gracias a mbappe", "shakira le da gracias a mbappé", "shakira thanks mbappe",
+        "shakira", "shakira le da gracias mbappe", "shakira le da gracias a mbappe", "shakira le da gracias a mbappé", "shakira thanks mbappe",
         "claude makelele throws jude bellingham", "impassioned kylian mbappe defense",
         "habi alonso rasskazal pochemu on reshil vozglavit chelsi",
         "хаби алонсо рассказал, почему он решил возглавить челси",

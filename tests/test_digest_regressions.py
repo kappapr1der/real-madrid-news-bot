@@ -420,6 +420,7 @@ def test_evening_digest_july_tenth_noise_is_filtered():
         ("Insolito: Lukaku pudo haber llegado al Real Madrid", "Marca - Real Madrid"),
         ("Shakira le da gracias a Mbappe", "Mundo Deportivo - Real Madrid"),
         ("Shakira le da gracias a Mbappé", "Mundo Deportivo - Real Madrid"),
+        ("Shakira le da las gracias a Mbappé", "Mundo Deportivo - Real Madrid"),
         ("Claude Makelele throws Jude Bellingham and Fede Valverde under the bus", "The Real Champs"),
     ]
 

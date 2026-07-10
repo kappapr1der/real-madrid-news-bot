@@ -633,6 +633,7 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "nico paz cumple sueño chiquitito",
     "lukaku pudo haber llegado real madrid",
     "lukaku pudo haber llegado al real madrid",
+    "shakira",
     "shakira le da gracias mbappe",
     "shakira le da gracias a mbappe",
     "shakira le da gracias a mbappé",
