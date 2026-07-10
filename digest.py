@@ -635,6 +635,7 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "lukaku pudo haber llegado al real madrid",
     "shakira le da gracias mbappe",
     "shakira le da gracias a mbappe",
+    "shakira le da gracias a mbappé",
     "shakira thanks mbappe",
     "claude makelele throws jude bellingham",
     "impassioned kylian mbappe defense",

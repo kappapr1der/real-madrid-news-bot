@@ -419,6 +419,7 @@ def test_evening_digest_july_tenth_noise_is_filtered():
         ("Nico Paz cumple sueno chiquitito", "Marca - Real Madrid"),
         ("Insolito: Lukaku pudo haber llegado al Real Madrid", "Marca - Real Madrid"),
         ("Shakira le da gracias a Mbappe", "Mundo Deportivo - Real Madrid"),
+        ("Shakira le da gracias a Mbappé", "Mundo Deportivo - Real Madrid"),
         ("Claude Makelele throws Jude Bellingham and Fede Valverde under the bus", "The Real Champs"),
     ]
 
