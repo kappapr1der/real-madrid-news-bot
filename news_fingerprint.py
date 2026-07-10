@@ -445,6 +445,17 @@ def is_teresa_herrera_deportivo_text(text: str) -> bool:
     )
 
 
+def is_fiorentina_austria_friendly_text(text: str) -> bool:
+    return (
+        contains_any(text, ("fiorentina", "фиорентин"))
+        and contains_any(text, ("austria", "австри"))
+        and contains_any(
+            text,
+            ("friendly", "amistoso", "pre season", "pre-season", "preseason", "pretemporada", "match", "partido"),
+        )
+    )
+
+
 def is_haaland_family_real_text(text: str) -> bool:
     return (
         contains_any(text, ("haaland", "haaland", "холанд", "хааланд"))
@@ -559,6 +570,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_teresa_herrera_deportivo_text(text):
         return "schedule:teresa-herrera-deportivo-friendly"
+
+    if is_fiorentina_austria_friendly_text(text):
+        return "schedule:preseason-fiorentina-austria-friendly"
 
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"

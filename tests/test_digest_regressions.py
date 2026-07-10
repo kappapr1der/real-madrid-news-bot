@@ -401,6 +401,29 @@ def test_mourinho_valdebebas_start_uses_one_semantic_key():
     assert semantic_news_key(digest_title) == "staff:mourinho-starts-at-valdebebas"
 
 
+def test_evening_digest_july_tenth_noise_is_filtered():
+    cases = [
+        ("Jose Luis Sanchez compara Bellingham con Lamine", "Defensa Central"),
+        ("Comercios Bernabeu Market levantan armas", "Mundo Deportivo - Real Madrid"),
+        ("World Cup 2026 injury latest: Mbappe latest, Jordan Henderson breaks hand", "Independent Football"),
+        ("Ayyoub Bouaddi sent an undeniable transfer guarantee to Real Madrid", "The Real Champs"),
+        ("Nico Paz cumple sueno chiquitito", "Marca - Real Madrid"),
+        ("Insolito: Lukaku pudo haber llegado al Real Madrid", "Marca - Real Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_fiorentina_austria_friendly_uses_one_semantic_key():
+    breaking_title = "Es oficial: Real Madrid jugara otro amistoso de pretemporada ante Fiorentina en Austria"
+    digest_title = "Real Madrid confirma amistoso en Austria contra Fiorentina"
+
+    assert semantic_news_key(breaking_title) == "schedule:preseason-fiorentina-austria-friendly"
+    assert semantic_news_key(digest_title) == "schedule:preseason-fiorentina-austria-friendly"
+
+
 def test_evening_digest_personal_former_player_noise_is_filtered():
     cases = [
         ("Fallece el padre de Ricardo Carvalho", "Marca - Real Madrid"),
