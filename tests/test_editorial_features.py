@@ -7,6 +7,7 @@ from breaking import is_breaking
 from digest import digest_llm_hard_deny
 from match_calendar import Match
 from matchday import format_auto_message, format_lineup_message
+from news_fingerprint import semantic_news_key
 from source_quality import source_quality_policy, source_trust_tier
 from weekly_recap import format_weekly_recap, select_weekly_stories
 
@@ -113,3 +114,8 @@ def test_new_old_player_anecdote_and_vague_renewal_clickbait_are_hard_denied():
             candidate=SimpleNamespace(title=title, summary="", source="test", link=link)
         )
         assert digest_llm_hard_deny(item, title) is True
+
+
+def test_courtois_world_cup_injury_variants_use_one_story_key():
+    assert semantic_news_key("Thibaut Courtois forced off with injury for Belgium against Spain") == "injury:courtois-belgium-world-cup"
+    assert semantic_news_key("Испания — Бельгия: Тибо Куртуа заменён из-за травмы") == "injury:courtois-belgium-world-cup"

@@ -576,8 +576,19 @@ def is_mourinho_valdebebas_start_text(text: str) -> bool:
     )
 
 
+def is_courtois_world_cup_injury_text(text: str) -> bool:
+    return (
+        contains_any(text, ("courtois", "куртуа"))
+        and contains_any(text, ("injury", "injured", "lesion", "lesion", "травм", "заменен", "заменён", "forced off"))
+        and contains_any(text, ("belgium", "belgica", "belgique", "бельг", "spain", "espana", "españa", "испания"))
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_courtois_world_cup_injury_text(text):
+        return "injury:courtois-belgium-world-cup"
 
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
