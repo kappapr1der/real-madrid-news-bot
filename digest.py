@@ -67,7 +67,9 @@ SENT_FILE = get_state_file("sent_links.txt")
 SENT_BREAKING_FILE = get_state_file("sent_breaking.txt")
 SENT_BREAKING_FINGERPRINT_FILE = get_state_file("sent_breaking_fingerprints.txt")
 QUARANTINE_FILE = get_state_file("digest_quarantine.json")
+TEMPLATE_HISTORY_FILE = get_state_file("digest_template_history.json")
 QUARANTINE_LIMIT = 200
+TEMPLATE_HISTORY_LIMIT = 4
 TZ = ZoneInfo(DIGEST_TIMEZONE)
 
 DIGEST_LLM_HARD_DENY_TERMS = (
@@ -814,22 +816,54 @@ TEMPLATES = {
     "утреннего": [
         "<b>Утренние сливки Мадрида</b>\n{intro}\n\n{news}",
         "<b>Белое утро на Бернабеу</b>\n{intro}\n\n{news}",
+        "<b>Белый рассвет</b>\n{intro}\n\n{news}",
+        "<b>Первый свисток Мадрида</b>\n{intro}\n\n{news}",
+        "<b>Утро в Вальдебебасе</b>\n{intro}\n\n{news}",
+        "<b>Мадрид просыпается</b>\n{intro}\n\n{news}",
+        "<b>Белая лента к утру</b>\n{intro}\n\n{news}",
+        "<b>Утренний Бернабеу</b>\n{intro}\n\n{news}",
+        "<b>До полудня в Мадриде</b>\n{intro}\n\n{news}",
+        "<b>Сливочные новости на старте дня</b>\n{intro}\n\n{news}",
     ],
     "дневного": [
         "<b>К этому часу у сливочных</b>\n{intro}\n\n{news}",
         "<b>Дневная белая сводка</b>\n{intro}\n\n{news}",
+        "<b>Белый полдень</b>\n{intro}\n\n{news}",
+        "<b>Вальдебебас на связи</b>\n{intro}\n\n{news}",
+        "<b>Мадридский радар</b>\n{intro}\n\n{news}",
+        "<b>Сливочные вести</b>\n{intro}\n\n{news}",
+        "<b>Полдень у «Реала»</b>\n{intro}\n\n{news}",
+        "<b>Лента Бернабеу</b>\n{intro}\n\n{news}",
+        "<b>Белая перекличка</b>\n{intro}\n\n{news}",
+        "<b>Между Вальдебебасом и Бернабеу</b>\n{intro}\n\n{news}",
     ],
     "вечернего": [
         "<b>Вечерняя белая хроника</b>\n{intro}\n\n{news}",
         "<b>Сливочные итоги дня</b>\n{intro}\n\n{news}",
+        "<b>Белый вечер в Мадриде</b>\n{intro}\n\n{news}",
+        "<b>После заката на Бернабеу</b>\n{intro}\n\n{news}",
+        "<b>Закрываем белый день</b>\n{intro}\n\n{news}",
+        "<b>Мадридский вечерний рапорт</b>\n{intro}\n\n{news}",
+        "<b>Последний свисток дня</b>\n{intro}\n\n{news}",
+        "<b>Белая лента перед ночью</b>\n{intro}\n\n{news}",
+        "<b>Вечерний Бернабеу</b>\n{intro}\n\n{news}",
+        "<b>День по-мадридски: главное</b>\n{intro}\n\n{news}",
     ],
     "ночного": [
         "<b>Ночная смена мадридистов</b>\n{intro}\n\n{news}",
         "<b>Пока Бернабеу спит</b>\n{intro}\n\n{news}",
+        "<b>Белая ночь Мадрида</b>\n{intro}\n\n{news}",
+        "<b>После полуночи у сливочных</b>\n{intro}\n\n{news}",
+        "<b>Ночной Вальдебебас</b>\n{intro}\n\n{news}",
+        "<b>Лента, которая не спит</b>\n{intro}\n\n{news}",
     ],
     "default": [
         "<b>Белая сводка «Кофе со сливками»</b>\n{intro}\n\n{news}",
         "<b>Главное о сливочных</b>\n{intro}\n\n{news}",
+        "<b>Белая лента Мадрида</b>\n{intro}\n\n{news}",
+        "<b>Бернабеу: главное</b>\n{intro}\n\n{news}",
+        "<b>Мадридский сбор</b>\n{intro}\n\n{news}",
+        "<b>Вести белого Мадрида</b>\n{intro}\n\n{news}",
     ],
 }
 
@@ -837,20 +871,36 @@ SHORT_TEMPLATES = {
     "утреннего": [
         "<b>Короткое белое утро</b>\n{intro}\n\n{news}",
         "<b>Утро без лишнего шума</b>\n{intro}\n\n{news}",
+        "<b>Утренний белый радар</b>\n{intro}\n\n{news}",
+        "<b>Несколько слов о Мадриде</b>\n{intro}\n\n{news}",
+        "<b>Первое белое обновление</b>\n{intro}\n\n{news}",
+        "<b>Вальдебебас к утру</b>\n{intro}\n\n{news}",
     ],
     "дневного": [
         "<b>Короткая белая сводка</b>\n{intro}\n\n{news}",
         "<b>К этому часу коротко</b>\n{intro}\n\n{news}",
+        "<b>Белый полдень: главное</b>\n{intro}\n\n{news}",
+        "<b>Дневной радар Мадрида</b>\n{intro}\n\n{news}",
+        "<b>Сливочные новости к этому часу</b>\n{intro}\n\n{news}",
+        "<b>Бернабеу в нескольких строках</b>\n{intro}\n\n{news}",
     ],
     "вечернего": [
         "<b>Сливочные итоги дня</b>\n{intro}\n\n{news}",
         "<b>Вечерняя белая сводка</b>\n{intro}\n\n{news}",
+        "<b>Белый вечер: главное</b>\n{intro}\n\n{news}",
+        "<b>Перед ночной паузой</b>\n{intro}\n\n{news}",
+        "<b>Мадрид к концу дня</b>\n{intro}\n\n{news}",
+        "<b>Вечерний радар Бернабеу</b>\n{intro}\n\n{news}",
     ],
     "ночного": [
         "<b>Ночная короткая сводка</b>\n{intro}\n\n{news}",
+        "<b>Ночной белый радар</b>\n{intro}\n\n{news}",
+        "<b>Мадрид перед сном</b>\n{intro}\n\n{news}",
     ],
     "default": [
         "<b>Короткая белая сводка</b>\n{intro}\n\n{news}",
+        "<b>Белое главное в нескольких строках</b>\n{intro}\n\n{news}",
+        "<b>Коротко о сливочных</b>\n{intro}\n\n{news}",
     ],
 }
 
@@ -1332,6 +1382,46 @@ def digest_render_plan(label: str, item_count: int) -> tuple[str, list[str], lis
     return "full", TEMPLATES.get(label, TEMPLATES["default"]), INTRO_LINES.get(label, INTRO_LINES["default"])
 
 
+def load_template_history() -> dict[str, list[str]]:
+    if not TEMPLATE_HISTORY_FILE.exists():
+        return {}
+    try:
+        data = json.loads(TEMPLATE_HISTORY_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        str(label): [str(template) for template in history if isinstance(template, str)]
+        for label, history in data.items()
+        if isinstance(history, list)
+    }
+
+
+def save_template_history(history: dict[str, list[str]]) -> None:
+    TEMPLATE_HISTORY_FILE.write_text(
+        json.dumps(history, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def pick_template_without_recent_repeats(templates: list[str], recent: list[str]) -> str:
+    if not templates:
+        raise ValueError("Digest template list must not be empty")
+    blocked = set(recent[-TEMPLATE_HISTORY_LIMIT:])
+    available = [template for template in templates if template not in blocked]
+    return random.choice(available or templates)
+
+
+def choose_digest_template(label: str, templates: list[str]) -> str:
+    history = load_template_history()
+    recent = history.get(label, [])
+    template = pick_template_without_recent_repeats(templates, recent)
+    history[label] = (recent + [template])[-TEMPLATE_HISTORY_LIMIT:]
+    save_template_history(history)
+    return template
+
+
 def post_telegram_message(message: str) -> bool:
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
@@ -1392,7 +1482,8 @@ def send_digest(label: str = "auto"):
     metrics["format"] = render_format
     metrics["short_format_threshold"] = DIGEST_SHORT_FORMAT_THRESHOLD
     intro = random.choice(intro_lines)
-    message = random.choice(templates).format(news=joined_news, intro=intro)
+    template = choose_digest_template(label, templates)
+    message = template.format(news=joined_news, intro=intro)
     message = append_hashtags(message, DIGEST_HASHTAGS)
     chunks = split_message(message)
     metrics["chunks"] = len(chunks)

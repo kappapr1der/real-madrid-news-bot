@@ -1,6 +1,14 @@
 from types import SimpleNamespace
 
-from digest import digest_llm_hard_deny, digest_render_plan, digest_semantic_keys, format_news_entry
+from digest import (
+    SHORT_TEMPLATES,
+    TEMPLATES,
+    digest_llm_hard_deny,
+    digest_render_plan,
+    digest_semantic_keys,
+    format_news_entry,
+    pick_template_without_recent_repeats,
+)
 from filters import passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
@@ -894,6 +902,19 @@ def test_digest_render_plan_uses_full_format_for_normal_digest():
     assert render_format == "full"
     assert any("Дневная" in template or "К этому часу" in template for template in templates)
     assert intro_lines
+
+
+def test_digest_template_catalog_has_thematic_depth():
+    for label in ("утреннего", "дневного", "вечернего"):
+        assert len(TEMPLATES[label]) >= 10
+        assert len(SHORT_TEMPLATES[label]) >= 6
+        assert len(set(TEMPLATES[label])) == len(TEMPLATES[label])
+
+
+def test_template_picker_skips_recent_titles_when_possible():
+    templates = ["A", "B", "C", "D", "E"]
+
+    assert pick_template_without_recent_repeats(templates, templates[:4]) == "E"
 
 
 def test_rank_digest_groups_latest_live_duplicates():
