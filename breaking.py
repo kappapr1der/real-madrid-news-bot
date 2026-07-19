@@ -71,6 +71,7 @@ SENT_FINGERPRINT_FILE = get_state_file("sent_breaking_fingerprints.txt")
 LLM_PENDING_FILE = get_state_file("breaking_llm_pending.json")
 LLM_REJECTED_FILE = get_state_file("breaking_llm_rejected.txt")
 HERE_WE_GO_BOOTSTRAP_FILE = get_state_file("here_we_go_bootstrap.txt")
+X_RSS_BOOTSTRAP_FILE = get_state_file("x_rss_bootstrap.json")
 stop_event = threading.Event()
 
 
@@ -250,6 +251,55 @@ def bootstrap_here_we_go(entries: list[dict[str, Any]]) -> bool:
     save_links(HERE_WE_GO_BOOTSTRAP_FILE, known_links)
     logging.info("[HERE WE GO] bootstrap complete, remembered=%s", len(known_links))
     return True
+
+
+def load_x_rss_bootstrap() -> dict[str, list[str]]:
+    if not X_RSS_BOOTSTRAP_FILE.exists():
+        return {}
+    try:
+        data = json.loads(X_RSS_BOOTSTRAP_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {
+        str(label): [str(link) for link in links if str(link)]
+        for label, links in data.items()
+        if isinstance(links, list)
+    }
+
+
+def save_x_rss_bootstrap(data: dict[str, list[str]]) -> None:
+    X_RSS_BOOTSTRAP_FILE.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def bootstrap_x_source(source: Any, entries: list[dict[str, Any]]) -> set[str] | None:
+    """Remember the first visible page of each newly enabled X source.
+
+    ``None`` means the source was just initialized and should not be processed
+    in this cycle. It prevents old posts from turning into new breakings after
+    X is enabled or a handle is added later.
+    """
+    if not source_is_x(source):
+        return set()
+
+    label = source_label(source)
+    data = load_x_rss_bootstrap()
+    if label in data:
+        return set(data[label])
+
+    known_links = {str(entry.get("link") or "").strip() for entry in entries}
+    known_links.discard("")
+    if not known_links:
+        return set()
+
+    data[label] = sorted(known_links)
+    save_x_rss_bootstrap(data)
+    logging.info("[X RSS] bootstrap complete for %s, remembered=%s", label, len(known_links))
+    return None
 
 
 def is_ucl_draw_result(text: str, summary: str = "", now: datetime | None = None) -> bool:
@@ -618,6 +668,10 @@ def fetch_breaking(sources):
                 feed = parse_feed_url(source)
                 entry_limit = source.get("breaking_entry_scan_limit", 1) if isinstance(source, dict) else 1
                 entries = list(feed.entries[:entry_limit]) if feed and feed.entries else []
+                x_bootstrap_links = bootstrap_x_source(source, entries)
+                if x_bootstrap_links is None:
+                    continue
+                bootstrap_links.update(x_bootstrap_links)
 
             for entry in entries:
                 if source_is_x(source) and is_repost_entry(entry):

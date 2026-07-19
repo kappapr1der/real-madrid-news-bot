@@ -1,5 +1,6 @@
 import feed_utils
 import sources_international
+import breaking
 
 
 RSS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
@@ -85,3 +86,12 @@ def test_curl_fetcher_returns_feed_bytes(monkeypatch):
     )
 
     assert content == RSS_XML
+
+
+def test_x_source_bootstrap_prevents_backfilled_breakings(monkeypatch, tmp_path):
+    monkeypatch.setattr(breaking, "X_RSS_BOOTSTRAP_FILE", tmp_path / "x-bootstrap.json")
+    source = {"label": "X - @realmadrid", "kind": "x_official"}
+    entries = [{"link": "https://nitter.example/realmadrid/status/1"}]
+
+    assert breaking.bootstrap_x_source(source, entries) is None
+    assert breaking.bootstrap_x_source(source, entries) == {entries[0]["link"]}
