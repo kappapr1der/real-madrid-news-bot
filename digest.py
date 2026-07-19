@@ -17,7 +17,7 @@ import requests
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from filters import passes_filters
-from feed_utils import parse_feed_url
+from feed_utils import is_repost_entry, parse_feed_url, source_is_x
 from match_calendar import digest_block_reason
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
@@ -1207,11 +1207,13 @@ def collect_candidates(sources, cutoff: datetime):
             continue
 
         try:
-            feed = parse_feed_url(url)
+            feed = parse_feed_url(src)
             if not feed or not feed.entries:
                 continue
 
             for entry in feed.entries[:DIGEST_ENTRY_SCAN_LIMIT]:
+                if source_is_x(src) and is_repost_entry(entry):
+                    continue
                 link = entry.get("link")
                 if not link or link in seen_links:
                     continue

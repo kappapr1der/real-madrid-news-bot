@@ -14,7 +14,7 @@
 
 - RSS-источники на русском, английском и испанском.
 - Профильные Real Madrid RSS в приоритете: Managing Madrid, Madrid Universal, The Real Champs, Defensa Central, Bernabéu Digital, Marca, Mundo Deportivo, Sport и другие.
-- Опциональные X/Twitter-источники через внешний RSS-шлюз (`X_RSS_BASE_URL`), чтобы ловить цитаты официальных аккаунтов и инсайдеров без платного X API.
+- Опциональные X/Twitter-источники через бесплатные Nitter-зеркала или внешний RSS-шлюз, чтобы ловить цитаты официальных аккаунтов и инсайдеров без платного X API.
 - Фильтр релевантности по Real Madrid, игрокам, турнирам, профильным источникам и стоп-словам.
 - Перевод через DeepL API Free, если задан `DEEPL_API_KEY`; иначе fallback на `deep-translator` / MyMemory.
 - Словари и правки терминов через `terms_by_theme.yaml` и `additions.yaml`.
@@ -91,11 +91,13 @@ DIGEST_DEDUPE_SIMILARITY=42
 Официальный X API требует Bearer token, поэтому бот не зависит от него напрямую. Вместо этого можно подключить любой RSS-шлюз, который превращает публичные X-аккаунты в RSS.
 
 ```env
-X_RSS_BASE_URL=https://rsshub.app/twitter/user/{handle}
-X_RSS_HANDLES=realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,AranchaMOBILE,melchorcope,JLSanchez78,Ramon_AlvarezMM,GuillermoRai_
+X_NITTER_INSTANCES=https://nitter.poast.org,https://your-second-working-nitter.example
+X_RSS_CACHE_SECONDS=300
+X_RSS_BREAKING_ENTRY_SCAN_LIMIT=6
+X_RSS_HANDLES=realmadrid,realmadriden,MarioCortegana,AranchaMOBILE,JLSanchez78,GuillermoRai_
 ```
 
-Если `X_RSS_BASE_URL` пустой, X-источники полностью выключены. В шаблоне можно использовать `{handle}`; если плейсхолдера нет, бот добавит handle в конец URL.
+`X_NITTER_INSTANCES` принимает несколько бесплатных Nitter-зеркал: бот проверяет их по порядку и переключается при сетевой ошибке, капче или невалидной RSS-ленте. Nitter читается через установленный на VPS `curl`, потому что часть публичных зеркал блокирует Python HTTP-клиенты. Для бережного отношения к инстансам X-лента кэшируется на пять минут, а ретвиты не выдают себя за прямые сообщения репортера. Обычный RSS-шлюз в `X_RSS_BASE_URL` поддерживается как запасной вариант; если оба параметра пусты, X-источники выключены.
 
 ## Here We Go
 
@@ -368,8 +370,11 @@ DIGEST_PREFLIGHT_MINUTES=5
 DIGEST_PREFLIGHT_WARN_MIN_CANDIDATES=6
 BREAKING_PREFLIGHT_PENDING_WARN=10
 
-# Опционально: X/Twitter через внешний RSS-шлюз.
+# Опционально: X/Twitter через Nitter или внешний RSS-шлюз.
 X_RSS_BASE_URL=
+X_NITTER_INSTANCES=
+X_RSS_CACHE_SECONDS=300
+X_RSS_BREAKING_ENTRY_SCAN_LIMIT=6
 X_RSS_HANDLES=realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,AranchaMOBILE,melchorcope,JLSanchez78,Ramon_AlvarezMM,GuillermoRai_
 
 # Матч-день и текстовые трансляции.

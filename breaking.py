@@ -23,7 +23,7 @@ from editorial_archive import record_story
 from text_cleaner import clean_text
 from filters import passes_filters
 from fabrizio_source import fetch_fabrizio_telegram_entries
-from feed_utils import parse_feed_url
+from feed_utils import is_repost_entry, parse_feed_url, source_is_x
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
 from llm_editor import llm_editor_enabled, review_breaking_items
@@ -615,10 +615,13 @@ def fetch_breaking(sources):
                     continue
                 bootstrap_links = load_sent_links(HERE_WE_GO_BOOTSTRAP_FILE)
             else:
-                feed = parse_feed_url(url)
-                entries = list(feed.entries[:1]) if feed and feed.entries else []
+                feed = parse_feed_url(source)
+                entry_limit = source.get("breaking_entry_scan_limit", 1) if isinstance(source, dict) else 1
+                entries = list(feed.entries[:entry_limit]) if feed and feed.entries else []
 
             for entry in entries:
+                if source_is_x(source) and is_repost_entry(entry):
+                    continue
                 if here_we_go_source and not here_we_go_is_fresh(entry):
                     continue
                 link = entry.get("link")

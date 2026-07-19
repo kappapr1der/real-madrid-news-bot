@@ -1,4 +1,12 @@
-from runtime_config import HERE_WE_GO_ENABLED, HERE_WE_GO_TELEGRAM_URL, X_RSS_BASE_URL, X_RSS_HANDLES
+from runtime_config import (
+    HERE_WE_GO_ENABLED,
+    HERE_WE_GO_TELEGRAM_URL,
+    X_NITTER_INSTANCES,
+    X_RSS_BASE_URL,
+    X_RSS_BREAKING_ENTRY_SCAN_LIMIT,
+    X_RSS_CACHE_SECONDS,
+    X_RSS_HANDLES,
+)
 
 
 X_OFFICIAL_HANDLES = {"realmadrid", "realmadriden"}
@@ -13,29 +21,56 @@ X_REPORTER_HANDLES = {
 }
 
 
-def _x_rss_url(handle: str) -> str:
-    template = X_RSS_BASE_URL.rstrip("/")
+def _x_rss_url(template: str, handle: str) -> str:
+    template = template.rstrip("/")
     if "{handle}" in template:
         return template.format(handle=handle)
     return f"{template}/{handle}"
 
 
+def _nitter_rss_url(instance: str, handle: str) -> str:
+    return f"{instance.rstrip('/')}/{handle}/rss"
+
+
+def _dedupe_urls(urls: list[str]) -> list[str]:
+    unique: list[str] = []
+    seen: set[str] = set()
+    for url in urls:
+        clean = url.strip()
+        if clean and clean not in seen:
+            unique.append(clean)
+            seen.add(clean)
+    return unique
+
+
 def build_x_sources() -> list[dict]:
-    if not X_RSS_BASE_URL:
+    if not X_RSS_BASE_URL and not X_NITTER_INSTANCES:
         return []
     sources = []
     for handle in X_RSS_HANDLES:
         clean = handle.strip().lstrip("@")
         if not clean:
             continue
+        urls = []
+        if X_RSS_BASE_URL:
+            urls.append(_x_rss_url(X_RSS_BASE_URL, clean))
+        urls.extend(_nitter_rss_url(instance, clean) for instance in X_NITTER_INSTANCES)
+        urls = _dedupe_urls(urls)
+        if not urls:
+            continue
         normalized = clean.casefold()
         trust = "official" if normalized in X_OFFICIAL_HANDLES else "reporter" if normalized in X_REPORTER_HANDLES else "community"
         sources.append(
             {
-                "url": _x_rss_url(clean),
+                "url": urls[0],
+                "fallback_urls": urls[1:],
                 "label": f"X – @{clean}",
                 "kind": f"x_{trust}",
                 "trust": trust,
+                "cache_seconds": X_RSS_CACHE_SECONDS,
+                "rss_require_entries": True,
+                "rss_fetcher": "curl",
+                "breaking_entry_scan_limit": X_RSS_BREAKING_ENTRY_SCAN_LIMIT,
             }
         )
     return sources

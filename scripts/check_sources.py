@@ -18,7 +18,7 @@ def check_source(source):
     if not url:
         return "FAIL", label, "missing URL"
 
-    feed = parse_feed_url(url)
+    feed = parse_feed_url(source)
     if not feed:
         return "FAIL", label, f"could not fetch RSS: {url}"
 

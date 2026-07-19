@@ -228,6 +228,9 @@ UCL_DRAW_ALERT_ENABLED = env_bool("UCL_DRAW_ALERT_ENABLED", default=True)
 UCL_DRAW_DATE = os.getenv("UCL_DRAW_DATE", "2026-08-27").strip()
 
 X_RSS_BASE_URL = os.getenv("X_RSS_BASE_URL", "").strip()
+X_NITTER_INSTANCES = env_csv("X_NITTER_INSTANCES", "")
+X_RSS_CACHE_SECONDS = max(env_int("X_RSS_CACHE_SECONDS", 300), 0)
+X_RSS_BREAKING_ENTRY_SCAN_LIMIT = max(env_int("X_RSS_BREAKING_ENTRY_SCAN_LIMIT", 6), 1)
 X_RSS_HANDLES = env_csv(
     "X_RSS_HANDLES",
     "realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,AranchaMOBILE,melchorcope,JLSanchez78,Ramon_AlvarezMM,GuillermoRai_",
