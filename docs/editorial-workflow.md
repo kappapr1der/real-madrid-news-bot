@@ -25,7 +25,7 @@ python weekly_recap.py --force
 
 ## X sources
 
-X remains disabled until `X_RSS_BASE_URL` is configured. `X_RSS_HANDLES` is an explicit whitelist. Official accounts and selected reporters are recognized by source tier; community aggregators cannot qualify a breaking post alone.
+X remains disabled until either `X_NITTER_INSTANCES` or `X_RSS_BASE_URL` is configured. `X_RSS_HANDLES` is an explicit whitelist. Public Nitter mirrors are failover-only sources and never replace the regular news feeds; reposts are ignored, while official accounts and selected reporters retain their source tier. Community aggregators cannot qualify a breaking post alone.
 
 ## Match Center
 
