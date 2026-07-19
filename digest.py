@@ -1088,12 +1088,9 @@ def related_sources_line(item: RankedDigestItem) -> str:
 
 def story_label(item: RankedDigestItem) -> str:
     candidate = item.candidate
-    text = " ".join(
-        [
-            str(getattr(candidate, "title", "") or ""),
-            str(getattr(candidate, "summary", "") or ""),
-        ]
-    ).casefold()
+    # Feed summaries often contain unrelated background context. Topic tags must
+    # describe the visible headline, not a stray word deeper in the article.
+    text = str(getattr(candidate, "title", "") or "").casefold()
 
     if any(term in text for term in ("transfer", "fichaje", "traspaso", "mercado", "переход", "трансфер")):
         return "Рынок"
@@ -1103,16 +1100,36 @@ def story_label(item: RankedDigestItem) -> str:
         return "Штаб"
     if any(term in text for term in ("lineup", "squad", "convocatoria", "starting xi", "стартовый состав", "заявка")):
         return "Состав"
-    if any(term in text for term in ("friendly", "amistoso", "fixture", "partido", "matchday", "сыграет", "матч с")):
+    if any(term in text for term in ("friendly", "amistoso", "fixture", "расписани", "календар", "сыграет с", "играет с")):
         return "Матч-день"
     return ""
 
 
+STORY_TOPIC_HASHTAGS = {
+    "Рынок": "#Трансферы",
+    "Лазарет": "#Лазарет",
+    "Штаб": "#Штаб",
+    "Состав": "#Состав",
+    "Матч-день": "#МатчДень",
+}
+
+
+def digest_topic_hashtags(items: list[RankedDigestItem]) -> str:
+    """Return each relevant digest topic once, in editorial priority order."""
+    seen = set()
+    tags = []
+    for item in items:
+        tag = STORY_TOPIC_HASHTAGS.get(story_label(item))
+        if not tag or tag in seen:
+            continue
+        seen.add(tag)
+        tags.append(tag)
+    return " ".join(tags)
+
+
 def format_news_entry(i: int, item: RankedDigestItem, title_override: str | None = None) -> str:
     candidate = item.candidate
-    category = story_label(item)
-    category_prefix = f"[{category}] " if category else ""
-    safe_text = escape(category_prefix + (title_override or polish_title(candidate.title)))
+    safe_text = escape(title_override or polish_title(candidate.title))
     safe_source = escape(candidate.source)
     safe_link = escape(candidate.link, quote=True)
     provenance = source_provenance_label(candidate.source)
@@ -1541,7 +1558,9 @@ def send_digest(label: str = "auto"):
     intro = random.choice(intro_lines)
     template = choose_digest_template(label, templates)
     message = template.format(news=joined_news, intro=intro)
-    message = append_hashtags(message, DIGEST_HASHTAGS)
+    topic_hashtags = digest_topic_hashtags(selected_items)
+    message = append_hashtags(message, f"{DIGEST_HASHTAGS} {topic_hashtags}")
+    metrics["topic_hashtags"] = topic_hashtags
     chunks = split_message(message)
     metrics["chunks"] = len(chunks)
     metrics["new_links"] = len(new_links)

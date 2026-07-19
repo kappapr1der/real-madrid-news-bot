@@ -7,6 +7,7 @@ from digest import (
     digest_render_plan,
     digest_semantic_keys,
     format_news_entry,
+    digest_topic_hashtags,
     pick_template_without_recent_repeats,
 )
 from filters import passes_filters
@@ -1008,7 +1009,7 @@ def test_digest_entry_uses_html_link():
     assert "](" not in rendered
 
 
-def test_digest_entry_shows_story_category_and_official_provenance():
+def test_digest_entry_keeps_story_category_out_of_title_and_shows_provenance():
     item = _item("Real Madrid confirm Courtois injury diagnosis")
     item.candidate.source = "X - @realmadrid"
     item.candidate.link = "https://example.com/official"
@@ -1017,20 +1018,26 @@ def test_digest_entry_shows_story_category_and_official_provenance():
 
     rendered = format_news_entry(1, item)
 
-    assert "[Лазарет]" in rendered
+    assert "[Лазарет]" not in rendered
     assert "официальный источник" in rendered
 
 
-def test_story_label_uses_title_context_over_broad_rank_category():
+def test_digest_topic_hashtags_use_title_context_over_broad_rank_category():
     item = _item("Detalles del fichaje de Mac Allister por el Real Madrid")
     item.candidate.source = "Bernabéu Digital"
     item.candidate.link = "https://example.com/transfer"
     item.related_sources = []
     item.category = "lineup"
 
-    rendered = format_news_entry(1, item)
+    assert digest_topic_hashtags([item]) == "#Трансферы"
 
-    assert "[Рынок]" in rendered
+
+def test_digest_topic_hashtags_are_deduplicated_in_story_order():
+    transfer = _item("Real Madrid transfer update")
+    injury = _item("Courtois injury diagnosis")
+    another_transfer = _item("Fichaje de un mediocampista")
+
+    assert digest_topic_hashtags([transfer, injury, another_transfer]) == "#Трансферы #Лазарет"
 
 
 def test_source_aware_digest_translation_cleanup():
