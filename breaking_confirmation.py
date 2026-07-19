@@ -63,12 +63,15 @@ def observe_breaking_candidate(
     source: str,
     link: str = "",
     title: str = "",
+    trusted_reporter: bool = False,
     now: datetime | None = None,
 ) -> ConfirmationDecision:
-    """Require two independent sources, while never delaying club confirmation."""
+    """Require two independent sources, while never delaying vetted direct confirmations."""
     tier = source_trust_tier(source)
     if tier == "official":
         return ConfirmationDecision(True, "official_source", 1)
+    if trusted_reporter:
+        return ConfirmationDecision(True, "trusted_reporter", 1)
     if not BREAKING_CONFIRMATION_ENABLED:
         return ConfirmationDecision(True, "confirmation_disabled", 1)
     if not fingerprint:

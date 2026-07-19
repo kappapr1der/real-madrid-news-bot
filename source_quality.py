@@ -36,6 +36,8 @@ SOURCE_TIER_RULES = (
             "x - @jlsanchez78",
             "x - @ramon_alvarezmm",
             "x - @guillermorai_",
+            "x - @fabrizioromano",
+            "fabrizio romano - telegram",
         ),
     ),
     (

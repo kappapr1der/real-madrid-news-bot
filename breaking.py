@@ -9,7 +9,7 @@ import logging
 import random
 import re
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from html import escape
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -22,13 +22,14 @@ from breaking_confirmation import observe_breaking_candidate
 from editorial_archive import record_story
 from text_cleaner import clean_text
 from filters import passes_filters
+from fabrizio_source import fetch_fabrizio_telegram_entries
 from feed_utils import parse_feed_url
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
 from llm_editor import llm_editor_enabled, review_breaking_items
 from status_manager import record_error, record_status
 from translator import translate_text
-from sources_international import SOURCES_INTERNATIONAL
+from sources_international import HERE_WE_GO_SOURCES, SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from source_quality import source_quality_policy, source_trust_tier
 from story_lifecycle import lifecycle_decision, record_lifecycle
@@ -38,6 +39,10 @@ from runtime_config import (
     BREAKING_INTERVAL_SECONDS,
     DIGEST_TIMEZONE,
     DRY_RUN,
+    HERE_WE_GO_ENABLED,
+    HERE_WE_GO_ENTRY_SCAN_LIMIT,
+    HERE_WE_GO_HASHTAGS,
+    HERE_WE_GO_MAX_AGE_MINUTES,
     LLM_EDITOR_BREAKING_BUFFER_SECONDS,
     LLM_EDITOR_BREAKING_FALLBACK_AFTER_SECONDS,
     LLM_EDITOR_MAX_BREAKING_ITEMS,
@@ -65,6 +70,7 @@ SENT_FILE = get_state_file("sent_breaking.txt")
 SENT_FINGERPRINT_FILE = get_state_file("sent_breaking_fingerprints.txt")
 LLM_PENDING_FILE = get_state_file("breaking_llm_pending.json")
 LLM_REJECTED_FILE = get_state_file("breaking_llm_rejected.txt")
+HERE_WE_GO_BOOTSTRAP_FILE = get_state_file("here_we_go_bootstrap.txt")
 stop_event = threading.Event()
 
 
@@ -155,6 +161,12 @@ BREAKING_RUMOUR_TERMS = (
     "может", "якобы", "слух", "интересуется", "мечтает", "возможн",
 )
 BREAKING_RELIABLE_TIERS = {"official", "reporter", "established_media"}
+HERE_WE_GO_SOURCE = "fabrizio romano - telegram"
+HERE_WE_GO_TERMS = ("here we go", "herewego")
+HERE_WE_GO_DEAL_TERMS = (
+    "deal", "sign", "signed", "signing", "joining", "transfer", "move", "agreement",
+    "contract", "loan", "fichaje", "traspaso", "contrato", "cesion",
+)
 
 TEMPLATES = [
     "<b>Сливочная молния</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
@@ -167,6 +179,11 @@ UCL_DRAW_TEMPLATE = (
     "<b>Жеребьевка Лиги чемпионов</b>\n"
     "{news}\n"
     "<a href=\"{link}\">Читать</a> · {source}"
+)
+HERE_WE_GO_TEMPLATE = (
+    "<b>Here we go</b>\n"
+    "{news}\n"
+    "<a href=\"{link}\">Источник: Fabrizio Romano</a>"
 )
 
 def source_url(source: Any) -> str | None:
@@ -203,6 +220,38 @@ def has_breaking_context(text: str, source: str = "", summary: str = "") -> bool
     return has_real_signal and (has_football_signal or source_is_real)
 
 
+def is_here_we_go(text: str, source: str = "", summary: str = "") -> bool:
+    """Accept Romano's phrase only for a direct Real Madrid transfer confirmation."""
+    if not HERE_WE_GO_ENABLED or _breaking_normalize(source) != HERE_WE_GO_SOURCE:
+        return False
+
+    combined = _breaking_normalize(f"{text} {summary}")
+    return (
+        any(term in combined for term in HERE_WE_GO_TERMS)
+        and any(term in combined for term in HERE_WE_GO_DEAL_TERMS)
+        and has_breaking_context(text, source=source, summary=summary)
+    )
+
+
+def here_we_go_is_fresh(entry: dict[str, Any]) -> bool:
+    published_at = entry.get("published_at")
+    if not isinstance(published_at, datetime):
+        return False
+    return published_at >= datetime.now(timezone.utc) - timedelta(minutes=max(HERE_WE_GO_MAX_AGE_MINUTES, 15))
+
+
+def bootstrap_here_we_go(entries: list[dict[str, Any]]) -> bool:
+    """Remember the current channel page once, so deployment never republishes old deals."""
+    if HERE_WE_GO_BOOTSTRAP_FILE.exists():
+        return False
+
+    known_links = {str(entry.get("link") or "").strip() for entry in entries}
+    known_links.discard("")
+    save_links(HERE_WE_GO_BOOTSTRAP_FILE, known_links)
+    logging.info("[HERE WE GO] bootstrap complete, remembered=%s", len(known_links))
+    return True
+
+
 def is_ucl_draw_result(text: str, summary: str = "", now: datetime | None = None) -> bool:
     if not UCL_DRAW_ALERT_ENABLED or not UCL_DRAW_DATE:
         return False
@@ -216,6 +265,9 @@ def is_ucl_draw_result(text: str, summary: str = "", now: datetime | None = None
 
 def is_breaking(text: str, source: str = "", summary: str = "", now: datetime | None = None) -> bool:
     lower_text = _breaking_normalize(text)
+    if is_here_we_go(text, source=source, summary=summary):
+        logging.info("[BREAKING DETECTED: HERE WE GO] %s", text)
+        return True
     if not has_breaking_context(text, source=source, summary=summary):
         logging.info("[BREAKING SKIPPED: LOW CONTEXT] %s: %s", source, text)
         return False
@@ -469,13 +521,21 @@ def send_breaking(
     fingerprint: str = "",
     event_type: str = "",
 ):
-    template = UCL_DRAW_TEMPLATE if event_type == "ucl_draw" else random.choice(TEMPLATES)
+    if event_type == "ucl_draw":
+        template = UCL_DRAW_TEMPLATE
+        hashtags = BREAKING_HASHTAGS
+    elif event_type == "here_we_go":
+        template = HERE_WE_GO_TEMPLATE
+        hashtags = HERE_WE_GO_HASHTAGS
+    else:
+        template = random.choice(TEMPLATES)
+        hashtags = BREAKING_HASHTAGS
     message = template.format(
         news=escape(news),
         link=escape(link, quote=True),
         source=escape(source),
     )
-    message = append_hashtags(message, BREAKING_HASHTAGS)
+    message = append_hashtags(message, hashtags)
 
     if DRY_RUN:
         logging.info(f"DRY_RUN breaking: {news} | Источник: {source}")
@@ -547,21 +607,33 @@ def fetch_breaking(sources):
 
         checked += 1
         try:
-            feed = parse_feed_url(url)
-            if not feed or not feed.entries:
-                continue
+            here_we_go_source = isinstance(source, dict) and source.get("kind") == "fabrizio_telegram"
+            bootstrap_links: set[str] = set()
+            if here_we_go_source:
+                entries = fetch_fabrizio_telegram_entries(url)[:HERE_WE_GO_ENTRY_SCAN_LIMIT]
+                if bootstrap_here_we_go(entries):
+                    continue
+                bootstrap_links = load_sent_links(HERE_WE_GO_BOOTSTRAP_FILE)
+            else:
+                feed = parse_feed_url(url)
+                entries = list(feed.entries[:1]) if feed and feed.entries else []
 
-            entry = feed.entries[0]
-            link = entry.get("link")
-            if not link or link in sent_breaking or link in llm_rejected_breaking or link in pending_links:
-                continue
+            for entry in entries:
+                if here_we_go_source and not here_we_go_is_fresh(entry):
+                    continue
+                link = entry.get("link")
+                if not link or link in bootstrap_links or link in sent_breaking or link in llm_rejected_breaking or link in pending_links:
+                    continue
 
-            title = entry.get("title", "").strip()
-            summary = entry.get("summary", "")
-            if not title or not passes_filters(title, summary=summary, source=label):
-                continue
+                title = entry.get("title", "").strip()
+                summary = entry.get("summary", "")
+                if not title or not passes_filters(title, summary=summary, source=label):
+                    continue
 
-            if is_breaking(title, source=label, summary=summary):
+                here_we_go = is_here_we_go(title, source=label, summary=summary)
+                if not is_breaking(title, source=label, summary=summary):
+                    continue
+
                 is_draw_alert = is_ucl_draw_result(title, summary)
                 fingerprint = ucl_draw_event_key(title, summary, UCL_DRAW_DATE) or semantic_news_key(title, summary)
                 if fingerprint in seen_fingerprints:
@@ -572,6 +644,7 @@ def fetch_breaking(sources):
                     source=label,
                     link=link,
                     title=title,
+                    trusted_reporter=here_we_go,
                 )
                 if not confirmation.ready:
                     awaiting_confirmation += 1
@@ -582,7 +655,7 @@ def fetch_breaking(sources):
                         title,
                     )
                     continue
-                if use_llm_editor and not is_draw_alert:
+                if use_llm_editor and not is_draw_alert and not here_we_go:
                     queue_llm_breaking(title, summary, link, label, fingerprint)
                     pending_links.add(link)
                     seen_fingerprints.add(fingerprint)
@@ -591,7 +664,7 @@ def fetch_breaking(sources):
                     continue
                 news = translate_text(title)
                 clean_news = clean_text(news)
-                event_type = "ucl_draw" if is_draw_alert else ""
+                event_type = "here_we_go" if here_we_go else "ucl_draw" if is_draw_alert else ""
                 lifecycle = lifecycle_decision(title, source=label, category="breaking", fingerprint=fingerprint)
                 if lifecycle.relevant and not lifecycle.changed:
                     logging.info("[BREAKING SKIPPED: STORY STATUS UNCHANGED] %s", lifecycle.key)
@@ -648,7 +721,7 @@ def parse_args():
 def main() -> int:
     install_signal_handlers()
     args = parse_args()
-    sources = SOURCES_INTERNATIONAL + SOURCES_RU
+    sources = SOURCES_INTERNATIONAL + SOURCES_RU + HERE_WE_GO_SOURCES
     mode = "DRY RUN" if DRY_RUN else "LIVE"
     record_status("breaking", "starting", f"monitor started ({mode})")
     print(Fore.YELLOW + f"[BREAKING BOT STARTED] Запущен мониторинг breaking news ({mode}).")

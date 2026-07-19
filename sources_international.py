@@ -1,4 +1,4 @@
-from runtime_config import X_RSS_BASE_URL, X_RSS_HANDLES
+from runtime_config import HERE_WE_GO_ENABLED, HERE_WE_GO_TELEGRAM_URL, X_RSS_BASE_URL, X_RSS_HANDLES
 
 
 X_OFFICIAL_HANDLES = {"realmadrid", "realmadriden"}
@@ -69,5 +69,18 @@ GENERAL_FOOTBALL_SOURCES = [
 ]
 
 X_SOURCES = build_x_sources()
+
+HERE_WE_GO_SOURCES = (
+    [
+        {
+            "url": HERE_WE_GO_TELEGRAM_URL,
+            "label": "Fabrizio Romano - Telegram",
+            "kind": "fabrizio_telegram",
+            "trust": "reporter",
+        }
+    ]
+    if HERE_WE_GO_ENABLED and HERE_WE_GO_TELEGRAM_URL
+    else []
+)
 
 SOURCES_INTERNATIONAL = REAL_MADRID_SOURCES + GENERAL_FOOTBALL_SOURCES + X_SOURCES

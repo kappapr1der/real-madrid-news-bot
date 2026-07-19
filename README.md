@@ -97,6 +97,18 @@ X_RSS_HANDLES=realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,A
 
 Если `X_RSS_BASE_URL` пустой, X-источники полностью выключены. В шаблоне можно использовать `{handle}`; если плейсхолдера нет, бот добавит handle в конец URL.
 
+## Here We Go
+
+Отдельная рубрика `Here we go` читает официальный публичный Telegram-канал Фабрицио Романо, а не случайное X-зеркало. Бот берёт только свежие посты с прямой формулировкой `Here we go`, относящиеся к «Реалу», и публикует их сразу: без второго источника и без ожидания LLM-очереди. Обычные сообщения Фабрицио в дайджесты не попадают.
+
+```env
+HERE_WE_GO_ENABLED=true
+HERE_WE_GO_TELEGRAM_URL=https://t.me/s/fabrizioromanotg
+HERE_WE_GO_ENTRY_SCAN_LIMIT=12
+HERE_WE_GO_MAX_AGE_MINUTES=180
+HERE_WE_GO_HASHTAGS="#RealMadrid #HalaMadrid #КофеСоСливками #HereWeGo"
+```
+
 ## Хэштеги
 
 Все типы постов добавляют хэштеги через `post_utils.py`. По умолчанию используются фанатские теги канала, а в `.env` можно задать отдельный набор для каждого режима:
