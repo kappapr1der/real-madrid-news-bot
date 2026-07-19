@@ -30,6 +30,7 @@ from translator import translate_text
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from source_quality import source_quality_policy, source_trust_tier
+from visual_cards import render_news_card
 from runtime_config import (
     BREAKING_HASHTAGS,
     BREAKING_INTERVAL_SECONDS,
@@ -405,8 +406,8 @@ def post_telegram_message(message: str) -> bool:
     return False
 
 
-def post_telegram_photo(caption: str, photo_url: str) -> bool:
-    if not photo_url or len(caption) > 1024:
+def post_telegram_photo(caption: str, photo_url: str = "", photo_path=None) -> bool:
+    if len(caption) > 1024 or (not photo_url and not photo_path):
         return False
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
@@ -419,7 +420,17 @@ def post_telegram_photo(caption: str, photo_url: str) -> bool:
 
     for attempt in range(1, 3):
         try:
-            response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
+            if photo_path:
+                with open(photo_path, "rb") as image_file:
+                    response = requests.post(
+                        url,
+                        data=payload,
+                        files={"photo": (photo_path.name, image_file, "image/jpeg")},
+                        timeout=TELEGRAM_TIMEOUT_SECONDS,
+                    )
+            else:
+                payload["photo"] = photo_url
+                response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
             if response.status_code == 200:
                 return True
             logging.warning("Фото для breaking не отправилось: %s %s", response.status_code, response.text)
@@ -459,9 +470,14 @@ def send_breaking(
         return False
 
     image_url = fetch_article_image(link)
+    branded_card = render_news_card(image_url)
     sent = False
-    if image_url:
-        sent = post_telegram_photo(message, image_url)
+    if branded_card:
+        sent = post_telegram_photo(message, photo_path=branded_card)
+        if sent:
+            logging.info("Опубликовано breaking с фирменной карточкой: %s | Источник: %s", news, source)
+    elif image_url:
+        sent = post_telegram_photo(message, photo_url=image_url)
         if sent:
             logging.info("Опубликовано breaking с фото: %s | Источник: %s", news, source)
 

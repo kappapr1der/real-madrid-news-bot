@@ -28,6 +28,7 @@ from source_quality import source_provenance_label, update_digest_source_quality
 from status_manager import record_error, record_status
 from translator import translate_text
 from text_cleaner import clean_text
+from visual_cards import render_news_card
 from runtime_config import (
     DIGEST_DAY_LOOKBACK_HOURS,
     DIGEST_DEDUPE_ENABLED,
@@ -1531,6 +1532,34 @@ def post_telegram_message(message: str) -> bool:
     return False
 
 
+def post_telegram_photo(caption: str, photo_path) -> bool:
+    if len(caption) > 1024 or not photo_path:
+        return False
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    payload = {
+        "chat_id": TARGET_CHAT_ID,
+        "caption": caption,
+        "parse_mode": "HTML",
+    }
+    for attempt in range(1, 3):
+        try:
+            with open(photo_path, "rb") as image_file:
+                response = requests.post(
+                    url,
+                    data=payload,
+                    files={"photo": (photo_path.name, image_file, "image/jpeg")},
+                    timeout=TELEGRAM_TIMEOUT_SECONDS,
+                )
+            if response.status_code == 200:
+                return True
+            logging.warning("Фирменная карточка дайджеста не отправилась: %s %s", response.status_code, response.text)
+        except (OSError, requests.RequestException) as exc:
+            logging.warning("Ошибка карточки дайджеста, попытка %s: %s", attempt, exc)
+        if attempt < 2:
+            time.sleep(attempt * 2)
+    return False
+
+
 def send_digest(label: str = "auto"):
     global sent_digest
 
@@ -1593,7 +1622,16 @@ def send_digest(label: str = "auto"):
         logging.error("TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return
 
-    for chunk in chunks:
+    sent_with_card = False
+    if len(chunks) == 1 and len(chunks[0]) <= 1024:
+        card_path = render_news_card()
+        sent_with_card = post_telegram_photo(chunks[0], card_path)
+        if sent_with_card:
+            metrics["visual_card"] = True
+
+    for index, chunk in enumerate(chunks):
+        if sent_with_card and index == 0:
+            continue
         if not post_telegram_message(chunk):
             record_error("digest", "Дайджест не сохранен как отправленный: часть сообщения не дошла", metrics)
             logging.error("Дайджест не сохранен как отправленный: часть сообщения не дошла")

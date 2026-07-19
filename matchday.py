@@ -19,6 +19,7 @@ from live_providers import fetch_confirmed_lineups, fetch_final_results, fetch_l
 from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, match_calendar_status, upcoming_matches
 from post_utils import append_hashtags
 from status_manager import record_error, record_status
+from visual_cards import render_match_card
 from runtime_config import (
     DRY_RUN,
     LIVE_HASHTAGS,
@@ -229,6 +230,38 @@ def post_telegram_message(message: str) -> bool:
     return False
 
 
+def post_match_card_or_message(message: str, match: Match, phase: str, score: str = "") -> bool:
+    if DRY_RUN:
+        return post_telegram_message(message)
+    card_path = render_match_card(match, phase=phase, score=score)
+    if card_path and len(message) <= 1024:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+        payload = {
+            "chat_id": TARGET_CHAT_ID,
+            "caption": message,
+            "parse_mode": "HTML",
+        }
+        for attempt in range(1, 3):
+            if stop_event.is_set():
+                return False
+            try:
+                with open(card_path, "rb") as image_file:
+                    response = requests.post(
+                        url,
+                        data=payload,
+                        files={"photo": (card_path.name, image_file, "image/jpeg")},
+                        timeout=TELEGRAM_TIMEOUT_SECONDS,
+                    )
+                if response.status_code == 200:
+                    return True
+                logging.warning("Карточка матча не отправилась: %s %s", response.status_code, response.text)
+            except (OSError, requests.RequestException) as exc:
+                logging.warning("Ошибка карточки матча, попытка %s: %s", attempt, exc)
+            if attempt < 2:
+                stop_event.wait(attempt * 2)
+    return post_telegram_message(message)
+
+
 def mark_posted(key: str) -> None:
     posted_keys.add(key)
     save_state(posted_keys)
@@ -274,7 +307,7 @@ def run_auto_once() -> int:
                 continue
 
             message = format_auto_message(match, phase)
-            if post_telegram_message(message):
+            if post_match_card_or_message(message, match, phase):
                 mark_posted(key)
                 archive_matchday_story(match, phase)
                 sent += 1
@@ -349,7 +382,7 @@ def run_lineup_once() -> int:
         key = f"lineup:{lineup.key}"
         if key in posted_keys:
             continue
-        if post_telegram_message(format_lineup_message(lineup)):
+        if post_match_card_or_message(format_lineup_message(lineup), lineup.match, "lineup"):
             mark_posted(key)
             archive_matchday_story(lineup.match, "lineup", text=", ".join(lineup.starters))
             sent += 1
@@ -364,7 +397,12 @@ def run_result_once() -> int:
         key = f"result:{result.key}"
         if key in posted_keys:
             continue
-        if post_telegram_message(format_final_result_message(result)):
+        if post_match_card_or_message(
+            format_final_result_message(result),
+            result.match,
+            "result",
+            score=result.score,
+        ):
             mark_posted(key)
             archive_matchday_story(result.match, "final_result", score=result.score)
             sent += 1

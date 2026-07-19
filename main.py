@@ -22,6 +22,10 @@ from runtime_config import (
     DIGEST_TIMEZONE,
     DRY_RUN,
     MATCHDAY_ENABLED,
+    WEEK_AHEAD_DAY,
+    WEEK_AHEAD_ENABLED,
+    WEEK_AHEAD_TIME,
+    WEEK_AHEAD_TIMEZONE,
     WEEKLY_RECAP_DAY,
     WEEKLY_RECAP_ENABLED,
     WEEKLY_RECAP_TIME,
@@ -192,6 +196,10 @@ def run_weekly_recap():
     start_process("weekly_recap", [PYTHON, "weekly_recap.py"], restart=False)
 
 
+def run_week_ahead():
+    start_process("week_ahead", [PYTHON, "week_ahead.py"], restart=False)
+
+
 def run_preflight_with_label(label: str):
     start_process(f"preflight:{label}", [PYTHON, "preflight.py", "digest", label], restart=False)
 
@@ -341,6 +349,18 @@ def schedule_weekly_recap():
     return job
 
 
+def schedule_week_ahead():
+    if not WEEK_AHEAD_ENABLED:
+        record_status("week_ahead", "disabled", "WEEK_AHEAD_ENABLED=false")
+        return None
+    days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+    day = WEEK_AHEAD_DAY if WEEK_AHEAD_DAY in days else "monday"
+    weekly_job = getattr(schedule.every(), day)
+    job = weekly_job.at(WEEK_AHEAD_TIME, WEEK_AHEAD_TIMEZONE).do(run_week_ahead)
+    logging.info("Scheduled week-ahead calendar on %s %s %s", day, WEEK_AHEAD_TIME, WEEK_AHEAD_TIMEZONE)
+    return job
+
+
 def main():
     install_signal_handlers()
     try:
@@ -360,6 +380,7 @@ def main():
         for label, at_time in digest_slots:
             schedule_digest_preflight(label, at_time)
             schedule_digest(label, at_time)
+        schedule_week_ahead()
         schedule_weekly_recap()
         run_missed_digest_if_needed(digest_slots)
 
