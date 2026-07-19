@@ -22,7 +22,7 @@ from editorial_archive import record_story
 from text_cleaner import clean_text
 from filters import passes_filters
 from feed_utils import parse_feed_url
-from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
+from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
 from llm_editor import llm_editor_enabled, review_breaking_items
 from status_manager import record_error, record_status
@@ -166,20 +166,6 @@ UCL_DRAW_TEMPLATE = (
     "<a href=\"{link}\">Читать</a> · {source}"
 )
 
-UCL_DRAW_TERMS = (
-    "champions league draw",
-    "champions league opponents",
-    "league phase draw",
-    "sorteo champions",
-    "sorteo de champions",
-    "sorteo de la champions",
-    "жеребьевк",
-    "соперник",
-    "оппонент",
-)
-UCL_TERMS = ("champions league", "champions", "лига чемпионов", "лч")
-
-
 def source_url(source: Any) -> str | None:
     if isinstance(source, dict):
         return source.get("url")
@@ -222,9 +208,7 @@ def is_ucl_draw_result(text: str, summary: str = "", now: datetime | None = None
     if current.date().isoformat() != UCL_DRAW_DATE:
         return False
 
-    combined = _breaking_normalize(f"{text} {summary}")
-    has_real = "real madrid" in combined or "реал мадрид" in combined
-    return has_real and any(term in combined for term in UCL_TERMS) and any(term in combined for term in UCL_DRAW_TERMS)
+    return bool(ucl_draw_event_key(text, summary, UCL_DRAW_DATE))
 
 
 def is_breaking(text: str, source: str = "", summary: str = "", now: datetime | None = None) -> bool:
@@ -543,7 +527,7 @@ def fetch_breaking(sources):
 
             if is_breaking(title, source=label, summary=summary):
                 is_draw_alert = is_ucl_draw_result(title, summary)
-                fingerprint = f"event:ucl-draw:{UCL_DRAW_DATE}" if is_draw_alert else semantic_news_key(title, summary)
+                fingerprint = ucl_draw_event_key(title, summary, UCL_DRAW_DATE) or semantic_news_key(title, summary)
                 if fingerprint in seen_fingerprints:
                     logging.info("[BREAKING SKIPPED: SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
                     continue

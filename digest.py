@@ -19,7 +19,7 @@ from sources_ru import SOURCES_RU
 from filters import passes_filters
 from feed_utils import parse_feed_url
 from match_calendar import digest_block_reason
-from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key
+from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from editorial_archive import archive_digest_items
@@ -51,6 +51,7 @@ from runtime_config import (
     TELEGRAM_MESSAGE_LIMIT,
     TELEGRAM_TIMEOUT_SECONDS,
     TARGET_CHAT_ID,
+    UCL_DRAW_DATE,
     get_log_file,
     get_state_file,
     telegram_configured,
@@ -1178,11 +1179,15 @@ def already_posted_links() -> set[str]:
     return set(sent_digest) | load_sent_links(SENT_BREAKING_FILE)
 
 
+def story_fingerprint(title: str, summary: str = "") -> str:
+    return ucl_draw_event_key(title, summary, UCL_DRAW_DATE) or semantic_news_key(title, summary)
+
+
 def digest_semantic_keys(items: list[RankedDigestItem]) -> set[str]:
     keys: set[str] = set()
     for item in items:
         candidate = item.candidate
-        key = semantic_news_key(candidate.title, candidate.summary)
+        key = story_fingerprint(candidate.title, candidate.summary)
         if key:
             keys.add(key)
     return keys
@@ -1219,7 +1224,7 @@ def collect_candidates(sources, cutoff: datetime):
                 if not title or not passes_filters(title, summary=summary, source=label):
                     continue
 
-                fingerprint = semantic_news_key(title, summary)
+                fingerprint = story_fingerprint(title, summary)
                 if fingerprint in seen_breaking_fingerprints:
                     logging.info("[DIGEST SKIPPED: BREAKING SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
                     continue

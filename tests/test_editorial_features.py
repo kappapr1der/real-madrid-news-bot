@@ -6,7 +6,7 @@ import editorial_archive
 import transfer_tracker
 import weekly_recap
 from breaking import is_breaking
-from digest import digest_llm_hard_deny
+from digest import digest_llm_hard_deny, story_fingerprint
 from match_calendar import Match
 from matchday import format_auto_message, format_lineup_message
 from news_fingerprint import semantic_news_key
@@ -74,6 +74,7 @@ def test_ucl_draw_result_becomes_one_special_breaking_on_draw_day(monkeypatch):
 
     assert breaking.is_ucl_draw_result(title, now=draw_day) is True
     assert breaking.is_breaking(title, "X – @realmadrid", now=draw_day) is True
+    assert story_fingerprint(title) == "event:ucl-draw:2026-08-27"
     assert breaking.is_ucl_draw_result(title, now=datetime(2026, 8, 28, tzinfo=timezone.utc)) is False
 
 

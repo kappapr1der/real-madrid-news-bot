@@ -23,6 +23,19 @@ PLAYER_ALIASES = {
     "ceballos": ("ceballos", "себальос"),
 }
 
+UCL_DRAW_TERMS = (
+    "champions league draw",
+    "champions league opponents",
+    "league phase draw",
+    "sorteo champions",
+    "sorteo de champions",
+    "sorteo de la champions",
+    "жеребьевк",
+    "соперник",
+    "оппонент",
+)
+UCL_TERMS = ("champions league", "champions", "лига чемпионов", "лч")
+
 
 def normalize_news_text(value: str) -> str:
     text = unicodedata.normalize("NFKC", value or "").casefold()
@@ -56,6 +69,17 @@ def contains_any(text: str, terms: tuple[str, ...]) -> bool:
 
 def contains_alias(text: str, alias: str) -> bool:
     return re.search(rf"(?<![a-zа-я0-9]){re.escape(alias)}(?![a-zа-я0-9])", text) is not None
+
+
+def ucl_draw_event_key(title: str, summary: str = "", event_date: str = "") -> str:
+    """Return a stable key for the published UCL league-phase draw result."""
+    if not event_date:
+        return ""
+    text = normalize_news_text(f"{title} {summary}")
+    has_real = "real madrid" in text or "реал мадрид" in text
+    if has_real and contains_any(text, UCL_TERMS) and contains_any(text, UCL_DRAW_TERMS):
+        return f"event:ucl-draw:{event_date}"
+    return ""
 
 
 def player_key(text: str) -> str | None:
