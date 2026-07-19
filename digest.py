@@ -370,6 +370,14 @@ DIGEST_LLM_HARD_DENY_TERMS = (
 )
 
 DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
+    "chelsea poised to sign morgan rogers",
+    "morgan rogers from aston villa",
+    "cucurella quiere asaltar el olimpo",
+    "zidane ya tiene fecha para ser seleccionador",
+    "jude bellingham is england's next captain",
+    "partido de sus vidas",
+    "prensa pide segunda estrella",
+    "alba redondo cerca de fichar por la juventus",
     "casillas sobre relacion con mourinho",
     "casillas sobre su relacion con mourinho",
     "casillas mourinho fue un matrimonio",
@@ -1069,6 +1077,8 @@ def polish_title(title: str) -> str:
         "рекордной плате": "рекордной сумме",
         "новой заинтересованности": "новому интересу",
         "получает новости обратно": "получил новости",
+        "Ла Фабриги": "Ла Фабрики",
+        "ла фабриги": "Ла Фабрики",
     }
     for bad, good in replacements.items():
         title = title.replace(bad, good)

@@ -143,7 +143,13 @@ def archive_digest_items(label: str, items: list[Any], title_overrides: dict[str
                 category=str(getattr(item, "category", "") or ""),
                 published_at=getattr(candidate, "published_at", None),
                 related_sources=list(getattr(item, "related_sources", []) or []),
-                metadata={"digest_label": label, "score": getattr(item, "score", None)},
+                metadata={
+                    "digest_label": label,
+                    "score": getattr(item, "score", None),
+                    # Weekly recap can re-translate the original instead of inheriting
+                    # a stale or imperfect one-line digest rewrite.
+                    "raw_title": raw_title,
+                },
             )
         )
     return archived

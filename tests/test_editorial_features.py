@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import editorial_archive
 import transfer_tracker
+import weekly_recap
 from breaking import is_breaking
 from digest import digest_llm_hard_deny
 from match_calendar import Match
@@ -55,6 +56,7 @@ def test_transfer_tracker_keeps_unverified_story_as_rumour(monkeypatch, tmp_path
     assert update["subject"] == "Майкл Олисе"
     assert update["status"] == "слух"
     assert update["changed"] is True
+    assert transfer_tracker.recent_updates(days=1, include_rumours=False) == []
 
 
 def test_breaking_requires_reliable_source_and_rejects_rumour():
@@ -76,16 +78,46 @@ def test_source_quality_autopilot_marks_only_very_noisy_sources_as_backup():
 def test_weekly_recap_renders_archived_stories_and_market_block():
     stories = select_weekly_stories(
         [
-            {"title": "Official club statement", "link": "https://example.test/one", "source": "Real Madrid", "kinds": ["breaking"], "category": "official"},
-            {"title": "Injury update", "link": "https://example.test/two", "source": "Marca", "kinds": ["digest"], "category": "injury"},
-            {"title": "Transfer story", "link": "https://example.test/three", "source": "Reporter", "kinds": ["digest"], "category": "transfer"},
+            {"title": "Official: Real Madrid announce a signing", "link": "https://example.test/one", "source": "Real Madrid", "kinds": ["breaking"], "category": "official"},
+            {"title": "Real Madrid injury update", "link": "https://example.test/two", "source": "Marca", "kinds": ["digest"], "category": "injury"},
+            {"title": "Real Madrid transfer story", "link": "https://example.test/three", "source": "Reporter", "kinds": ["digest"], "category": "transfer"},
         ],
         limit=8,
     )
-    message = format_weekly_recap(stories, [{"subject": "Майкл Олисе", "status": "слух"}])
+    message = format_weekly_recap(
+        stories,
+        [{"subject": "Майкл Олисе", "status": "слух"}],
+        title_formatter=lambda story: story["title"],
+    )
     assert "Белая неделя" in message
     assert "Рынок за неделю" in message
     assert "#ИтогиНедели" in message
+
+
+def test_weekly_recap_rechecks_archived_story_relevance_and_uses_raw_title(monkeypatch):
+    stories = [
+        {
+            "title": "Плохой сохраненный перевод",
+            "metadata": {"raw_title": "Real Madrid confirm a signing"},
+            "link": "https://example.test/good",
+            "source": "Marca – Real Madrid",
+            "kinds": ["digest"],
+            "category": "official",
+        },
+        {
+            "title": "Chelsea poised to sign Morgan Rogers from Aston Villa",
+            "link": "https://example.test/noise",
+            "source": "Guardian Football",
+            "kinds": ["digest"],
+            "category": "general",
+        },
+    ]
+
+    selected = select_weekly_stories(stories, limit=8)
+    monkeypatch.setattr(weekly_recap, "translate_text", lambda title: "Переведенный заголовок")
+
+    assert selected == [stories[0]]
+    assert weekly_recap.weekly_story_title(selected[0]) == "Переведенный заголовок"
 
 
 def test_match_center_adds_day_before_and_confirmed_lineup_formats():

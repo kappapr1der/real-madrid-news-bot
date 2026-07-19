@@ -58,7 +58,7 @@ FILTERS = {
         "huijsen", "хейсен", "хуисен", "asencio", "асенсио",
         "alaba", "алаба", "mendy", "менди", "fran garcia", "fran garcía", "фран гарсия",
         "carreras", "каррерас", "olise", "олисе", "konate", "konaté", "конате",
-        "enzo fernandez", "enzo fernández", "энцо фернандес", "cucurella", "кукурелья",
+        "enzo fernandez", "enzo fernández", "энцо фернандес",
         "ancelotti", "анчеротти", "анчелотти", "mourinho", "мourinho", "моруинью", "моуринью",
         "xabi alonso", "хаби алонсо", "arbeloa", "арбеоа",
         "florentino perez", "florentino pérez", "florentino", "флорентино", "перес",
@@ -81,6 +81,15 @@ FILTERS = {
         "real sociedad", "villarreal", "girona",
     ],
     "blacklist": [
+        # Freshly observed feed leakage: neither rival-only news nor former-player
+        # national-team features belong in the Real Madrid editorial stream.
+        "chelsea poised to sign morgan rogers", "morgan rogers from aston villa",
+        "cucurella quiere asaltar el olimpo", "кукурелья хочет штурмовать олимп",
+        "zidane ya tiene fecha para ser seleccionador", "зидан уже назначен на пост главного тренера сборной франции",
+        "jude bellingham is england's next captain", "следующий капитан сборной англии",
+        "partido de sus vidas", "prensa pide segunda estrella", "вся пресса требует вторую звезду",
+        "alba redondo cerca de fichar por la juventus", "альба редондо близка к переходу в ювентус",
+
         # National-team / World Cup noise that is not club-relevant enough for the channel.
         "world cup spotlight", "madrid world cup spotlight",
         "entra historia belgica", "historia belgica", "historia de belgica",

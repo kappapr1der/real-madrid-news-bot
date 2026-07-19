@@ -154,7 +154,7 @@ def record_transfer_story(story: dict[str, Any]) -> dict[str, Any] | None:
     return {"subject": subject, "status": status, "changed": update, "updated_at": current.get("updated_at", now)}
 
 
-def recent_updates(days: int = 7, limit: int = 6) -> list[dict[str, Any]]:
+def recent_updates(days: int = 7, limit: int = 6, include_rumours: bool = True) -> list[dict[str, Any]]:
     cutoff = datetime.now(timezone.utc).timestamp() - max(days, 1) * 86400
     rows = []
     for entry in _load().get("entries", {}).values():
@@ -166,6 +166,8 @@ def recent_updates(days: int = 7, limit: int = 6) -> list[dict[str, Any]]:
         except ValueError:
             continue
         if stamp >= cutoff:
+            if not include_rumours and str(entry.get("status") or "") == "слух":
+                continue
             rows.append(entry)
     return sorted(rows, key=lambda row: str(row.get("updated_at") or row.get("last_seen_at") or ""), reverse=True)[:limit]
 

@@ -52,6 +52,20 @@ def test_world_cup_player_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_latest_rival_and_former_player_noise_is_filtered():
+    cases = [
+        ("Chelsea poised to sign Morgan Rogers from Aston Villa in record-breaking deal", "Guardian Football"),
+        ("Cucurella quiere asaltar el olimpo de los campeones", "Marca – Real Madrid"),
+        ("Zidane ya tiene fecha para ser seleccionador de Francia", "Mundo Deportivo – Real Madrid"),
+        ("Jude Bellingham is England's next captain", "FourFourTwo"),
+        ("El partido de sus vidas: la prensa pide una segunda estrella", "Bernabéu Digital"),
+        ("Alba Redondo cerca de fichar por la Juventus", "Mundo Deportivo – Real Madrid"),
+    ]
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_basketball_is_filtered_even_when_real_madrid_is_mentioned():
     title = "Juancho Hernangomez, en el radar del Real Madrid"
     headline = "Хуанчо Эрнангомес на радаре Реала"

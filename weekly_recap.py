@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from html import escape
@@ -9,6 +10,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from editorial_archive import recent_stories
+from filters import passes_filters
 from match_calendar import digest_block_reason
 from post_utils import append_hashtags
 from runtime_config import (
@@ -29,6 +31,8 @@ from runtime_config import (
 )
 from status_manager import record_error, record_status
 from transfer_tracker import recent_updates
+from text_cleaner import clean_text
+from translator import translate_text
 
 
 LOG_FILE = get_log_file("weekly_recap.log")
@@ -78,11 +82,29 @@ def _story_score(story: dict) -> tuple[int, str]:
     return score, str(story.get("last_archived_at") or "")
 
 
+def weekly_source_title(story: dict) -> str:
+    metadata = story.get("metadata") if isinstance(story.get("metadata"), dict) else {}
+    return str(metadata.get("raw_title") or story.get("title") or "").strip()
+
+
+def weekly_story_title(story: dict) -> str:
+    title = clean_text(weekly_source_title(story))
+    if not title:
+        return ""
+
+    cyrillic_count = len(re.findall(r"[А-Яа-яЁё]", title))
+    latin_count = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", title))
+    if latin_count > cyrillic_count:
+        return clean_text(translate_text(title))
+    return title
+
+
 def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
     selected = []
     category_counts: dict[str, int] = {}
     for story in sorted(stories, key=_story_score, reverse=True):
-        if not story.get("title"):
+        title = weekly_source_title(story)
+        if not title or not passes_filters(title, source=str(story.get("source") or "")):
             continue
         category = str(story.get("category") or "general")
         if category_counts.get(category, 0) >= 3:
@@ -94,10 +116,10 @@ def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
     return selected
 
 
-def format_weekly_recap(stories: list[dict], transfers: list[dict]) -> str:
+def format_weekly_recap(stories: list[dict], transfers: list[dict], title_formatter=weekly_story_title) -> str:
     lines = ["<b>Белая неделя: главное</b>", "Собрали сюжеты, которые действительно двигали ленту последние семь дней."]
     for index, story in enumerate(stories, start=1):
-        title = escape(str(story.get("title") or ""))
+        title = escape(title_formatter(story))
         link = str(story.get("link") or "").strip()
         source = escape(str(story.get("source") or ""))
         suffix = f"\n<a href=\"{escape(link, quote=True)}\">Читать</a> · {source}" if link else (f"\n{source}" if source else "")
@@ -157,7 +179,8 @@ def send_weekly_recap(force: bool = False) -> bool:
     if len(stories) < WEEKLY_RECAP_MIN_ITEMS:
         record_status("weekly_recap", "empty", "not enough archived stories", metrics)
         return False
-    transfers = recent_updates(days=WEEKLY_RECAP_DAYS, limit=4)
+    # A block made only of rumours reads as filler, not as a useful market summary.
+    transfers = recent_updates(days=WEEKLY_RECAP_DAYS, limit=4, include_rumours=False)
     message = format_weekly_recap(stories, transfers)
     if not post_telegram_message(message):
         record_error("weekly_recap", "Telegram send failed", metrics)
