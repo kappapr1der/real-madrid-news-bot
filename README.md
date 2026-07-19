@@ -512,6 +512,17 @@ sudo systemctl status coffee-bot.service
 
 `main.py`, `breaking.py`, `digest.py` и `matchday.py` пишут runtime-состояние в `STATUS_FILE` (`state/status.json` по умолчанию). `heartbeat.py` читает этот файл и отвечает JSON на `HEARTBEAT_HOST:HEARTBEAT_PORT` (`127.0.0.1:8000` по умолчанию).
 
+### Визуальные рубрики
+
+`editorial_posts.py` добавляет два самостоятельных формата, которые не смешиваются с обычными дайджестами:
+
+- `history` в `HISTORY_TIME` публикуется только для проверенных дат из `config/history_events.json` и берет реальную архивную фотографию, заранее привязанную к событию;
+- `cover` в `EDITORIAL_COVER_TIME` публикует фактическую первую полосу Diario AS.
+
+Обе рубрики по умолчанию пропускают матч-дни. Их можно проверить без Telegram: `DRY_RUN=true python editorial_posts.py history --force` и `DRY_RUN=true python editorial_posts.py cover --force`.
+
+Для `history` фотография задается вручную в `config/history_events.json` через `image_url`. Если у записи нет проверенной прямой ссылки на архивный кадр, пост не выйдет: бот не подставляет логотипы, случайные иллюстрации или сгенерированные карточки.
+
 Проверить локально:
 
 ```bash

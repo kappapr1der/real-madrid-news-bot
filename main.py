@@ -28,6 +28,12 @@ from runtime_config import (
     EDITORIAL_REPORT_ENABLED,
     EDITORIAL_REPORT_TIME,
     EDITORIAL_REPORT_TIMEZONE,
+    EDITORIAL_COVER_ENABLED,
+    EDITORIAL_COVER_TIME,
+    EDITORIAL_COVER_TIMEZONE,
+    HISTORY_ENABLED,
+    HISTORY_TIME,
+    HISTORY_TIMEZONE,
     MATCHDAY_ENABLED,
     WEEK_AHEAD_DAY,
     WEEK_AHEAD_ENABLED,
@@ -215,6 +221,14 @@ def run_editorial_report():
     start_process("editorial_report", [PYTHON, "editorial_report.py"], restart=False)
 
 
+def run_editorial_cover():
+    start_process("editorial_cover", [PYTHON, "editorial_posts.py", "cover"], restart=False)
+
+
+def run_history_post():
+    start_process("history", [PYTHON, "editorial_posts.py", "history"], restart=False)
+
+
 def run_preflight_with_label(label: str):
     start_process(f"preflight:{label}", [PYTHON, "preflight.py", "digest", label], restart=False)
 
@@ -397,6 +411,24 @@ def schedule_editorial_report():
     return job
 
 
+def schedule_editorial_cover():
+    if not EDITORIAL_COVER_ENABLED:
+        record_status("editorial_cover", "disabled", "EDITORIAL_COVER_ENABLED=false")
+        return None
+    job = schedule.every().day.at(EDITORIAL_COVER_TIME, EDITORIAL_COVER_TIMEZONE).do(run_editorial_cover)
+    logging.info("Scheduled editorial cover at %s %s", EDITORIAL_COVER_TIME, EDITORIAL_COVER_TIMEZONE)
+    return job
+
+
+def schedule_history_post():
+    if not HISTORY_ENABLED:
+        record_status("history", "disabled", "HISTORY_ENABLED=false")
+        return None
+    job = schedule.every().day.at(HISTORY_TIME, HISTORY_TIMEZONE).do(run_history_post)
+    logging.info("Scheduled history post at %s %s", HISTORY_TIME, HISTORY_TIMEZONE)
+    return job
+
+
 def main():
     install_signal_handlers()
     try:
@@ -420,6 +452,8 @@ def main():
         schedule_week_ahead()
         schedule_weekly_recap()
         schedule_editorial_report()
+        schedule_history_post()
+        schedule_editorial_cover()
         run_missed_digest_if_needed(digest_slots)
 
         print(
