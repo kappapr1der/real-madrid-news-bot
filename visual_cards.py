@@ -245,7 +245,7 @@ def render_news_card(article_image_url: str = "") -> Path | None:
     draw.rectangle((82, 112, 94, 528), fill="#173E78")
     draw.rectangle((108, 112, 120, 528), fill="#C7A34A")
 
-    _paste_badge_or_fallback(canvas, REAL_MADRID_NAME, 915 if source else 885, 318)
+    _paste_badge_or_fallback(canvas, REAL_MADRID_NAME, 1055, 318)
     brand_font = _font(44 if source else 52)
     title_font = _font(70 if source else 92)
     sub_font = _font(32, bold=False)
