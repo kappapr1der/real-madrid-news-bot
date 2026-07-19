@@ -21,6 +21,7 @@ from feed_utils import is_repost_entry, parse_feed_url, source_is_x
 from match_calendar import digest_block_reason
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
+from publication_registry import published_editorial_links
 from content_quality import RankedDigestItem, candidate_profile, rank_digest_candidates
 from editorial_archive import archive_digest_items
 from llm_editor import review_digest_items
@@ -1191,7 +1192,7 @@ def split_message(message: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str
 
 
 def already_posted_links() -> set[str]:
-    return set(sent_digest) | load_sent_links(SENT_BREAKING_FILE)
+    return set(sent_digest) | load_sent_links(SENT_BREAKING_FILE) | published_editorial_links()
 
 
 def story_fingerprint(title: str, summary: str = "") -> str:

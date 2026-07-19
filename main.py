@@ -34,6 +34,10 @@ from runtime_config import (
     HISTORY_ENABLED,
     HISTORY_TIME,
     HISTORY_TIMEZONE,
+    LA_FABRICA_DAYS,
+    LA_FABRICA_ENABLED,
+    LA_FABRICA_TIME,
+    LA_FABRICA_TIMEZONE,
     MATCHDAY_ENABLED,
     WEEK_AHEAD_DAY,
     WEEK_AHEAD_ENABLED,
@@ -43,6 +47,10 @@ from runtime_config import (
     WEEKLY_RECAP_ENABLED,
     WEEKLY_RECAP_TIME,
     WEEKLY_RECAP_TIMEZONE,
+    WHITE_FRAME_DAYS,
+    WHITE_FRAME_ENABLED,
+    WHITE_FRAME_TIME,
+    WHITE_FRAME_TIMEZONE,
     get_log_file,
 )
 from status_manager import load_status, parse_iso, record_error, record_status
@@ -227,6 +235,14 @@ def run_editorial_cover():
 
 def run_history_post():
     start_process("history", [PYTHON, "editorial_posts.py", "history"], restart=False)
+
+
+def run_white_frame():
+    start_process("white_frame", [PYTHON, "white_frame.py"], restart=False)
+
+
+def run_la_fabrica():
+    start_process("la_fabrica", [PYTHON, "la_fabrica.py"], restart=False)
 
 
 def run_preflight_with_label(label: str):
@@ -429,6 +445,45 @@ def schedule_history_post():
     return job
 
 
+def schedule_editorial_days(component: str, enabled: bool, days: list[str], at_time: str, timezone: str, runner):
+    if not enabled:
+        record_status(component, "disabled", f"{component.upper()}_ENABLED=false")
+        return []
+    valid_days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+    selected_days = [day for day in dict.fromkeys(days) if day in valid_days]
+    if not selected_days:
+        record_status(component, "disabled", "no valid schedule days configured")
+        return []
+    jobs = []
+    for day in selected_days:
+        weekly_job = getattr(schedule.every(), day)
+        jobs.append(weekly_job.at(at_time, timezone).do(runner))
+    logging.info("Scheduled %s on %s at %s %s", component, ",".join(selected_days), at_time, timezone)
+    return jobs
+
+
+def schedule_white_frame():
+    return schedule_editorial_days(
+        "white_frame",
+        WHITE_FRAME_ENABLED,
+        WHITE_FRAME_DAYS,
+        WHITE_FRAME_TIME,
+        WHITE_FRAME_TIMEZONE,
+        run_white_frame,
+    )
+
+
+def schedule_la_fabrica():
+    return schedule_editorial_days(
+        "la_fabrica",
+        LA_FABRICA_ENABLED,
+        LA_FABRICA_DAYS,
+        LA_FABRICA_TIME,
+        LA_FABRICA_TIMEZONE,
+        run_la_fabrica,
+    )
+
+
 def main():
     install_signal_handlers()
     try:
@@ -454,6 +509,8 @@ def main():
         schedule_editorial_report()
         schedule_history_post()
         schedule_editorial_cover()
+        schedule_white_frame()
+        schedule_la_fabrica()
         run_missed_digest_if_needed(digest_slots)
 
         print(

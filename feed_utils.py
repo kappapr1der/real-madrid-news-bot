@@ -2,6 +2,7 @@ import logging
 import subprocess
 import time
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 import feedparser
 import requests
@@ -11,6 +12,19 @@ from runtime_config import HTTP_USER_AGENT, RSS_TIMEOUT_SECONDS
 
 HEADERS = {"User-Agent": HTTP_USER_AGENT}
 _FEED_CACHE: dict[str, tuple[float, Any]] = {}
+
+
+def normalize_x_media_url(url: str) -> str:
+    """Prefer Twitter's image CDN when a Nitter image proxy is unavailable."""
+    clean = (url or "").strip()
+    parsed = urlparse(clean)
+    marker = "/pic/"
+    if not parsed.netloc or marker not in parsed.path:
+        return clean
+    raw_path = unquote(parsed.path.split(marker, 1)[1]).lstrip("/")
+    if raw_path.startswith(("media/", "amplify_video_thumb/", "tweet_video_thumb/")):
+        return f"https://pbs.twimg.com/{raw_path}"
+    return clean
 
 
 def source_is_x(source: str | dict) -> bool:
@@ -33,7 +47,7 @@ def entry_media_url(entry) -> str:
                 continue
             url = str(row.get("url") or row.get("href") or "").strip()
             if url.startswith(("https://", "http://")) and not url.lower().endswith(".svg"):
-                return url
+                return normalize_x_media_url(url)
 
     summary = str(entry.get("summary", "") or "")
     if not summary:
@@ -42,7 +56,7 @@ def entry_media_url(entry) -> str:
     for image in soup.select("img[src]"):
         url = str(image.get("src") or "").strip()
         if url.startswith(("https://", "http://")) and not url.lower().endswith(".svg"):
-            return url
+            return normalize_x_media_url(url)
     return ""
 
 

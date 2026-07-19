@@ -16,6 +16,7 @@ from colorama import Fore, Style, init
 
 from editorial_archive import archive_matchday_story
 from live_providers import fetch_confirmed_lineups, fetch_final_results, fetch_live_events, live_provider_status
+from matchday_editorial import bernabeu_voice_copy, pre_whistle_copy
 from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, match_calendar_status, upcoming_matches
 from post_utils import append_hashtags
 from status_manager import record_error, record_status
@@ -111,15 +112,17 @@ def format_auto_message(match: Match, phase: str) -> str:
     safe_kickoff = escape(kickoff_label(match))
 
     if phase == "day_before":
+        pre_whistle = pre_whistle_copy(match)
         lines = [
-            f"<b>Завтра матч: {safe_title}</b>",
+            f"<b>{'Перед свистком' if pre_whistle else 'Завтра матч'}: {safe_title}</b>",
             safe_meta,
             f"Начало: {safe_kickoff}",
-            "Заранее собираем всё важное к матчу и оставляем день без лишнего шума.",
+            pre_whistle or "Заранее собираем всё важное к матчу и оставляем день без лишнего шума.",
         ]
         if match.broadcast:
             lines.append(f"Трансляция: {escape(match.broadcast)}")
-        return append_hashtags("\n".join(lines), MATCHDAY_HASHTAGS)
+        hashtags = f"{MATCHDAY_HASHTAGS} #ПередСвистком" if pre_whistle else MATCHDAY_HASHTAGS
+        return append_hashtags("\n".join(lines), hashtags)
 
     if phase == "preview":
         lines = [
@@ -199,8 +202,12 @@ def format_final_result_message(result) -> str:
             goals.append(f"{minute}{player}")
     if goals:
         lines.append(f"Голы: {', '.join(goals)}")
+    bernabeu_voice = bernabeu_voice_copy(result)
+    if bernabeu_voice:
+        lines.extend(("", bernabeu_voice))
     message = "\n".join(lines)
-    return append_hashtags(message, MATCHDAY_HASHTAGS)
+    hashtags = f"{MATCHDAY_HASHTAGS} #ГолосБернабеу" if bernabeu_voice else MATCHDAY_HASHTAGS
+    return append_hashtags(message, hashtags)
 
 
 def post_telegram_message(message: str) -> bool:
