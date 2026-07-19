@@ -608,8 +608,35 @@ def is_courtois_world_cup_injury_text(text: str) -> bool:
     )
 
 
+def is_bernabeu_summer_works_text(text: str) -> bool:
+    return (
+        contains_any(text, ("santiago bernabeu", "bernabeu", "бернабеу"))
+        and contains_any(
+            text,
+            (
+                "summer glow up",
+                "summer update",
+                "summer renovation",
+                "summer renovations",
+                "stadium works",
+                "obras en",
+                "obras del",
+                "obras santiago",
+                "renovation",
+                "renovations",
+                "remodelacion",
+                "remodelación",
+                "modernization",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
+
+    if is_bernabeu_summer_works_text(text):
+        return "club:bernabeu-summer-works"
 
     if is_courtois_world_cup_injury_text(text):
         return "injury:courtois-belgium-world-cup"
@@ -759,6 +786,8 @@ def canonical_news_key(key: str) -> str:
     if not clean:
         return ""
     text = normalize_news_text(clean.replace("generic:", " ").replace(":", " ").replace("-", " "))
+    if is_bernabeu_summer_works_text(text):
+        return "club:bernabeu-summer-works"
     if is_venezuela_donation_text(text):
         return "club:donation:venezuela-earthquake"
     if is_joan_martinez_valencia_text(text):

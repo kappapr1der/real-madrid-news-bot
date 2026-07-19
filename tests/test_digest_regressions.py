@@ -66,6 +66,42 @@ def test_latest_rival_and_former_player_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_late_evening_catchup_noise_is_filtered():
+    cases = [
+        ("Argentina make 3 changes to lineup for World Cup final", "ESPN FC"),
+        ("Espana domina al descanso, pero no logra poner en apuros a Argentina (0-0)", "Defensa Central"),
+        ("A 120 million decision could haunt Real Madrid this season", "The Real Champs"),
+        ("Vinicius estrena nuevo look", "Mundo Deportivo - Real Madrid"),
+        ("Asencio se resiste a salir: bloquearia la llegada de Bastoni", "Bernabeu Digital"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_rank_digest_groups_bernabeu_summer_works_thread():
+    ranked = rank_digest_candidates(
+        [
+            _candidate(
+                "Santiago Bernabeu set for a summer glow up before Real Madrid start the new season",
+                "Madrid Universal",
+                "https://example.com/bernabeu-summer",
+            ),
+            _candidate(
+                "Mas obras en el Santiago Bernabeu",
+                "Mundo Deportivo - Real Madrid",
+                "https://example.com/bernabeu-works",
+            ),
+        ],
+        limit=10,
+    )
+
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == 2
+    assert semantic_news_key("Mas obras en el Santiago Bernabeu") == "club:bernabeu-summer-works"
+
+
 def test_basketball_is_filtered_even_when_real_madrid_is_mentioned():
     title = "Juancho Hernangomez, en el radar del Real Madrid"
     headline = "Хуанчо Эрнангомес на радаре Реала"

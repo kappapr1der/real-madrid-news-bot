@@ -90,6 +90,15 @@ FILTERS = {
         "partido de sus vidas", "prensa pide segunda estrella", "вся пресса требует вторую звезду",
         "alba redondo cerca de fichar por la juventus", "альба редондо близка к переходу в ювентус",
 
+        # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
+        # snippets, and ungrounded transfer clickbait into the club digest.
+        "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
+        "argentina 3 changes to lineup", "argentina 3 changes lineup",
+        "espana domina al descanso", "spain dominate at half time", "spain dominates at half time",
+        "a 120 million decision could haunt real madrid", "120 million decision could haunt",
+        "vinicius estrena nuevo look", "vinicius unveils new look", "vinicius new look",
+        "asencio se resiste a salir", "bloquearia llegada de bastoni",
+
         # National-team / World Cup noise that is not club-relevant enough for the channel.
         "world cup spotlight", "madrid world cup spotlight",
         "entra historia belgica", "historia belgica", "historia de belgica",
