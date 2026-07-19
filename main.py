@@ -21,6 +21,13 @@ from runtime_config import (
     DIGEST_PREFLIGHT_MINUTES,
     DIGEST_TIMEZONE,
     DRY_RUN,
+    CALENDAR_REFRESH_ENABLED,
+    CALENDAR_REFRESH_TIME,
+    CALENDAR_REFRESH_TIMEZONE,
+    EDITORIAL_REPORT_DAY,
+    EDITORIAL_REPORT_ENABLED,
+    EDITORIAL_REPORT_TIME,
+    EDITORIAL_REPORT_TIMEZONE,
     MATCHDAY_ENABLED,
     WEEK_AHEAD_DAY,
     WEEK_AHEAD_ENABLED,
@@ -200,6 +207,14 @@ def run_week_ahead():
     start_process("week_ahead", [PYTHON, "week_ahead.py"], restart=False)
 
 
+def run_calendar_refresh():
+    start_process("calendar_refresh", [PYTHON, "calendar_refresh.py"], restart=False)
+
+
+def run_editorial_report():
+    start_process("editorial_report", [PYTHON, "editorial_report.py"], restart=False)
+
+
 def run_preflight_with_label(label: str):
     start_process(f"preflight:{label}", [PYTHON, "preflight.py", "digest", label], restart=False)
 
@@ -361,6 +376,27 @@ def schedule_week_ahead():
     return job
 
 
+def schedule_calendar_refresh():
+    if not CALENDAR_REFRESH_ENABLED:
+        record_status("calendar_refresh", "disabled", "CALENDAR_REFRESH_ENABLED=false")
+        return None
+    job = schedule.every().day.at(CALENDAR_REFRESH_TIME, CALENDAR_REFRESH_TIMEZONE).do(run_calendar_refresh)
+    logging.info("Scheduled calendar refresh at %s %s", CALENDAR_REFRESH_TIME, CALENDAR_REFRESH_TIMEZONE)
+    return job
+
+
+def schedule_editorial_report():
+    if not EDITORIAL_REPORT_ENABLED:
+        record_status("editorial_report", "disabled", "EDITORIAL_REPORT_ENABLED=false")
+        return None
+    days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+    day = EDITORIAL_REPORT_DAY if EDITORIAL_REPORT_DAY in days else "sunday"
+    weekly_job = getattr(schedule.every(), day)
+    job = weekly_job.at(EDITORIAL_REPORT_TIME, EDITORIAL_REPORT_TIMEZONE).do(run_editorial_report)
+    logging.info("Scheduled editorial report on %s %s %s", day, EDITORIAL_REPORT_TIME, EDITORIAL_REPORT_TIMEZONE)
+    return job
+
+
 def main():
     install_signal_handlers()
     try:
@@ -380,8 +416,10 @@ def main():
         for label, at_time in digest_slots:
             schedule_digest_preflight(label, at_time)
             schedule_digest(label, at_time)
+        schedule_calendar_refresh()
         schedule_week_ahead()
         schedule_weekly_recap()
+        schedule_editorial_report()
         run_missed_digest_if_needed(digest_slots)
 
         print(

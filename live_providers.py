@@ -2,7 +2,7 @@ import hashlib
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
 
@@ -50,11 +50,20 @@ class ConfirmedLineup:
 
 
 @dataclass(frozen=True)
+class GoalSummary:
+    minute: str
+    player: str
+    team: str
+
+
+@dataclass(frozen=True)
 class FinalResult:
     key: str
     match: Match
     score: str
     status: str
+    goals: list[GoalSummary] = field(default_factory=list)
+    real_starters: list[str] = field(default_factory=list)
 
 
 class ApiFootballClient:
@@ -440,12 +449,41 @@ def fetch_final_results(matches: list[Match]) -> list[FinalResult]:
             score = fixture_score(fixture)
             if not score:
                 continue
+            goal_events = []
+            for raw_event in client.fixture_events(fixture_ref):
+                if str(raw_event.get("type") or "").casefold() != "goal":
+                    continue
+                scorer = player_name(raw_event, "player")
+                if not scorer:
+                    continue
+                goal_events.append(
+                    GoalSummary(
+                        minute=event_minute(raw_event),
+                        player=scorer,
+                        team=team_name(raw_event),
+                    )
+                )
+            real_starters = []
+            for lineup in client.fixture_lineups(fixture_ref):
+                team = lineup.get("team") or {}
+                team_id = str(team.get("id") or "")
+                team_label = str(team.get("name") or "")
+                if team_id != str(API_FOOTBALL_TEAM_ID) and not REAL_NAME_RE.search(team_label):
+                    continue
+                real_starters = [
+                    str((entry.get("player") or {}).get("name") or "").strip()
+                    for entry in (lineup.get("startXI") or [])
+                ]
+                real_starters = [name for name in real_starters if name]
+                break
             results.append(
                 FinalResult(
                     key=f"api-football:{fixture_ref}:final:{score}",
                     match=match,
                     score=score,
                     status=fixture_status(fixture),
+                    goals=goal_events,
+                    real_starters=real_starters[:11],
                 )
             )
         return results

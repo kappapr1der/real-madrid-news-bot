@@ -33,6 +33,8 @@ from runtime_config import (
     MATCHDAY_POST_TOLERANCE_MINUTES,
     MATCHDAY_PREVIEW_MINUTES,
     MATCHDAY_LINEUP_ENABLED,
+    MATCHDAY_POSTMATCH_POLL_ENABLED,
+    MATCHDAY_POSTMATCH_POLL_QUESTION,
     MATCHDAY_RESULT_ENABLED,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_TIMEOUT_SECONDS,
@@ -185,12 +187,19 @@ def format_lineup_message(lineup) -> str:
 
 
 def format_final_result_message(result) -> str:
-    message = "\n".join(
-        [
-            f"<b>Финальный свист: {escape(result.match.title)}</b>",
-            f"Счёт: <b>{escape(result.score)}</b>",
-        ]
-    )
+    lines = [
+        f"<b>Финальный свист: {escape(result.match.title)}</b>",
+        f"Счёт: <b>{escape(result.score)}</b>",
+    ]
+    goals = []
+    for goal in list(getattr(result, "goals", []) or [])[:8]:
+        minute = f"{escape(str(goal.minute))}' " if getattr(goal, "minute", "") else ""
+        player = escape(str(getattr(goal, "player", "") or ""))
+        if player:
+            goals.append(f"{minute}{player}")
+    if goals:
+        lines.append(f"Голы: {', '.join(goals)}")
+    message = "\n".join(lines)
     return append_hashtags(message, MATCHDAY_HASHTAGS)
 
 
@@ -227,6 +236,53 @@ def post_telegram_message(message: str) -> bool:
         if attempt < 3:
             stop_event.wait(attempt * 2)
 
+    return False
+
+
+def player_of_match_options(result) -> list[str]:
+    options = []
+    seen = set()
+
+    def add(name: str) -> None:
+        clean_name = (name or "").strip()
+        key = clean_name.casefold()
+        if clean_name and key not in seen and len(options) < 4:
+            options.append(clean_name)
+            seen.add(key)
+
+    for goal in list(getattr(result, "goals", []) or []):
+        team = str(getattr(goal, "team", "") or "").casefold()
+        if "real madrid" in team or "реал мадрид" in team:
+            add(str(getattr(goal, "player", "") or ""))
+    for starter in list(getattr(result, "real_starters", []) or []):
+        add(str(starter))
+    return options if len(options) >= 2 else []
+
+
+def post_player_of_match_poll(result) -> bool:
+    options = player_of_match_options(result)
+    if not MATCHDAY_POSTMATCH_POLL_ENABLED or not options:
+        return False
+    if DRY_RUN:
+        print(Fore.MAGENTA + Style.BRIGHT + f"[DRY RUN MATCHDAY POLL] {MATCHDAY_POSTMATCH_POLL_QUESTION}: {options}")
+        return True
+    if not telegram_configured():
+        return False
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPoll"
+    payload = {
+        "chat_id": TARGET_CHAT_ID,
+        "question": MATCHDAY_POSTMATCH_POLL_QUESTION,
+        "options": json.dumps(options, ensure_ascii=False),
+        "is_anonymous": True,
+    }
+    try:
+        response = requests.post(url, data=payload, timeout=TELEGRAM_TIMEOUT_SECONDS)
+        if response.status_code == 200:
+            return True
+        logging.warning("Telegram player-of-match poll response=%s body=%s", response.status_code, response.text)
+    except requests.RequestException as exc:
+        logging.warning("Telegram player-of-match poll failed: %s", exc)
     return False
 
 
@@ -395,16 +451,19 @@ def run_result_once() -> int:
     sent = 0
     for result in fetch_final_results(load_matches()):
         key = f"result:{result.key}"
-        if key in posted_keys:
-            continue
-        if post_match_card_or_message(
-            format_final_result_message(result),
-            result.match,
-            "result",
-            score=result.score,
-        ):
-            mark_posted(key)
-            archive_matchday_story(result.match, "final_result", score=result.score)
+        if key not in posted_keys:
+            if post_match_card_or_message(
+                format_final_result_message(result),
+                result.match,
+                "result",
+                score=result.score,
+            ):
+                mark_posted(key)
+                archive_matchday_story(result.match, "final_result", score=result.score)
+                sent += 1
+        poll_key = f"poll:{result.key}"
+        if key in posted_keys and poll_key not in posted_keys and post_player_of_match_poll(result):
+            mark_posted(poll_key)
             sent += 1
     return sent
 

@@ -18,6 +18,7 @@ import requests
 from colorama import init, Fore, Style
 
 from article_media import fetch_article_image
+from breaking_confirmation import observe_breaking_candidate
 from editorial_archive import record_story
 from text_cleaner import clean_text
 from filters import passes_filters
@@ -30,6 +31,7 @@ from translator import translate_text
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from source_quality import source_quality_policy, source_trust_tier
+from story_lifecycle import lifecycle_decision, record_lifecycle
 from visual_cards import render_news_card
 from runtime_config import (
     BREAKING_HASHTAGS,
@@ -310,9 +312,26 @@ def _post_breaking_row(row: dict[str, Any], decision: dict[str, Any] | None = No
     if not headline:
         headline = translate_text(str(row.get("title") or ""))
     clean_news = clean_text(headline)
+    lifecycle = lifecycle_decision(
+        str(row.get("title") or ""),
+        source=str(row.get("source") or ""),
+        category="breaking",
+        fingerprint=fingerprint,
+    )
+    if lifecycle.relevant and not lifecycle.changed:
+        logging.info("[BREAKING SKIPPED: STORY STATUS UNCHANGED] %s", lifecycle.key)
+        return False
     event_type = "ucl_draw" if is_ucl_draw_result(str(row.get("title") or ""), str(row.get("summary") or "")) else ""
-    send_breaking(clean_news, link, source=str(row.get("source") or ""), fingerprint=fingerprint, event_type=event_type)
-    return True
+    sent = send_breaking(clean_news, link, source=str(row.get("source") or ""), fingerprint=fingerprint, event_type=event_type)
+    if sent and lifecycle.relevant:
+        record_lifecycle(
+            str(row.get("title") or ""),
+            source=str(row.get("source") or ""),
+            link=link,
+            category="breaking",
+            fingerprint=fingerprint,
+        )
+    return sent
 
 
 def flush_llm_breaking_queue() -> tuple[int, int]:
@@ -509,6 +528,7 @@ def fetch_breaking(sources):
     found = 0
     queued = 0
     rejected = 0
+    awaiting_confirmation = 0
     checked = 0
     errors = 0
     use_llm_editor = llm_editor_enabled("breaking")
@@ -547,6 +567,21 @@ def fetch_breaking(sources):
                 if fingerprint in seen_fingerprints:
                     logging.info("[BREAKING SKIPPED: SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
                     continue
+                confirmation = observe_breaking_candidate(
+                    fingerprint=fingerprint,
+                    source=label,
+                    link=link,
+                    title=title,
+                )
+                if not confirmation.ready:
+                    awaiting_confirmation += 1
+                    logging.info(
+                        "[BREAKING AWAITING CONFIRMATION] sources=%s fingerprint=%s title=%s",
+                        confirmation.sources,
+                        fingerprint,
+                        title,
+                    )
+                    continue
                 if use_llm_editor and not is_draw_alert:
                     queue_llm_breaking(title, summary, link, label, fingerprint)
                     pending_links.add(link)
@@ -557,7 +592,13 @@ def fetch_breaking(sources):
                 news = translate_text(title)
                 clean_news = clean_text(news)
                 event_type = "ucl_draw" if is_draw_alert else ""
+                lifecycle = lifecycle_decision(title, source=label, category="breaking", fingerprint=fingerprint)
+                if lifecycle.relevant and not lifecycle.changed:
+                    logging.info("[BREAKING SKIPPED: STORY STATUS UNCHANGED] %s", lifecycle.key)
+                    continue
                 if send_breaking(clean_news, link, source=label, fingerprint=fingerprint, event_type=event_type):
+                    if lifecycle.relevant:
+                        record_lifecycle(title, source=label, link=link, category="breaking", fingerprint=fingerprint)
                     seen_fingerprints.add(fingerprint)
                     found += 1
         except Exception as e:
@@ -569,11 +610,11 @@ def fetch_breaking(sources):
         found += posted
         rejected += rejected_now
 
-    return checked, found, errors, queued, rejected, len(load_llm_pending()) if use_llm_editor else 0
+    return checked, found, errors, queued, rejected, len(load_llm_pending()) if use_llm_editor else 0, awaiting_confirmation
 
 
 def run_cycle(sources):
-    checked, found, errors, queued, rejected, pending = fetch_breaking(sources)
+    checked, found, errors, queued, rejected, pending, awaiting_confirmation = fetch_breaking(sources)
     state = "degraded" if errors and errors == checked else "ok"
     record_status(
         "breaking",
@@ -586,6 +627,7 @@ def run_cycle(sources):
             "rejected": rejected,
             "pending": pending,
             "errors": errors,
+            "awaiting_confirmation": awaiting_confirmation,
             "dry_run": DRY_RUN,
         },
     )

@@ -106,6 +106,24 @@ def record_story(
     except Exception:
         # Publication must never fail because a secondary editorial index is unavailable.
         existing["transfer_update"] = None
+    try:
+        from story_lifecycle import record_lifecycle
+
+        lifecycle = record_lifecycle(
+            existing.get("title", ""),
+            source=existing.get("source", ""),
+            link=existing.get("link", ""),
+            category=existing.get("category", ""),
+            fingerprint=existing.get("id", ""),
+        )
+        existing["lifecycle_update"] = {
+            "relevant": lifecycle.relevant,
+            "changed": lifecycle.changed,
+            "key": lifecycle.key,
+            "status": lifecycle.status,
+        }
+    except Exception:
+        existing["lifecycle_update"] = None
     return existing
 
 
