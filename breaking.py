@@ -9,8 +9,10 @@ import logging
 import random
 import re
 import threading
+from datetime import datetime
 from html import escape
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import requests
 from colorama import init, Fore, Style
@@ -31,6 +33,7 @@ from source_quality import source_quality_policy, source_trust_tier
 from runtime_config import (
     BREAKING_HASHTAGS,
     BREAKING_INTERVAL_SECONDS,
+    DIGEST_TIMEZONE,
     DRY_RUN,
     LLM_EDITOR_BREAKING_BUFFER_SECONDS,
     LLM_EDITOR_BREAKING_FALLBACK_AFTER_SECONDS,
@@ -38,6 +41,8 @@ from runtime_config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_TIMEOUT_SECONDS,
     TARGET_CHAT_ID,
+    UCL_DRAW_ALERT_ENABLED,
+    UCL_DRAW_DATE,
     get_log_file,
     get_state_file,
     telegram_configured,
@@ -124,7 +129,8 @@ BREAKING_FOOTBALL_TERMS = (
     "sign", "signed", "transfer", "fichaje", "contract", "contrato", "renewal",
     "injury", "lesion", "lesión", "squad", "lineup", "convocatoria", "match",
     "partido", "goal", "gol", "трансфер", "контракт", "травм", "состав",
-    "матч", "гол", "переговор", "аренда", "уход", "подпис",
+    "матч", "гол", "переговор", "аренда", "уход", "подпис", "champions",
+    "лига чемпионов", "жеребьев",
 )
 REAL_SOURCE_TERMS = (
     "real madrid", "madrid universal", "managing madrid", "marca", "defensa central",
@@ -154,6 +160,24 @@ TEMPLATES = [
     "<b>Белая лента обновилась</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
     "<b>Из Мадрида пришло важное</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
 ]
+UCL_DRAW_TEMPLATE = (
+    "<b>Жеребьевка Лиги чемпионов</b>\n"
+    "{news}\n"
+    "<a href=\"{link}\">Читать</a> · {source}"
+)
+
+UCL_DRAW_TERMS = (
+    "champions league draw",
+    "champions league opponents",
+    "league phase draw",
+    "sorteo champions",
+    "sorteo de champions",
+    "sorteo de la champions",
+    "жеребьевк",
+    "соперник",
+    "оппонент",
+)
+UCL_TERMS = ("champions league", "champions", "лига чемпионов", "лч")
 
 
 def source_url(source: Any) -> str | None:
@@ -190,7 +214,20 @@ def has_breaking_context(text: str, source: str = "", summary: str = "") -> bool
     return has_real_signal and (has_football_signal or source_is_real)
 
 
-def is_breaking(text: str, source: str = "", summary: str = "") -> bool:
+def is_ucl_draw_result(text: str, summary: str = "", now: datetime | None = None) -> bool:
+    if not UCL_DRAW_ALERT_ENABLED or not UCL_DRAW_DATE:
+        return False
+
+    current = (now or datetime.now(ZoneInfo(DIGEST_TIMEZONE))).astimezone(ZoneInfo(DIGEST_TIMEZONE))
+    if current.date().isoformat() != UCL_DRAW_DATE:
+        return False
+
+    combined = _breaking_normalize(f"{text} {summary}")
+    has_real = "real madrid" in combined or "реал мадрид" in combined
+    return has_real and any(term in combined for term in UCL_TERMS) and any(term in combined for term in UCL_DRAW_TERMS)
+
+
+def is_breaking(text: str, source: str = "", summary: str = "", now: datetime | None = None) -> bool:
     lower_text = _breaking_normalize(text)
     if not has_breaking_context(text, source=source, summary=summary):
         logging.info("[BREAKING SKIPPED: LOW CONTEXT] %s: %s", source, text)
@@ -207,6 +244,10 @@ def is_breaking(text: str, source: str = "", summary: str = "") -> bool:
     if tier != "official" and any(term in lower_text for term in BREAKING_RUMOUR_TERMS):
         logging.info("[BREAKING SKIPPED: RUMOUR] %s: %s", source, text)
         return False
+
+    if is_ucl_draw_result(text, summary=summary, now=now):
+        logging.info("[BREAKING DETECTED: UCL DRAW] %s", text)
+        return True
 
     for word in STRONG_BREAKING_KEYWORDS:
         if word in lower_text:
@@ -284,7 +325,8 @@ def _post_breaking_row(row: dict[str, Any], decision: dict[str, Any] | None = No
     if not headline:
         headline = translate_text(str(row.get("title") or ""))
     clean_news = clean_text(headline)
-    send_breaking(clean_news, link, source=str(row.get("source") or ""), fingerprint=fingerprint)
+    event_type = "ucl_draw" if is_ucl_draw_result(str(row.get("title") or ""), str(row.get("summary") or "")) else ""
+    send_breaking(clean_news, link, source=str(row.get("source") or ""), fingerprint=fingerprint, event_type=event_type)
     return True
 
 
@@ -406,8 +448,14 @@ def post_telegram_photo(caption: str, photo_url: str) -> bool:
     return False
 
 
-def send_breaking(news: str, link: str, source: str = "Неизвестный источник", fingerprint: str = ""):
-    template = random.choice(TEMPLATES)
+def send_breaking(
+    news: str,
+    link: str,
+    source: str = "Неизвестный источник",
+    fingerprint: str = "",
+    event_type: str = "",
+):
+    template = UCL_DRAW_TEMPLATE if event_type == "ucl_draw" else random.choice(TEMPLATES)
     message = template.format(
         news=escape(news),
         link=escape(link, quote=True),
@@ -494,11 +542,12 @@ def fetch_breaking(sources):
                 continue
 
             if is_breaking(title, source=label, summary=summary):
-                fingerprint = semantic_news_key(title, summary)
+                is_draw_alert = is_ucl_draw_result(title, summary)
+                fingerprint = f"event:ucl-draw:{UCL_DRAW_DATE}" if is_draw_alert else semantic_news_key(title, summary)
                 if fingerprint in seen_fingerprints:
                     logging.info("[BREAKING SKIPPED: SEMANTIC DUPLICATE] %s: %s", fingerprint, title)
                     continue
-                if use_llm_editor:
+                if use_llm_editor and not is_draw_alert:
                     queue_llm_breaking(title, summary, link, label, fingerprint)
                     pending_links.add(link)
                     seen_fingerprints.add(fingerprint)
@@ -507,7 +556,8 @@ def fetch_breaking(sources):
                     continue
                 news = translate_text(title)
                 clean_news = clean_text(news)
-                if send_breaking(clean_news, link, source=label, fingerprint=fingerprint):
+                event_type = "ucl_draw" if is_draw_alert else ""
+                if send_breaking(clean_news, link, source=label, fingerprint=fingerprint, event_type=event_type):
                     seen_fingerprints.add(fingerprint)
                     found += 1
         except Exception as e:

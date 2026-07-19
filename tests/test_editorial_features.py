@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import breaking
 import editorial_archive
 import transfer_tracker
 import weekly_recap
@@ -63,6 +64,17 @@ def test_breaking_requires_reliable_source_and_rejects_rumour():
     assert source_trust_tier("X – @realmadrid") == "official"
     assert is_breaking("Official: Real Madrid announce Michael Olise signing", "X – @realmadrid") is True
     assert is_breaking("Confirmed: Real Madrid could sign Michael Olise", "Bernabéu Digital") is False
+
+
+def test_ucl_draw_result_becomes_one_special_breaking_on_draw_day(monkeypatch):
+    monkeypatch.setattr(breaking, "UCL_DRAW_ALERT_ENABLED", True)
+    monkeypatch.setattr(breaking, "UCL_DRAW_DATE", "2026-08-27")
+    draw_day = datetime(2026, 8, 27, 17, 0, tzinfo=timezone.utc)
+    title = "Champions League draw: Real Madrid learn their league phase opponents"
+
+    assert breaking.is_ucl_draw_result(title, now=draw_day) is True
+    assert breaking.is_breaking(title, "X – @realmadrid", now=draw_day) is True
+    assert breaking.is_ucl_draw_result(title, now=datetime(2026, 8, 28, tzinfo=timezone.utc)) is False
 
 
 def test_source_quality_autopilot_marks_only_very_noisy_sources_as_backup():
