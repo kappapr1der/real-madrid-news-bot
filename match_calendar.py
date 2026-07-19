@@ -128,9 +128,23 @@ def match_calendar_status(path: Path = MATCH_SCHEDULE_FILE) -> tuple[str, str, d
     expected_publication = str(metadata.get("expected_publication") or "").strip()
     checked_at = str(metadata.get("checked_at") or "").strip()
 
+    scheduled_matches = sum(
+        1
+        for row in rows
+        if isinstance(row, dict) and str(row.get("kickoff") or "").strip()
+    )
+    date_hint_matches = sum(
+        1
+        for row in rows
+        if isinstance(row, dict) and str(row.get("date_hint") or row.get("date") or "").strip()
+    )
+
     metrics: dict[str, Any] = {
         "path": str(path),
         "matches": len(rows),
+        "scheduled_matches": scheduled_matches,
+        "date_hint_matches": date_hint_matches,
+        "pending_kickoff_times": max(len(rows) - scheduled_matches, 0),
         "status": declared_status or ("ready" if rows else "empty"),
     }
     if expected_publication:
@@ -141,6 +155,14 @@ def match_calendar_status(path: Path = MATCH_SCHEDULE_FILE) -> tuple[str, str, d
     if declared_status in {"pending", "awaiting", "not_published"} and not rows:
         when = f", ожидается {expected_publication}" if expected_publication else ""
         return "pending", f"официальный календарь ещё не опубликован{when}", metrics
+    if rows and scheduled_matches < len(rows):
+        return (
+            "partial",
+            "загружен календарь: "
+            f"{len(rows)} матчей, с подтвержденным временем {scheduled_matches}, "
+            f"ожидают времени {len(rows) - scheduled_matches}",
+            metrics,
+        )
     if rows:
         return "ready", f"загружено матчей: {len(rows)}", metrics
     return "empty", "календарь валиден, но матчей пока нет", metrics
