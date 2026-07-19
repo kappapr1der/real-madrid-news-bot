@@ -350,7 +350,7 @@ DIGEST_MORNING_TIME=09:00
 DIGEST_DAY_TIME=15:00
 DIGEST_EVENING_TIME=21:00
 DIGEST_MISSED_CATCHUP_ENABLED=true
-DIGEST_MISSED_GRACE_MINUTES=360
+DIGEST_MISSED_GRACE_MINUTES=30
 DIGEST_LIMIT=10
 DIGEST_MIN_ITEMS_TO_POST=3
 DIGEST_SHORT_FORMAT_THRESHOLD=6
@@ -476,7 +476,7 @@ python digest.py вечернего
 
 Если `DIGEST_PREFLIGHT_ENABLED=true`, менеджер запускает `preflight.py digest <label>` за `DIGEST_PREFLIGHT_MINUTES` минут до каждого дайджеста. Preflight не публикует пост и не вызывает LLM-редактор: он собирает свежие кандидаты, проверяет дедупликацию, hard-deny, тонкие выпуски и очередь breaking, а затем пишет результат в `STATUS_FILE`. Свежие warning/error из preflight видны в heartbeat в течение `PREFLIGHT_STATUS_TTL_SECONDS`.
 
-Если VPS был выключен или недоступен в момент запуска дайджеста, менеджер при старте проверяет пропущенные слоты. При `DIGEST_MISSED_CATCHUP_ENABLED=true` он догонит только последний актуальный выпуск дня, если с его планового времени прошло не больше `DIGEST_MISSED_GRACE_MINUTES` минут и этот дайджест сегодня ещё не завершался. Это защищает канал от пачки устаревших утренних/дневных выпусков после долгой аварии. По умолчанию окно — `360` минут.
+Если VPS был выключен или недоступен в момент запуска дайджеста, менеджер при старте проверяет пропущенные слоты. При `DIGEST_MISSED_CATCHUP_ENABLED=true` он догонит только последний актуальный выпуск дня, если с его планового времени прошло не больше `DIGEST_MISSED_GRACE_MINUTES` минут и этот дайджест сегодня ещё не завершался. Это защищает канал от пачки устаревших утренних/дневных выпусков после долгой аварии. По умолчанию окно — `30` минут.
 
 ## Live-режим
 
