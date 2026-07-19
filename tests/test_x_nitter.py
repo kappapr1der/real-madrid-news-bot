@@ -72,6 +72,15 @@ def test_nitter_reposts_are_identified_before_editorial_selection():
     assert feed_utils.is_repost_entry({"title": "Real Madrid announce the squad"}) is False
 
 
+def test_entry_media_url_prefers_rss_media_before_summary_markup():
+    entry = {
+        "media_content": [{"url": "https://images.example/post.jpg"}],
+        "summary": '<img src="https://images.example/fallback.jpg">',
+    }
+
+    assert feed_utils.entry_media_url(entry) == "https://images.example/post.jpg"
+
+
 def test_curl_fetcher_returns_feed_bytes(monkeypatch):
     class Result:
         returncode = 0

@@ -598,7 +598,7 @@ DRY_RUN=true python week_ahead.py --force
 
 Короткий дайджест, который помещается в Telegram-caption, тоже выходит на фирменной карточке. Длинный дайджест остаётся одним текстовым сообщением: Telegram ограничивает подпись к изображению 1024 символами, а разбивать выпуск на два равноправных поста ради обложки бот не будет.
 
-Настройки: `VISUAL_CARDS_ENABLED`, `VISUAL_NEWS_CARDS_ENABLED`, `VISUAL_MATCH_CARDS_ENABLED`, `CLUB_BADGE_LOOKUP_URL`, `CLUB_BADGE_LOOKUP_TIMEOUT_SECONDS`.
+Настройки: `VISUAL_CARDS_ENABLED`, `VISUAL_NEWS_CARDS_ENABLED`, `VISUAL_MATCH_CARDS_ENABLED`, `VISUAL_X_POST_CARDS_ENABLED`, `CLUB_BADGE_LOOKUP_URL`, `CLUB_BADGE_LOOKUP_TIMEOUT_SECONDS`. X/Nitter-breaking получает отдельную карточку с автором, русской сутью и медиа из исходного поста, когда оно доступно.
 
 ## Редакционная надежность
 

@@ -23,7 +23,7 @@ from editorial_archive import record_story
 from text_cleaner import clean_text
 from filters import passes_filters
 from fabrizio_source import fetch_fabrizio_telegram_entries
-from feed_utils import is_repost_entry, parse_feed_url, source_is_x
+from feed_utils import entry_media_url, is_repost_entry, parse_feed_url, source_is_x
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
 from llm_editor import llm_editor_enabled, review_breaking_items
@@ -33,7 +33,7 @@ from sources_international import HERE_WE_GO_SOURCES, SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from source_quality import source_quality_policy, source_trust_tier
 from story_lifecycle import lifecycle_decision, record_lifecycle
-from visual_cards import render_news_card
+from visual_cards import render_news_card, render_x_post_card
 from runtime_config import (
     BREAKING_HASHTAGS,
     BREAKING_INTERVAL_SECONDS,
@@ -375,7 +375,14 @@ def pending_llm_links() -> set[str]:
     return {row.get("link", "") for row in load_llm_pending() if row.get("link")}
 
 
-def queue_llm_breaking(title: str, summary: str, link: str, source: str, fingerprint: str) -> None:
+def queue_llm_breaking(
+    title: str,
+    summary: str,
+    link: str,
+    source: str,
+    fingerprint: str,
+    media_image_url: str = "",
+) -> None:
     now = int(time.time())
     rows = load_llm_pending()
     by_link = {row.get("link"): row for row in rows if row.get("link")}
@@ -391,6 +398,7 @@ def queue_llm_breaking(title: str, summary: str, link: str, source: str, fingerp
                 "link": link,
                 "source": source,
                 "fingerprint": fingerprint,
+                "media_image_url": media_image_url,
                 "first_seen_at": now,
                 "last_seen_at": now,
                 "seen_count": 1,
@@ -424,7 +432,14 @@ def _post_breaking_row(row: dict[str, Any], decision: dict[str, Any] | None = No
         logging.info("[BREAKING SKIPPED: STORY STATUS UNCHANGED] %s", lifecycle.key)
         return False
     event_type = "ucl_draw" if is_ucl_draw_result(str(row.get("title") or ""), str(row.get("summary") or "")) else ""
-    sent = send_breaking(clean_news, link, source=str(row.get("source") or ""), fingerprint=fingerprint, event_type=event_type)
+    sent = send_breaking(
+        clean_news,
+        link,
+        source=str(row.get("source") or ""),
+        fingerprint=fingerprint,
+        event_type=event_type,
+        media_image_url=str(row.get("media_image_url") or ""),
+    )
     if sent and lifecycle.relevant:
         record_lifecycle(
             str(row.get("title") or ""),
@@ -570,6 +585,7 @@ def send_breaking(
     source: str = "Неизвестный источник",
     fingerprint: str = "",
     event_type: str = "",
+    media_image_url: str = "",
 ):
     if event_type == "ucl_draw":
         template = UCL_DRAW_TEMPLATE
@@ -598,8 +614,9 @@ def send_breaking(
         print(Fore.RED + "[BREAKING] TELEGRAM_BOT_TOKEN или TARGET_CHAT_ID не заданы")
         return False
 
-    image_url = fetch_article_image(link)
-    branded_card = render_news_card(image_url)
+    x_source = bool(re.match(r"^x\s*[-–]\s*@", source.strip(), flags=re.IGNORECASE))
+    image_url = "" if x_source else fetch_article_image(link)
+    branded_card = render_x_post_card(source, news, media_image_url) if x_source else render_news_card(image_url)
     sent = False
     if branded_card:
         sent = post_telegram_photo(message, photo_path=branded_card)
@@ -713,7 +730,14 @@ def fetch_breaking(sources):
                     )
                     continue
                 if use_llm_editor and not is_draw_alert and not here_we_go:
-                    queue_llm_breaking(title, summary, link, label, fingerprint)
+                    queue_llm_breaking(
+                        title,
+                        summary,
+                        link,
+                        label,
+                        fingerprint,
+                        media_image_url=entry_media_url(entry) if source_is_x(source) else "",
+                    )
                     pending_links.add(link)
                     seen_fingerprints.add(fingerprint)
                     queued += 1
@@ -726,7 +750,14 @@ def fetch_breaking(sources):
                 if lifecycle.relevant and not lifecycle.changed:
                     logging.info("[BREAKING SKIPPED: STORY STATUS UNCHANGED] %s", lifecycle.key)
                     continue
-                if send_breaking(clean_news, link, source=label, fingerprint=fingerprint, event_type=event_type):
+                if send_breaking(
+                    clean_news,
+                    link,
+                    source=label,
+                    fingerprint=fingerprint,
+                    event_type=event_type,
+                    media_image_url=entry_media_url(entry) if source_is_x(source) else "",
+                ):
                     if lifecycle.relevant:
                         record_lifecycle(title, source=label, link=link, category="breaking", fingerprint=fingerprint)
                     seen_fingerprints.add(fingerprint)

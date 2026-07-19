@@ -14,6 +14,7 @@ from runtime_config import (
     VISUAL_CARDS_ENABLED,
     VISUAL_MATCH_CARDS_ENABLED,
     VISUAL_NEWS_CARDS_ENABLED,
+    VISUAL_X_POST_CARDS_ENABLED,
     get_state_file,
 )
 
@@ -176,6 +177,31 @@ def _fit_text(draw: Any, text: str, font: Any, max_width: int) -> str:
     return f"{value.rstrip()}…" if value else "…"
 
 
+def _wrapped_lines(draw: Any, text: str, font: Any, max_width: int, max_lines: int) -> list[str]:
+    words = re.sub(r"\s+", " ", text or "").strip().split(" ")
+    if not words:
+        return []
+
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if draw.textbbox((0, 0), candidate, font=font)[2] <= max_width:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+        current = _fit_text(draw, word, font, max_width)
+        if len(lines) == max_lines:
+            break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+
+    if len(lines) == max_lines and len(words) > len(" ".join(lines).split(" ")):
+        lines[-1] = _fit_text(draw, lines[-1], font, max_width)
+    return lines[:max_lines]
+
+
 def _paste_badge_or_fallback(canvas: Any, team_name: str, center_x: int, center_y: int) -> None:
     pillow = _pillow()
     if not pillow:
@@ -253,6 +279,63 @@ def render_news_card(article_image_url: str = "") -> Path | None:
     draw.text((174, 258), "БЕЛАЯ ЛЕНТА", fill="#1D2733", font=title_font)
     draw.text((178, 390), "Новости мадридистов", fill="#5B6675", font=sub_font)
     return _save_card(canvas, f"news-brand-v2:{article_image_url}")
+
+
+def render_x_post_card(source: str, headline: str, media_image_url: str = "") -> Path | None:
+    """Render a dedicated visual treatment for curated X/Nitter sources."""
+    if not VISUAL_CARDS_ENABLED or not VISUAL_X_POST_CARDS_ENABLED:
+        return None
+    pillow = _pillow()
+    if not pillow:
+        return None
+
+    image, draw_module, _, image_ops = pillow
+    width, height = 1080, 1350
+    canvas = image.new("RGBA", (width, height), "#0B1F35")
+    draw = draw_module.Draw(canvas)
+    media = _remote_image(media_image_url)
+
+    draw.rectangle((0, 0, width, 14), fill="#C7A34A")
+    draw.rectangle((54, 62, width - 54, height - 62), fill="#F8FAFC")
+    draw.rectangle((54, 62, width - 54, 190), fill="#173E78")
+    draw.rectangle((54, 190, width - 54, 202), fill="#C7A34A")
+
+    brand_font = _font(30)
+    source_font = _font(44)
+    title_font = _font(58)
+    note_font = _font(28, bold=False)
+    footer_font = _font(25, bold=False)
+
+    draw.text((100, 101), "КОФЕ СО СЛИВКАМИ", fill="#F8FAFC", font=brand_font)
+    draw.text((100, 258), "X / МАДРИД", fill="#173E78", font=brand_font)
+    handle = re.search(r"@([A-Za-z0-9_]+)", source or "")
+    source_label = f"@{handle.group(1)}" if handle else source
+    source_label = _fit_text(draw, source_label, source_font, 760)
+    draw.text((100, 306), source_label, fill="#1D2733", font=source_font)
+    _paste_badge_or_fallback(canvas, REAL_MADRID_NAME, 894, 314)
+
+    text_y = 425
+    for line in _wrapped_lines(draw, headline, title_font, 860, max_lines=5):
+        draw.text((110, text_y), line, fill="#173E78", font=title_font)
+        text_y += 76
+
+    if media:
+        image_panel_top = max(text_y + 42, 690)
+        image_panel_height = 380
+        fitted = image_ops.fit(media, (860, image_panel_height), method=image.Resampling.LANCZOS)
+        canvas.alpha_composite(fitted, (110, image_panel_top))
+        draw.rectangle(
+            (110, image_panel_top, 970, image_panel_top + image_panel_height),
+            outline="#C7A34A",
+            width=5,
+        )
+    else:
+        draw.rectangle((110, 862, 970, 866), fill="#C7A34A")
+        draw.text((110, 908), "СВЕЖЕЕ ИЗ ЛЕНТЫ МАДРИДИСТОВ", fill="#5B6675", font=note_font)
+
+    draw.rectangle((54, height - 122, width - 54, height - 62), fill="#173E78")
+    draw.text((100, height - 104), "БЕЛАЯ ЛЕНТА МАДРИДА", fill="#F8FAFC", font=footer_font)
+    return _save_card(canvas, f"x-post-v1:{source}:{headline}:{media_image_url}")
 
 
 def render_match_card(match: Any, phase: str = "", score: str = "") -> Path | None:

@@ -5,6 +5,7 @@ from typing import Any
 
 import feedparser
 import requests
+from bs4 import BeautifulSoup
 
 from runtime_config import HTTP_USER_AGENT, RSS_TIMEOUT_SECONDS
 
@@ -19,6 +20,30 @@ def source_is_x(source: str | dict) -> bool:
 def is_repost_entry(entry) -> bool:
     title = str(entry.get("title", "") or "").strip().casefold()
     return title.startswith("rt by @") or title.startswith("retweet by @")
+
+
+def entry_media_url(entry) -> str:
+    """Return the first usable image URL exposed by an RSS entry."""
+    for key in ("media_content", "media_thumbnail", "enclosures"):
+        rows = entry.get(key, []) or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            url = str(row.get("url") or row.get("href") or "").strip()
+            if url.startswith(("https://", "http://")) and not url.lower().endswith(".svg"):
+                return url
+
+    summary = str(entry.get("summary", "") or "")
+    if not summary:
+        return ""
+    soup = BeautifulSoup(summary, "html.parser")
+    for image in soup.select("img[src]"):
+        url = str(image.get("src") or "").strip()
+        if url.startswith(("https://", "http://")) and not url.lower().endswith(".svg"):
+            return url
+    return ""
 
 
 def clear_feed_cache() -> None:
