@@ -16,7 +16,7 @@ import requests
 
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
-from filters import passes_filters
+from filters import is_handle_only_x_title, passes_filters
 from feed_utils import is_repost_entry, parse_feed_url, source_is_x
 from match_calendar import digest_block_reason
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
@@ -415,6 +415,12 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "mantienen-bloqueo-fichaje-yan-diomande-psg",
     "once ideal del mundial",
     "ideal world cup xi",
+    "real madrid have doubts over the suitability of superstar trio",
+    "doubts over the suitability of superstar trio",
+    "letras gigantes acero inoxidable fachada bernabeu",
+    "aparece incognita sobre letras gigantes acero inoxidable",
+    "iris ashley deja real madrid",
+    "iris ashley deja el real madrid",
     "casillas sobre relacion con mourinho",
     "casillas sobre su relacion con mourinho",
     "casillas mourinho fue un matrimonio",
@@ -1340,6 +1346,8 @@ def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[R
 
 def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     candidate = item.candidate
+    if is_handle_only_x_title(candidate.title, getattr(candidate, "source", "")):
+        return True
     text = " ".join(
         [
             str(candidate.title or ""),

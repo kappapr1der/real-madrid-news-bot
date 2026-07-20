@@ -90,11 +90,24 @@ def test_july_twentieth_morning_noise_is_filtered():
         ("Real Madrid defender determined to stay, potentially blocking Alessandro Bastoni move", "Madrid Universal"),
         ("Mantienen el bloqueo al fichaje de Yan Diomande por el PSG", "Bernabeu Digital"),
         ("Once ideal del Mundial: cuatro espanoles, Messi, Mbappe y Haaland", "Marca - Real Madrid"),
+        ("Real Madrid have doubts over the suitability of superstar trio despite individual quality", "Madrid Universal"),
+        ("Aparece incognita sobre letras gigantes acero inoxidable en la fachada del Bernabeu", "Defensa Central"),
+        ("Iris Ashley deja el Real Madrid y se marcha al Granada", "Mundo Deportivo - Real Madrid"),
     ]
 
     for title, source in cases:
         assert passes_filters(title, source=source) is False
         assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_handle_only_x_post_is_filtered_from_digest():
+    title = "@TrentAA @Gonzalo7Garcia_"
+    source = "X - @realmadrid"
+    item = _item(title)
+    item.candidate.source = source
+
+    assert passes_filters(title, source=source) is False
+    assert digest_llm_hard_deny(item, title) is True
 
 
 def test_rank_digest_groups_bernabeu_summer_works_thread():

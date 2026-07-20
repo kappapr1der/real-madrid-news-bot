@@ -100,6 +100,9 @@ FILTERS = {
         "real madrid defender determined to stay", "potentially blocking alessandro bastoni move",
         "mantienen el bloqueo al fichaje de yan diomande por el psg", "bloqueo al fichaje de yan diomande por el psg",
         "once ideal del mundial", "ideal world cup xi",
+        "real madrid have doubts over the suitability of superstar trio", "doubts over the suitability of superstar trio",
+        "letras gigantes acero inoxidable fachada bernabeu", "aparece incognita sobre letras gigantes acero inoxidable",
+        "iris ashley deja real madrid", "iris ashley deja el real madrid",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
@@ -589,6 +592,14 @@ def _real_source_has_topic_signal(title: str, body: str) -> bool:
     )
 
 
+def is_handle_only_x_title(text: str, source: str = "") -> bool:
+    """Reject social cards that contain only tagged accounts, not a news headline."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @"):
+        return False
+    return bool(re.fullmatch(r"(?:@[A-Za-z0-9_]+\s*)+", str(text or "").strip()))
+
+
 def passes_filters(text: str, summary: Optional[str] = None, source: Optional[str] = None) -> bool:
     """
     Основной фильтр релевантности.
@@ -606,6 +617,10 @@ def passes_filters(text: str, summary: Optional[str] = None, source: Optional[st
     title = _normalize(text)
     body = _normalize(summary) if summary else ""
     source_name = _normalize(source) if source else ""
+
+    if is_handle_only_x_title(text, source):
+        logger.info(f"[FILTERED: X HANDLE ONLY] {source}: {text[:90]}...")
+        return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
         logger.info(f"[FILTERED: BLACKLIST] {text[:90]}...")
