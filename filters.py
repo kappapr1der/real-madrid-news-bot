@@ -90,6 +90,14 @@ FILTERS = {
         "partido de sus vidas", "prensa pide segunda estrella", "вся пресса требует вторую звезду",
         "alba redondo cerca de fichar por la juventus", "альба редондо близка к переходу в ювентус",
 
+        # July 20 morning: pundit takes, unrelated World Cup coverage, and anonymous
+        # transfer clickbait are not stories for the club feed.
+        "tomas guasch", "tomás guasch", "томас гуаш", "fichar olise es capricho",
+        "spain and marc cucurella crowned world cup champions", "cucurella crowned world cup champions",
+        "rodri rodri rodri", "rodri, rodri, rodri", "toni kroos heroico triunfo espana", "toni kroos y el heroico triunfo",
+        "heroic spain triumph kroos",
+        "real madrid fichado lateral izquierdo mundo", "real madrid has signed the best left back in the world",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

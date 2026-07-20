@@ -80,6 +80,20 @@ def test_late_evening_catchup_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_twentieth_morning_noise_is_filtered():
+    cases = [
+        ("Tomas Guasch: fichar a Olise es un capricho", "Defensa Central"),
+        ("Spain and Marc Cucurella crowned World Cup champions", "Managing Madrid"),
+        ("Rodri, Rodri, Rodri, Rodri: July 20, 2026", "Managing Madrid"),
+        ("Toni Kroos y el heroico triunfo de Espana: el futbol gano", "Marca - Real Madrid"),
+        ("Real Madrid fichado lateral izquierdo mundo", "Bernabeu Digital"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_rank_digest_groups_bernabeu_summer_works_thread():
     ranked = rank_digest_candidates(
         [
@@ -1435,3 +1449,4 @@ def test_morning_digest_translation_glitches_are_cleaned():
     assert clean_text(
         "Тчуамени подписал продление контракта с «Реалом» до 2031 года"
     ) == "Тчуамени продлил контракт с «Реалом» до 2031 года"
+    assert clean_text("Подписание Олайи - прихоть") == "Подписание Олисе - прихоть"
