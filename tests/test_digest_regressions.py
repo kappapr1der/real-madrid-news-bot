@@ -87,6 +87,9 @@ def test_july_twentieth_morning_noise_is_filtered():
         ("Rodri, Rodri, Rodri, Rodri: July 20, 2026", "Managing Madrid"),
         ("Toni Kroos y el heroico triunfo de Espana: el futbol gano", "Marca - Real Madrid"),
         ("Real Madrid fichado lateral izquierdo mundo", "Bernabeu Digital"),
+        ("Real Madrid defender determined to stay, potentially blocking Alessandro Bastoni move", "Madrid Universal"),
+        ("Mantienen el bloqueo al fichaje de Yan Diomande por el PSG", "Bernabeu Digital"),
+        ("Once ideal del Mundial: cuatro espanoles, Messi, Mbappe y Haaland", "Marca - Real Madrid"),
     ]
 
     for title, source in cases:

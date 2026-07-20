@@ -97,6 +97,9 @@ FILTERS = {
         "rodri rodri rodri", "rodri, rodri, rodri", "toni kroos heroico triunfo espana", "toni kroos y el heroico triunfo",
         "heroic spain triumph kroos",
         "real madrid fichado lateral izquierdo mundo", "real madrid has signed the best left back in the world",
+        "real madrid defender determined to stay", "potentially blocking alessandro bastoni move",
+        "mantienen el bloqueo al fichaje de yan diomande por el psg", "bloqueo al fichaje de yan diomande por el psg",
+        "once ideal del mundial", "ideal world cup xi",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
