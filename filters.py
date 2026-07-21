@@ -112,6 +112,16 @@ FILTERS = {
         "carlo ancelotti was right about wanting this spanish midfielder at real madrid in 2022",
         "verstappen", "red bull", "ферстаппен", "ред булл",
 
+        # July 21 evening: membership marketing, World Cup age trivia, and
+        # video-game promotion do not belong in the club-news digest.
+        "new season campaign", "become an official real madrid fan",
+        "campana nueva temporada", "hazte aficionado oficial real madrid",
+        "empieza la nueva temporada como fan oficial",
+        "how old will every real madrid player be at the 2030 world cup",
+        "edad tendran todos jugadores real madrid proximo mundial 2030",
+        "la edad que tendrán todos los jugadores del real madrid en el próximo mundial 2030",
+        "fc27", "portada fc27",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

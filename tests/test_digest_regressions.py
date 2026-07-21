@@ -136,6 +136,29 @@ def test_july_twenty_first_titles_are_cleaned():
     ) == "Марио Кортегана считает трансфер Олисе этим летом возможным"
 
 
+def test_july_twenty_first_evening_noise_is_filtered():
+    cases = [
+        ("New season campaign: Become an official Real Madrid fan", "X - @realmadrid"),
+        ("Empieza la nueva temporada como fan oficial y vive el Real Madrid mas cerca que nunca", "X - @realmadrid"),
+        ("How old will every Real Madrid player be at the 2030 World Cup?", "Defensa Central"),
+        ("La edad que tendrán todos los jugadores del Real Madrid en el próximo Mundial 2030", "Defensa Central"),
+        ("Mbappe returns as the FC27 cover star", "Marca - Real Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_mendy_recovery_reports_share_a_semantic_key():
+    timeline_title = "Injured Real Madrid defender expected to be back in September-October"
+    training_title = "Mendy vuelve al cesped y cumple plazos optimistas"
+
+    assert semantic_news_key(timeline_title) == semantic_news_key(training_title)
+    assert semantic_news_key(timeline_title) == "injury:mendy-return-schedule"
+    assert clean_text(timeline_title) == "Мэнди должен вернуться в сентябре-октябре"
+
+
 def test_rank_digest_groups_bernabeu_summer_works_thread():
     ranked = rank_digest_candidates(
         [

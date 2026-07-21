@@ -632,6 +632,21 @@ def is_bernabeu_summer_works_text(text: str) -> bool:
     )
 
 
+def is_mendy_return_schedule_text(text: str) -> bool:
+    """Unify the late-July reports describing Ferland Mendy's recovery timeline."""
+    generic_timeline = (
+        contains_any(text, ("injured real madrid defender", "defensor lesionado real madrid"))
+        and contains_any(text, ("september", "septiembre"))
+        and contains_any(text, ("october", "octubre"))
+    )
+    mendy_training_update = (
+        contains_any(text, ("mendy", "ферлан менди", "менди"))
+        and contains_any(text, ("cesped", "grass", "training pitch", "entrena"))
+        and contains_any(text, ("plazos", "schedule", "return", "vuelve", "regresa"))
+    )
+    return generic_timeline or mendy_training_update
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -640,6 +655,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_courtois_world_cup_injury_text(text):
         return "injury:courtois-belgium-world-cup"
+
+    if is_mendy_return_schedule_text(text):
+        return "injury:mendy-return-schedule"
 
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
@@ -788,6 +806,8 @@ def canonical_news_key(key: str) -> str:
     text = normalize_news_text(clean.replace("generic:", " ").replace(":", " ").replace("-", " "))
     if is_bernabeu_summer_works_text(text):
         return "club:bernabeu-summer-works"
+    if is_mendy_return_schedule_text(text):
+        return "injury:mendy-return-schedule"
     if is_venezuela_donation_text(text):
         return "club:donation:venezuela-earthquake"
     if is_joan_martinez_valencia_text(text):
