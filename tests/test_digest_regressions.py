@@ -110,6 +110,32 @@ def test_handle_only_x_post_is_filtered_from_digest():
     assert digest_llm_hard_deny(item, title) is True
 
 
+def test_july_twenty_first_day_noise_is_filtered():
+    cases = [
+        ("Real Madrid consider move for Bayern Munich superstar unfeasible", "Madrid Universal"),
+        ("Quillo Barrios, comunicador: Argentina tiene grandeza Madrid", "Defensa Central"),
+        ("Courtois presentara plataforma inversion Madrid", "Mundo Deportivo - Real Madrid"),
+        ("Mendy entrena cesped, Lunin gimnasio", "Mundo Deportivo - Real Madrid"),
+        ("Novedades mercado: afirman interes Ferran Torres", "Bernabeu Digital"),
+        ("Vinicius luce nueva imagen tras el Mundial con su novia Virginia", "Marca - Real Madrid"),
+        ("Carlo Ancelotti was right about wanting this Spanish midfielder at Real Madrid in 2022", "The Real Champs"),
+        ("Este proyecto es para Verstappen: Perez explica como hunden pilotos en Red Bull", "Sports.ru"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_july_twenty_first_titles_are_cleaned():
+    assert clean_text(
+        "Real Madrid goalkeeper trains alone after muscle issue"
+    ) == "Лунин тренируется отдельно из-за мышечных проблем"
+    assert clean_text(
+        "Кортегана не считает возможным трансфер Олиза этим летом"
+    ) == "Марио Кортегана считает трансфер Олисе этим летом возможным"
+
+
 def test_rank_digest_groups_bernabeu_summer_works_thread():
     ranked = rank_digest_candidates(
         [

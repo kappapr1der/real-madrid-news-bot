@@ -103,6 +103,14 @@ FILTERS = {
         "real madrid have doubts over the suitability of superstar trio", "doubts over the suitability of superstar trio",
         "letras gigantes acero inoxidable fachada bernabeu", "aparece incognita sobre letras gigantes acero inoxidable",
         "iris ashley deja real madrid", "iris ashley deja el real madrid",
+        "real madrid consider move for bayern munich superstar unfeasible",
+        "quillo barrios comunicador", "argentina tiene grandeza madrid",
+        "courtois presentara plataforma inversion madrid",
+        "mendy entrena cesped lunin gimnasio", "mendy entrena cesped, lunin gimnasio",
+        "novedades mercado afirman interes ferran torres", "novedades mercado: afirman interes ferran torres",
+        "vinicius luce nueva imagen",
+        "carlo ancelotti was right about wanting this spanish midfielder at real madrid in 2022",
+        "verstappen", "red bull", "ферстаппен", "ред булл",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
