@@ -141,6 +141,8 @@ FILTERS = {
         "mundial dispara real madrid", "mundial dispara al real madrid",
         "expertos en climatizacion", "expertos en climatización",
         "air conditioning remote",
+        "real madrid trio see market values soar after impressive world cup displays",
+        "every real madrid fan has been asking for",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.

@@ -692,6 +692,31 @@ def is_rodri_real_interest_text(text: str) -> bool:
     )
 
 
+def is_valverde_mourinho_leadership_text(text: str) -> bool:
+    """Keep the first-day Valverde/Mourinho leadership quotes in one story."""
+    return (
+        contains_any(text, ("valverde", "вальверде"))
+        and contains_any(text, ("mourinho", "моуринью"))
+        and contains_any(
+            text,
+            (
+                "captain",
+                "captaincy",
+                "learn",
+                "learning",
+                "aprend",
+                "rendido",
+                "hails",
+                "first day",
+                "primer dia",
+                "учиться",
+                "капитан",
+                "повязк",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -709,6 +734,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
+
+    if is_valverde_mourinho_leadership_text(text):
+        return "club:valverde-mourinho-leadership"
 
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
@@ -863,6 +891,8 @@ def canonical_news_key(key: str) -> str:
         return "social:rodrygo-cucurella-world-cup-welcome"
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
+    if is_valverde_mourinho_leadership_text(text):
+        return "club:valverde-mourinho-leadership"
     if is_venezuela_donation_text(text):
         return "club:donation:venezuela-earthquake"
     if is_joan_martinez_valencia_text(text):

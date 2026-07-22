@@ -180,6 +180,28 @@ def test_july_twenty_second_evening_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_late_july_twenty_second_noise_is_filtered():
+    cases = [
+        ("Real Madrid trio see market values soar after impressive World Cup displays", "Madrid Universal"),
+        ("Real Madrid are sending Arda Guler a message every Real Madrid fan has been asking for", "The Real Champs"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_valverde_mourinho_leadership_quotes_share_a_semantic_key():
+    day_title = "Valverde hails Mourinho, embraces Real Madrid captaincy"
+    evening_title = "Valverde ready to learn from Mourinho"
+
+    assert semantic_news_key(day_title) == semantic_news_key(evening_title)
+    assert semantic_news_key(day_title) == "club:valverde-mourinho-leadership"
+    assert clean_text(
+        "От перехода в «Реал» за 60 миллионов до перехода в аренду этим летом: «После Франко Мастантуоно в Испании и за рубежом осталось более 5 команд»"
+    ) == "Франко Мастантуоно может уйти в аренду: интерес есть у пяти клубов"
+
+
 def test_rodri_interest_reports_share_a_semantic_key():
     first_title = "Real Madrid interested in Rodri"
     second_title = "Rodri: Real Madrid siempre quiere fichar a los mejores jugadores"

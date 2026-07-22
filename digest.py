@@ -407,6 +407,8 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "expertos en climatizacion",
     "expertos en climatización",
     "air conditioning remote",
+    "real madrid trio see market values soar after impressive world cup displays",
+    "every real madrid fan has been asking for",
     "argentina make 3 changes to lineup",
     "argentina makes 3 changes to lineup",
     "argentina 3 changes to lineup",
