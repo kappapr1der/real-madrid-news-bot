@@ -168,6 +168,10 @@ HERE_WE_GO_DEAL_TERMS = (
     "deal", "sign", "signed", "signing", "joining", "transfer", "move", "agreement",
     "contract", "loan", "fichaje", "traspaso", "contrato", "cesion",
 )
+HERE_WE_GO_REAL_MADRID_TERMS = (
+    "real madrid", "реал мадрид", "мадридский реал", "мадридского реала",
+    "rmcf", "los blancos", "club blanco", "сливочн",
+)
 
 TEMPLATES = [
     "<b>Сливочная молния</b>\n{news}\n<a href=\"{link}\">Читать</a> · {source}",
@@ -221,6 +225,12 @@ def has_breaking_context(text: str, source: str = "", summary: str = "") -> bool
     return has_real_signal and (has_football_signal or source_is_real)
 
 
+def has_direct_real_madrid_reference(text: str, summary: str = "") -> bool:
+    """Keep Romano's dedicated transfer stream tied to the club itself."""
+    combined = _breaking_normalize(f"{text} {summary}")
+    return any(term in combined for term in HERE_WE_GO_REAL_MADRID_TERMS)
+
+
 def is_here_we_go(text: str, source: str = "", summary: str = "") -> bool:
     """Accept Romano's phrase only for a direct Real Madrid transfer confirmation."""
     if not HERE_WE_GO_ENABLED or _breaking_normalize(source) != HERE_WE_GO_SOURCE:
@@ -230,7 +240,7 @@ def is_here_we_go(text: str, source: str = "", summary: str = "") -> bool:
     return (
         any(term in combined for term in HERE_WE_GO_TERMS)
         and any(term in combined for term in HERE_WE_GO_DEAL_TERMS)
-        and has_breaking_context(text, source=source, summary=summary)
+        and has_direct_real_madrid_reference(text, summary=summary)
     )
 
 
@@ -701,6 +711,9 @@ def fetch_breaking(sources):
 
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "")
+                if here_we_go_source and not has_direct_real_madrid_reference(title, summary=summary):
+                    logging.info("[HERE WE GO SKIPPED: NOT REAL MADRID] %s", title)
+                    continue
                 if not title or not passes_filters(title, summary=summary, source=label):
                     continue
 

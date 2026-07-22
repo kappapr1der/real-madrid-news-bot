@@ -37,6 +37,16 @@ def test_here_we_go_requires_fabrizio_and_real_madrid_transfer():
     assert breaking.is_here_we_go("Here we go, new YouTube episode", "Fabrizio Romano - Telegram") is False
 
 
+def test_here_we_go_rejects_other_club_deal_mentioning_former_madrid_staff():
+    title = (
+        "All documents are signed for Valentin Barco to join Chelsea from Strasbourg. "
+        "He will be welcomed by Xabi Alonso. Here we go, 100% confirmed."
+    )
+
+    assert breaking.has_direct_real_madrid_reference(title) is False
+    assert breaking.is_here_we_go(title, "Fabrizio Romano - Telegram") is False
+
+
 def test_here_we_go_bypasses_confirmation_and_keeps_short_freshness_window(monkeypatch, tmp_path):
     monkeypatch.setattr(breaking_confirmation, "CONFIRMATIONS_FILE", tmp_path / "confirmations.json")
     decision = breaking_confirmation.observe_breaking_candidate(
