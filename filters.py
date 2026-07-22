@@ -122,6 +122,19 @@ FILTERS = {
         "la edad que tendrán todos los jugadores del real madrid en el próximo mundial 2030",
         "fc27", "portada fc27",
 
+        # July 22: national-team side stories, lifestyle pieces, women's-team
+        # transfers, and generic clickbait must not displace club news.
+        "enzo fernandez says argentina played with pride and humility",
+        "morgan rogers",
+        "sensible changes",
+        "vinicius 26 sobre su familia", "vivi con mi abuela nilza", "grandmother nilza",
+        "problema real madrid sigue sin resolver", "the problem real madrid have still not solved",
+        "ea fc 27", "ea fc27",
+        "real madrid misses out on the chance to sign one of europes best defenders",
+        "real madrid miss out on the chance to sign one of europe's best defenders",
+        "alba redondo deja real madrid", "alba redondo leaves real madrid",
+        "doris dipetta", "madre de fede valverde",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

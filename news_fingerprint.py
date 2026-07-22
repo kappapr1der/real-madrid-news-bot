@@ -647,6 +647,28 @@ def is_mendy_return_schedule_text(text: str) -> bool:
     return generic_timeline or mendy_training_update
 
 
+def is_cucurella_welcome_text(text: str) -> bool:
+    """Collapse the post-World-Cup Rodrygo/Cucurella social exchange into one story."""
+    return (
+        contains_any(text, ("cucurella", "кукурелья"))
+        and contains_any(
+            text,
+            (
+                "welcome",
+                "welcomes",
+                "bienvenida",
+                "felicita",
+                "congratulat",
+                "waiting for you",
+                "приветствует",
+                "поприветствовал",
+                "поздравил",
+            ),
+        )
+        and contains_any(text, ("real madrid", "madrid", "rodrygo", "родриго", "реал"))
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -658,6 +680,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_mendy_return_schedule_text(text):
         return "injury:mendy-return-schedule"
+
+    if is_cucurella_welcome_text(text):
+        return "social:rodrygo-cucurella-world-cup-welcome"
 
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
@@ -808,6 +833,8 @@ def canonical_news_key(key: str) -> str:
         return "club:bernabeu-summer-works"
     if is_mendy_return_schedule_text(text):
         return "injury:mendy-return-schedule"
+    if is_cucurella_welcome_text(text):
+        return "social:rodrygo-cucurella-world-cup-welcome"
     if is_venezuela_donation_text(text):
         return "club:donation:venezuela-earthquake"
     if is_joan_martinez_valencia_text(text):

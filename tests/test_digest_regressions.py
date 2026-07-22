@@ -150,6 +150,33 @@ def test_july_twenty_first_evening_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_twenty_second_noise_is_filtered():
+    cases = [
+        ("Enzo Fernandez says Argentina played with pride and humility", "Sky Sports Football"),
+        ("Morgan Rogers joins Chelsea for GBP117m", "Guardian Football"),
+        ("Sensible Changes: July 22, 2026", "Managing Madrid"),
+        ("Vinicius, 26, on his family and grandmother Nilza", "Defensa Central"),
+        ("The problem Real Madrid have still not solved", "Mundo Deportivo - Real Madrid"),
+        ("Official: Kylian Mbappe is the cover star of EA FC 27", "Bernabeu Digital"),
+        ("Real Madrid miss out on the chance to sign one of Europe's best defenders", "The Real Champs"),
+        ("Official: Alba Redondo leaves Real Madrid for Juventus", "Mundo Deportivo - Real Madrid"),
+        ("Doris Dipetta, mother of Fede Valverde", "Defensa Central"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_cucurella_welcome_reports_share_a_semantic_key():
+    morning_title = "Rodrygo felicita y da la bienvenida a Cucurella"
+    day_title = "Real Madrid star welcomes Cucurella after World Cup win"
+
+    assert semantic_news_key(morning_title) == semantic_news_key(day_title)
+    assert semantic_news_key(morning_title) == "social:rodrygo-cucurella-world-cup-welcome"
+    assert clean_text("Следующий этап сагаа Олисе - «Реал»") == "Новый этап саги Олисе и «Реала»"
+
+
 def test_mendy_recovery_reports_share_a_semantic_key():
     timeline_title = "Injured Real Madrid defender expected to be back in September-October"
     training_title = "Mendy vuelve al cesped y cumple plazos optimistas"
