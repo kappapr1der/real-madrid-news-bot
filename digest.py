@@ -401,6 +401,12 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "alba redondo leaves real madrid",
     "doris dipetta",
     "madre de fede valverde",
+    "three real madrid players included in the 2026 fifa world cup best xi",
+    "mundial dispara real madrid",
+    "mundial dispara al real madrid",
+    "expertos en climatizacion",
+    "expertos en climatización",
+    "air conditioning remote",
     "argentina make 3 changes to lineup",
     "argentina makes 3 changes to lineup",
     "argentina 3 changes to lineup",
@@ -1193,7 +1199,25 @@ def story_label(item: RankedDigestItem) -> str:
         return "Штаб"
     if any(term in text for term in ("lineup", "squad", "convocatoria", "starting xi", "стартовый состав", "заявка")):
         return "Состав"
-    if any(term in text for term in ("friendly", "amistoso", "fixture", "расписани", "календар", "сыграет с", "играет с")):
+    if any(
+        term in text
+        for term in (
+            "matchday",
+            "preview",
+            "derby",
+            "clasico",
+            "clásico",
+            "real madrid vs",
+            "real madrid v ",
+            "real madrid face",
+            "real madrid will face",
+            "реал сыграет с",
+            "реал играет с",
+            "реал против",
+            "реал встретится с",
+            "матч против",
+        )
+    ):
         return "Матч-день"
     return ""
 

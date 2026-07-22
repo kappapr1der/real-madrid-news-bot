@@ -669,6 +669,29 @@ def is_cucurella_welcome_text(text: str) -> bool:
     )
 
 
+def is_rodri_real_interest_text(text: str) -> bool:
+    """Unify the current Rodri-to-Real-Madrid transfer thread across sources."""
+    return (
+        contains_any(text, ("rodri", "родри"))
+        and contains_any(text, ("real madrid", "real", "madrid", "реал"))
+        and contains_any(
+            text,
+            (
+                "interest",
+                "interes",
+                "fichar",
+                "fichaje",
+                "sign",
+                "signing",
+                "best players",
+                "mejores jugadores",
+                "хочет подписать",
+                "интересуется",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -683,6 +706,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
+
+    if is_rodri_real_interest_text(text):
+        return "transfer:rumour:rodri"
 
     if is_laliga_opener_postponed_text(text):
         return "schedule:laliga-opener-postponed"
@@ -835,6 +861,8 @@ def canonical_news_key(key: str) -> str:
         return "injury:mendy-return-schedule"
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
+    if is_rodri_real_interest_text(text):
+        return "transfer:rumour:rodri"
     if is_venezuela_donation_text(text):
         return "club:donation:venezuela-earthquake"
     if is_joan_martinez_valencia_text(text):

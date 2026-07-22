@@ -168,6 +168,33 @@ def test_july_twenty_second_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_twenty_second_evening_noise_is_filtered():
+    cases = [
+        ("Confirmed: three Real Madrid players included in the 2026 FIFA World Cup Best XI", "Madrid Universal"),
+        ("El Mundial dispara al Real Madrid", "Sport - Real Madrid"),
+        ("Expertos en climatizacion coinciden en el boton del aire acondicionado", "Defensa Central"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_rodri_interest_reports_share_a_semantic_key():
+    first_title = "Real Madrid interested in Rodri"
+    second_title = "Rodri: Real Madrid siempre quiere fichar a los mejores jugadores"
+
+    assert semantic_news_key(first_title) == semantic_news_key(second_title)
+    assert semantic_news_key(first_title) == "transfer:rumour:rodri"
+
+
+def test_digest_topic_hashtags_skip_generic_preseason_schedule():
+    schedule = _item("Real Madrid pre-season fixtures: full schedule, opponents and missing players")
+    schedule.category = "matchday"
+
+    assert digest_topic_hashtags([schedule]) == ""
+
+
 def test_cucurella_welcome_reports_share_a_semantic_key():
     morning_title = "Rodrygo felicita y da la bienvenida a Cucurella"
     day_title = "Real Madrid star welcomes Cucurella after World Cup win"

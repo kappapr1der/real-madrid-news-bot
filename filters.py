@@ -135,6 +135,13 @@ FILTERS = {
         "alba redondo deja real madrid", "alba redondo leaves real madrid",
         "doris dipetta", "madre de fede valverde",
 
+        # July 22 evening: World Cup XI roundups, generic valuation chatter,
+        # and home-appliance clickbait are outside the club-news beat.
+        "three real madrid players included in the 2026 fifa world cup best xi",
+        "mundial dispara real madrid", "mundial dispara al real madrid",
+        "expertos en climatizacion", "expertos en climatización",
+        "air conditioning remote",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
