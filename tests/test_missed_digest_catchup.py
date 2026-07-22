@@ -2,7 +2,12 @@ from datetime import datetime
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
-from main import digest_completed_today, preflight_time_for_digest, select_missed_digest_candidate
+from main import (
+    digest_completed_today,
+    mark_digest_slot_completed,
+    preflight_time_for_digest,
+    select_missed_digest_candidate,
+)
 
 
 TZ = ZoneInfo("Europe/Moscow")
@@ -79,3 +84,12 @@ def test_digest_completed_today_reads_aggregate_digest_status():
     with patch("main.load_status", return_value=status):
         assert digest_completed_today("утреннего", now) is True
         assert digest_completed_today("дневного", now) is False
+
+
+def test_digest_completed_today_uses_slot_ledger_when_status_is_missing(tmp_path):
+    now = datetime(2026, 7, 2, 21, 28, tzinfo=TZ)
+
+    with patch("main.DIGEST_SLOT_RUNS_FILE", tmp_path / "digest_slot_runs.json"):
+        mark_digest_slot_completed("вечернего", now)
+        with patch("main.load_status", return_value={"services": {}}):
+            assert digest_completed_today("вечернего", now) is True

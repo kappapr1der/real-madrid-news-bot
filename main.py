@@ -1,3 +1,4 @@
+import json
 import os
 import signal
 import subprocess
@@ -7,7 +8,7 @@ import time
 import threading
 import schedule
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from colorama import init, Fore, Style
 
@@ -51,6 +52,7 @@ from runtime_config import (
     WHITE_FRAME_ENABLED,
     WHITE_FRAME_TIME,
     WHITE_FRAME_TIMEZONE,
+    get_state_file,
     get_log_file,
 )
 from status_manager import load_status, parse_iso, record_error, record_status
@@ -74,6 +76,8 @@ PYTHON = sys.executable or "python"
 MANAGER_STATUS_INTERVAL = 60
 last_manager_status = 0.0
 stop_event = threading.Event()
+DIGEST_SLOT_RUNS_FILE = get_state_file("digest_slot_runs.json")
+DIGEST_SLOT_RUNS_RETENTION_DAYS = 14
 
 
 def request_stop(signum=None, frame=None):
@@ -153,6 +157,8 @@ def check_processes():
         if not state["restart"]:
             level = logging.INFO if retcode == 0 else logging.ERROR
             status_state = "completed" if retcode == 0 else "error"
+            if retcode == 0 and name.startswith("digest:"):
+                mark_digest_slot_completed(name.removeprefix("digest:"))
             record_status(name, status_state, f"process exited with code {retcode}", metrics)
             logging.log(level, "%s завершился с кодом %s", name, retcode)
             color = Fore.GREEN if retcode == 0 else Fore.RED
@@ -271,6 +277,9 @@ def preflight_time_for_digest(at_time: str, lead_minutes: int) -> str | None:
 
 
 def digest_completed_today(label: str, now: datetime) -> bool:
+    if label in load_digest_slot_runs().get(now.date().isoformat(), []):
+        return True
+
     services = load_status().get("services", {})
     entries = [
         services.get(f"digest:{label}", {}),
@@ -289,6 +298,45 @@ def digest_completed_today(label: str, now: datetime) -> bool:
         if completed_at and completed_at.astimezone(now.tzinfo).date() == now.date():
             return True
     return False
+
+
+def load_digest_slot_runs() -> dict[str, list[str]]:
+    if not DIGEST_SLOT_RUNS_FILE.exists():
+        return {}
+    try:
+        payload = json.loads(DIGEST_SLOT_RUNS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    days = payload.get("days", {}) if isinstance(payload, dict) else {}
+    if not isinstance(days, dict):
+        return {}
+    return {
+        str(day): [str(label) for label in labels]
+        for day, labels in days.items()
+        if isinstance(labels, list)
+    }
+
+
+def mark_digest_slot_completed(label: str, now: datetime | None = None) -> None:
+    completed_at = now or datetime.now(ZoneInfo(DIGEST_TIMEZONE))
+    days = load_digest_slot_runs()
+    day_key = completed_at.date().isoformat()
+    days[day_key] = sorted({*days.get(day_key, []), label})
+
+    cutoff = completed_at.date() - timedelta(days=DIGEST_SLOT_RUNS_RETENTION_DAYS)
+    retained_days = {
+        day: labels
+        for day, labels in days.items()
+        if day >= cutoff.isoformat()
+    }
+    payload = {"days": retained_days}
+    try:
+        DIGEST_SLOT_RUNS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = DIGEST_SLOT_RUNS_FILE.with_suffix(DIGEST_SLOT_RUNS_FILE.suffix + ".tmp")
+        tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp_path.replace(DIGEST_SLOT_RUNS_FILE)
+    except OSError as exc:
+        logging.warning("Не удалось сохранить отметку дайджеста %s: %s", label, exc)
 
 
 def missed_digest_candidate(label: str, at_time: str, now: datetime) -> dict | None:
