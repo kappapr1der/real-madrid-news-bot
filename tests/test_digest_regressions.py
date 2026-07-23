@@ -1591,3 +1591,40 @@ def test_morning_digest_translation_glitches_are_cleaned():
         "Тчуамени подписал продление контракта с «Реалом» до 2031 года"
     ) == "Тчуамени продлил контракт с «Реалом» до 2031 года"
     assert clean_text("Подписание Олайи - прихоть") == "Подписание Олисе - прихоть"
+
+
+def test_july_23_off_topic_digest_noise_is_filtered():
+    cases = [
+        ("Заявление AFA о задержании президента, Торрес готов покинуть «Барселону»", "Чемпионат - Футбол"),
+        ("Raul Arevalo says Mbappe gives him good energy", "Defensa Central"),
+        ("Real Madrid land 3 stars in FIFA's official Best XI of the 2026 World Cup", "The Real Champs"),
+        ("Oficial: Modric renueva con el Milan y seguira un ano mas jugando al futbol", "Defensa Central"),
+        (
+            "Calendario de pretemporada 2026/27: fechas, horarios y donde ver todos los amistosos de los equipos de LaLiga",
+            "Marca - Real Madrid",
+        ),
+        ("Desvelan la intrahistoria del fichaje de Pedrerol y El Chiringuito por Mediaset", "Bernabeu Digital"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_green_away_kit_uses_one_semantic_key():
+    titles = [
+        "Real Madrid unveil new green away kit for 2026-27",
+        "Real Madrid vestira de verde con su segunda equipacion 2026-27",
+        "Nueva camiseta verde de la segunda equipacion del Madrid",
+    ]
+
+    assert {semantic_news_key(title) for title in titles} == {"club:green-away-kit-2026-27"}
+
+
+def test_july_23_title_inversions_are_corrected():
+    assert clean_text("«Реал» рассматривает покупку Камавинга и Берге") == (
+        "«Манчестер Юнайтед» рассматривает Камавинга и Берге для усиления центра поля"
+    )
+    assert clean_text("«Реал» подписал игрока из своей академии") == (
+        "Клуб АПЛ отказался от сделки по 22-летнему воспитаннику «Реала»"
+    )

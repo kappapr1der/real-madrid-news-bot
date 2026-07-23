@@ -717,6 +717,30 @@ def is_valverde_mourinho_leadership_text(text: str) -> bool:
     )
 
 
+def is_real_madrid_green_away_kit_text(text: str) -> bool:
+    """Group the July 2026 green away-kit stories across all source wording."""
+    return (
+        contains_any(text, ("real madrid", "реал мадрид", "madrid", "мадрид"))
+        and contains_any(text, ("green", "verde", "зелён", "зелен"))
+        and contains_any(
+            text,
+            (
+                "away kit",
+                "away shirt",
+                "second kit",
+                "second shirt",
+                "segunda equipacion",
+                "segunda camiseta",
+                "equipacion",
+                "equipación",
+                "camiseta",
+                "гостев",
+                "вторая форма",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -731,6 +755,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
+
+    if is_real_madrid_green_away_kit_text(text):
+        return "club:green-away-kit-2026-27"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
@@ -889,6 +916,8 @@ def canonical_news_key(key: str) -> str:
         return "injury:mendy-return-schedule"
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
+    if is_real_madrid_green_away_kit_text(text):
+        return "club:green-away-kit-2026-27"
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
     if is_valverde_mourinho_leadership_text(text):

@@ -144,6 +144,19 @@ FILTERS = {
         "real madrid trio see market values soar after impressive world cup displays",
         "every real madrid fan has been asking for",
 
+        # July 23: keep general-football roundups, celebrity reactions and
+        # former-player updates out of the Real Madrid editorial lane.
+        "afa statement on president's detention", "afa statement on the president's detention",
+        "torres ready to leave barcelona",
+        "заявление afa о задержании президента", "торрес готов покинуть барселону",
+        "raul arevalo", "raul arévalo",
+        "real madrid land 3 stars in fifa's official best xi",
+        "modric renueva con milan", "modric renueva con el milan", "modric renews with milan",
+        "calendario pretemporada 2026/27: fechas, horarios y donde ver todos los amistosos",
+        "calendario de pretemporada 2026/27: fechas, horarios y donde ver todos los amistosos",
+        "desvelan intrahistoria fichaje pedrerol chiringuito mediaset",
+        "intrahistoria del fichaje de pedrerol",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
