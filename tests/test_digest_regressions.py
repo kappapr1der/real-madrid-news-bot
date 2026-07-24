@@ -1628,3 +1628,32 @@ def test_july_23_title_inversions_are_corrected():
     assert clean_text("«Реал» подписал игрока из своей академии") == (
         "Клуб АПЛ отказался от сделки по 22-летнему воспитаннику «Реала»"
     )
+
+
+def test_july_24_off_topic_digest_noise_is_filtered():
+    cases = [
+        ("One of the bright spots of Real Madrid's season ready to take another leap", "Managing Madrid"),
+        ("El PSG dispuesto a romper definitivamente el fichaje de Enzo por el Real Madrid", "Bernabeu Digital"),
+        ("Would not accept transfer: insider floats possibility of Karim Benzema's availability", "The Real Champs"),
+        ("Главный тренер Родины охарактеризовал новичка - воспитанника Реала и Ман Сити", "Чемпионат - Футбол"),
+        ("Expertos en cirugia plastica coinciden: operacion Vinicius", "Sport - Real Madrid"),
+        ("Compra tus entradas Betis vs Real Madrid en septiembre", "Marca - Real Madrid"),
+        ("Leyenda continua: Sergio Llull renueva con Real Madrid", "Bernabeu Digital"),
+        ("Maria Trisac sobre Mbappe, Olise y Bellingham", "Defensa Central"),
+        ("Vinicius da la cara y presume de nueva imagen con una estrella de Hollywood", "Marca - Real Madrid"),
+        ("Zidane set to be announced as Mbappe and Tchouameni's new France coach", "Managing Madrid"),
+        ("Reflexion Iker Casillas 45 anos", "Sport - Real Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_july_24_headline_cleanup_is_readable():
+    assert clean_text(
+        "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
+    ) == "У вингера академии «Реала» есть несколько вариантов продолжения карьеры"
+    assert clean_text(
+        "Бесплатное «подписание Жоселу», которое Моуринью не забывает для своего «Реала» в Мадриде"
+    ) == "Влахович остаётся вариантом для «Реала»: Моуринью ценит профиль Хоселу"

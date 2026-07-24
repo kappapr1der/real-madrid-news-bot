@@ -157,6 +157,21 @@ FILTERS = {
         "desvelan intrahistoria fichaje pedrerol chiringuito mediaset",
         "intrahistoria del fichaje de pedrerol",
 
+        # July 24: lifestyle, ticketing, basketball and stale/former-player
+        # material do not belong in the football news digest.
+        "one of the bright spots of real madrid's season ready to take another leap",
+        "psg dispuesto a romper definitivamente el fichaje de enzo por el real madrid",
+        "would not accept transfer: insider floats possibility of karim benzema",
+        "glavnyj trener rodiny oharakterizoval novichka",
+        "главный тренер родины охарактеризовал новичка",
+        "expertos en cirugia plastica coinciden", "expertos en cirugía plástica coinciden",
+        "compra tus entradas betis vs real madrid",
+        "sergio llull", "серхио люлль",
+        "maria trisac", "мария трисак",
+        "vinicius da la cara y presume de nueva imagen", "винисиус поворачивается лицом и хвастается",
+        "zidane set to be announced as mbappe and tchouameni",
+        "reflexion iker casillas 45 anos", "reflexión iker casillas 45 años",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
