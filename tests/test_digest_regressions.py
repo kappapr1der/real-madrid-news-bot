@@ -1657,3 +1657,20 @@ def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "Бесплатное «подписание Жоселу», которое Моуринью не забывает для своего «Реала» в Мадриде"
     ) == "Влахович остаётся вариантом для «Реала»: Моуринью ценит профиль Хоселу"
+
+
+def test_yan_diomande_transfer_reports_share_one_semantic_key():
+    titles = [
+        "Real Madrid step up pursuit of RB Leipzig star Yan Diomande",
+        "El Real Madrid se suma a la puja por Yan Diomande",
+        "Real Madrid trabaja en el fichaje de Yan Diomande",
+        "Real Madrid in race for Yan Diomande, talks with RB Leipzig",
+    ]
+
+    assert {semantic_news_key(title) for title in titles} == {"transfer:yan-diomande-real-madrid"}
+
+
+def test_fulham_youngster_headline_is_not_inverted():
+    assert clean_text("«Реал» заинтересован в молодом игроке") == (
+        "«Фулхэм» продолжает добиваться перехода молодого игрока «Реала»"
+    )

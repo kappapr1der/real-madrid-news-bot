@@ -741,6 +741,32 @@ def is_real_madrid_green_away_kit_text(text: str) -> bool:
     )
 
 
+def is_yan_diomande_real_transfer_text(text: str) -> bool:
+    """Collapse the concurrent Yan Diomande-to-Real-Madrid transfer reports."""
+    return (
+        contains_any(text, ("yan diomande", "ян диоманде"))
+        and contains_any(text, ("real madrid", "реал мадрид", "madrid", "мадрид"))
+        and contains_any(
+            text,
+            (
+                "pursuit",
+                "transfer",
+                "fichaje",
+                "fichar",
+                "puja",
+                "race",
+                "talks",
+                "negoci",
+                "interes",
+                "interés",
+                "работает над",
+                "переговор",
+                "борьбе за",
+            ),
+        )
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -758,6 +784,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_real_madrid_green_away_kit_text(text):
         return "club:green-away-kit-2026-27"
+
+    if is_yan_diomande_real_transfer_text(text):
+        return "transfer:yan-diomande-real-madrid"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
@@ -918,6 +947,8 @@ def canonical_news_key(key: str) -> str:
         return "social:rodrygo-cucurella-world-cup-welcome"
     if is_real_madrid_green_away_kit_text(text):
         return "club:green-away-kit-2026-27"
+    if is_yan_diomande_real_transfer_text(text):
+        return "transfer:yan-diomande-real-madrid"
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
     if is_valverde_mourinho_leadership_text(text):
