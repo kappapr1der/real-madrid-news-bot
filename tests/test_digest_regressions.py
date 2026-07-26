@@ -1650,6 +1650,19 @@ def test_july_24_off_topic_digest_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_25_and_26_off_topic_digest_noise_is_filtered():
+    cases = [
+        ("Courtois ensena espectacular Porsche GT3 RS y desvela su proyecto", "Mundo Deportivo - Real Madrid"),
+        ("Courtois o De Bruyne: quien vale mas", "Sports.ru"),
+        ("Real Sociedad con Zakharyan se impone al Wolves", "Championnat - Football"),
+        ("I Prefer Not To Speak: July 26, 2026", "Managing Madrid"),
+    ]
+
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
@@ -1665,6 +1678,11 @@ def test_yan_diomande_transfer_reports_share_one_semantic_key():
         "El Real Madrid se suma a la puja por Yan Diomande",
         "Real Madrid trabaja en el fichaje de Yan Diomande",
         "Real Madrid in race for Yan Diomande, talks with RB Leipzig",
+        "Fabrizio Romano just poured gas on the Yan Diomande transfer saga",
+        "Just in: Real Madrid agree personal terms with Yan Diomande even as PSG push",
+        "Mercado de fichajes: Diomande y Bastoni sobre la mesa",
+        "Diomande inminente, Olise imposible, Rodri incognita",
+        "On Vinicius, Diomande and the dominoes of this transfer window",
     ]
 
     assert {semantic_news_key(title) for title in titles} == {"transfer:yan-diomande-real-madrid"}
@@ -1674,3 +1692,12 @@ def test_fulham_youngster_headline_is_not_inverted():
     assert clean_text("«Реал» заинтересован в молодом игроке") == (
         "«Фулхэм» продолжает добиваться перехода молодого игрока «Реала»"
     )
+
+
+def test_july_26_diomande_headline_cleanup_is_readable():
+    assert clean_text(
+        "Фабрицио Романо подтвердил окончательный переход Диоманде из «Реала» в Мадрид"
+    ) == "Фабрицио Романо: «Реал» продвигается в переговорах по Диоманде"
+    assert clean_text(
+        "На всякий случай: «Реал» согласовал личные условия с Яном Диоманде, несмотря на то, что «ПСЖ» давит на Романо"
+    ) == "«Реал» согласовал личные условия с Яном Диоманде, несмотря на давление «ПСЖ»"

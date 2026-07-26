@@ -742,29 +742,8 @@ def is_real_madrid_green_away_kit_text(text: str) -> bool:
 
 
 def is_yan_diomande_real_transfer_text(text: str) -> bool:
-    """Collapse the concurrent Yan Diomande-to-Real-Madrid transfer reports."""
-    return (
-        contains_any(text, ("yan diomande", "ян диоманде"))
-        and contains_any(text, ("real madrid", "реал мадрид", "madrid", "мадрид"))
-        and contains_any(
-            text,
-            (
-                "pursuit",
-                "transfer",
-                "fichaje",
-                "fichar",
-                "puja",
-                "race",
-                "talks",
-                "negoci",
-                "interes",
-                "interés",
-                "работает над",
-                "переговор",
-                "борьбе за",
-            ),
-        )
-    )
+    """Collapse the current Yan Diomande transfer saga across all source phrasings."""
+    return contains_any(text, ("yan diomande", "ян диоманде", "diomande", "диоманде"))
 
 
 def semantic_news_key(title: str, summary: str = "") -> str:

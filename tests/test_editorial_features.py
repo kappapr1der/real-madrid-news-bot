@@ -133,6 +133,34 @@ def test_weekly_recap_rechecks_archived_story_relevance_and_uses_raw_title(monke
     assert weekly_recap.weekly_story_title(selected[0]) == "Переведенный заголовок"
 
 
+def test_weekly_recap_collapses_semantic_transfer_duplicates_and_keeps_russian_archive_copy(monkeypatch):
+    stories = [
+        {
+            "title": "«Реал» согласовал личные условия с Яном Диоманде",
+            "metadata": {"raw_title": "Real Madrid agree personal terms with Yan Diomande"},
+            "link": "https://example.test/personal-terms",
+            "source": "Madrid Universal",
+            "kinds": ["breaking"],
+            "category": "transfer",
+        },
+        {
+            "title": "Фабрицио Романо рассказал о саге Диоманде",
+            "metadata": {"raw_title": "Fabrizio Romano pours gas on Yan Diomande transfer saga"},
+            "link": "https://example.test/romano",
+            "source": "Bernabeu Digital",
+            "kinds": ["digest"],
+            "category": "transfer",
+        },
+    ]
+
+    monkeypatch.setattr(weekly_recap, "translate_text", lambda title: title)
+
+    selected = select_weekly_stories(stories, limit=8)
+
+    assert selected == [stories[0]]
+    assert weekly_recap.weekly_story_title(selected[0]) == "«Реал» согласовал личные условия с Яном Диоманде"
+
+
 def test_match_center_adds_day_before_and_confirmed_lineup_formats():
     match = Match(
         id="test-match",

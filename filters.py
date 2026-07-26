@@ -172,6 +172,14 @@ FILTERS = {
         "zidane set to be announced as mbappe and tchouameni",
         "reflexion iker casillas 45 anos", "reflexión iker casillas 45 años",
 
+        # July 25-26: personal lifestyle, unrelated fixtures and generic daily
+        # columns must not take places from actual club news.
+        "courtois ensena espectacular porsche gt3", "courtois muestra su porsche gt3",
+        "courtois o de bruyne", "courtois o de bruyne quien vale mas",
+        "кто из бывших друзей и легенд сборной бельгии стоит дороже",
+        "real sociedad con zakharyan se impone al wolves", "реал сосьедад с захаряном одержал победу над вулверхэмптоном",
+        "i prefer not to speak", "я предпочитаю молчать 26 июля 2026",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

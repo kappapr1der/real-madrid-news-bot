@@ -12,6 +12,7 @@ import requests
 from editorial_archive import recent_stories
 from filters import passes_filters
 from match_calendar import digest_block_reason
+from news_fingerprint import semantic_news_key
 from post_utils import append_hashtags
 from runtime_config import (
     DRY_RUN,
@@ -95,13 +96,30 @@ def weekly_story_title(story: dict) -> str:
     cyrillic_count = len(re.findall(r"[А-Яа-яЁё]", title))
     latin_count = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", title))
     if latin_count > cyrillic_count:
-        return clean_text(translate_text(title))
+        translated = clean_text(translate_text(title))
+        translated_cyrillic = len(re.findall(r"[А-Яа-яЁё]", translated))
+        translated_latin = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", translated))
+        if translated_latin > translated_cyrillic:
+            archived_title = clean_text(str(story.get("title") or ""))
+            archived_cyrillic = len(re.findall(r"[А-Яа-яЁё]", archived_title))
+            archived_latin = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", archived_title))
+            if archived_title and archived_cyrillic >= archived_latin:
+                return archived_title
+        return translated
     return title
+
+
+def weekly_story_key(story: dict) -> str:
+    key = semantic_news_key(weekly_source_title(story))
+    if not key.startswith("generic:"):
+        return key
+    return str(story.get("link") or key)
 
 
 def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
     selected = []
     category_counts: dict[str, int] = {}
+    selected_keys: set[str] = set()
     for story in sorted(stories, key=_story_score, reverse=True):
         title = weekly_source_title(story)
         if not title or not passes_filters(title, source=str(story.get("source") or "")):
@@ -109,7 +127,11 @@ def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
         category = str(story.get("category") or "general")
         if category_counts.get(category, 0) >= 3:
             continue
+        key = weekly_story_key(story)
+        if key in selected_keys:
+            continue
         selected.append(story)
+        selected_keys.add(key)
         category_counts[category] = category_counts.get(category, 0) + 1
         if len(selected) >= limit:
             break
