@@ -187,6 +187,16 @@ FILTERS = {
         "the last time in budapest", "реал возвращается в будапешт",
         "craig overton", "battle with brother jamie", "dramatic hundred finish",
 
+        # July 27 evening: rival-only transfer news and personal World Cup
+        # reflections do not carry a concrete club update.
+        "welbeck", "уэлбек",
+        "carta abierta mbappe", "carta abierta mbappé", "carta abierta de mbappe", "carta abierta de mbappé",
+        "open letter mbappe", "открытое письмо мбаппе",
+        "endrick 20 anos cuando era nino", "endrick 20 años cuando era niño",
+        "mi madre solia llevarse biblia", "mi madre solía llevarse biblia",
+        "no teniamos tv ni internet en casa", "no teníamos tv ni internet en casa",
+        "у нас дома не было телевизора или интернета",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

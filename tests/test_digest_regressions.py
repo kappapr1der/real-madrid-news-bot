@@ -1682,6 +1682,24 @@ def test_july_27_digest_deduplicates_pitarch_injury_and_filters_noise():
     assert clean_text("Тиаго Питарч получил травму колена") == "Тьяго Питарч получил травму колена"
 
 
+def test_july_27_evening_filters_non_club_items_and_groups_vinicius_future():
+    noise_cases = [
+        ("Chelsea begin talks to sign Brighton striker Danny Welbeck", "BBC Sport Football"),
+        ("Carta abierta de Mbappe: habria sido increible levantar la Copa", "Mundo Deportivo - Real Madrid"),
+        ("Endrick, 20 anos: cuando era nino no teniamos TV ni internet en casa", "Defensa Central"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    vinicius_titles = [
+        "Real Madrid to hold further talks over Vinicius future this week amid Arsenal interest",
+        "Arsenal aprieta a Vinicius mientras el Real Madrid cierra una operacion",
+    ]
+    assert {semantic_news_key(title) for title in vinicius_titles} == {"contract:vinicius-renewal"}
+    assert clean_text("Алонсо о будущем Винисиуса") == "Серрано рассказал о позиции «Реала» по будущему Винисиуса"
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

@@ -403,7 +403,28 @@ def is_enzo_denial_text(text: str) -> bool:
 def is_vinicius_renewal_text(text: str) -> bool:
     return (
         contains_any(text, ("vinicius", "vini", "винисиус", "вини джуниор"))
-        and contains_any(text, ("renew", "renovar", "renovacion", "renovación", "contract", "contrato", "продлен", "контракт"))
+        and contains_any(
+            text,
+            (
+                "renew",
+                "renovar",
+                "renovacion",
+                "renovación",
+                "contract",
+                "contrato",
+                "продлен",
+                "контракт",
+                "future",
+                "futuro",
+                "talks",
+                "conversation",
+                "conversaciones",
+                "переговор",
+                "будущ",
+                "arsenal",
+                "арсенал",
+            ),
+        )
     )
 
 
