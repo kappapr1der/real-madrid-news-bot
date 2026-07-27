@@ -608,6 +608,17 @@ def is_courtois_world_cup_injury_text(text: str) -> bool:
     )
 
 
+def is_thiago_pitarch_injury_text(text: str) -> bool:
+    """Unify reports about Thiago Pitarch's pre-season knee injury."""
+    return (
+        contains_any(text, ("thiago pitarch", "тиаго питарч", "тьяго питарч"))
+        and contains_any(
+            text,
+            ("injury", "injured", "knee", "lesion", "lesionado", "травм", "колен", "выбыл"),
+        )
+    )
+
+
 def is_bernabeu_summer_works_text(text: str) -> bool:
     return (
         contains_any(text, ("santiago bernabeu", "bernabeu", "бернабеу"))
@@ -754,6 +765,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_courtois_world_cup_injury_text(text):
         return "injury:courtois-belgium-world-cup"
+
+    if is_thiago_pitarch_injury_text(text):
+        return "injury:thiago-pitarch-knee"
 
     if is_mendy_return_schedule_text(text):
         return "injury:mendy-return-schedule"
@@ -922,6 +936,8 @@ def canonical_news_key(key: str) -> str:
         return "club:bernabeu-summer-works"
     if is_mendy_return_schedule_text(text):
         return "injury:mendy-return-schedule"
+    if is_thiago_pitarch_injury_text(text):
+        return "injury:thiago-pitarch-knee"
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
     if is_real_madrid_green_away_kit_text(text):

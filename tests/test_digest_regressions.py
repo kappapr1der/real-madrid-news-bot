@@ -1663,6 +1663,25 @@ def test_july_25_and_26_off_topic_digest_noise_is_filtered():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_27_digest_deduplicates_pitarch_injury_and_filters_noise():
+    injury_titles = [
+        "Thiago Pitarch suffers knee injury, out for around two months",
+        "Thiago Pitarch lesionado en el primer entrenamiento con Mourinho",
+    ]
+    assert {semantic_news_key(title) for title in injury_titles} == {"injury:thiago-pitarch-knee"}
+
+    noise_cases = [
+        ("Balon de Oro marca las normas: Mbappe se coloca como principal candidato", "Defensa Central"),
+        ("The last time in Budapest", "Managing Madrid"),
+        ("Craig Overton wins battle with brother Jamie in dramatic Hundred finish", "Sky Sports Football"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    assert clean_text("Тиаго Питарч получил травму колена") == "Тьяго Питарч получил травму колена"
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

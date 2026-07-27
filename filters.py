@@ -180,6 +180,13 @@ FILTERS = {
         "real sociedad con zakharyan se impone al wolves", "реал сосьедад с захаряном одержал победу над вулверхэмптоном",
         "i prefer not to speak", "я предпочитаю молчать 26 июля 2026",
 
+        # July 27: generic award chatter, historical club trivia and a leaked
+        # cricket item are not actionable Real Madrid news.
+        "balon de oro marca las normas", "balón de oro marca las normas",
+        "mbappe se coloca como principal candidato", "mbappé se coloca como principal candidato",
+        "the last time in budapest", "реал возвращается в будапешт",
+        "craig overton", "battle with brother jamie", "dramatic hundred finish",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
