@@ -631,13 +631,27 @@ def is_courtois_world_cup_injury_text(text: str) -> bool:
 
 def is_thiago_pitarch_injury_text(text: str) -> bool:
     """Unify reports about Thiago Pitarch's pre-season knee injury."""
-    return (
+    named_injury = (
         contains_any(text, ("thiago pitarch", "тиаго питарч", "тьяго питарч"))
         and contains_any(
             text,
             ("injury", "injured", "knee", "lesion", "lesionado", "травм", "колен", "выбыл"),
         )
     )
+    # One source omitted Pitarch's name but retained the unique two-month detail.
+    unnamed_variant = (
+        contains_any(
+            text,
+            (
+                "real madrid dealt major injury blow with this youngster",
+                "major injury blow with this youngster",
+                "серьезный удар из-за травмы молодого игрока",
+                "серьёзный удар из-за травмы молодого игрока",
+            ),
+        )
+        and contains_any(text, ("two months", "dos meses", "два месяца"))
+    )
+    return named_injury or unnamed_variant
 
 
 def is_bernabeu_summer_works_text(text: str) -> bool:
@@ -699,6 +713,40 @@ def is_cucurella_welcome_text(text: str) -> bool:
         )
         and contains_any(text, ("real madrid", "madrid", "rodrygo", "родриго", "реал"))
     )
+
+
+def is_cucurella_chelsea_farewell_text(text: str) -> bool:
+    """Group repeated reports about Cucurella's farewell to Chelsea."""
+    return (
+        contains_any(text, ("cucurella", "кукурелья"))
+        and contains_any(text, ("chelsea", "челси"))
+        and contains_any(
+            text,
+            ("farewell", "bids farewell", "despedida", "despide", "прощается", "прощание"),
+        )
+    )
+
+
+def is_mourinho_documentary_text(text: str) -> bool:
+    """Keep trailers and write-ups about the same Mourinho documentary together."""
+    return (
+        contains_any(text, ("mourinho", "моуринью"))
+        and contains_any(text, ("documentary", "documental", "docuseries", "netflix", "трейлер", "документал"))
+    )
+
+
+def is_llopis_goalkeeping_staff_text(text: str) -> bool:
+    """Unify reports about the possible Llopis departure from the goalkeeper staff."""
+    named_report = (
+        contains_any(text, ("luis llopis", "льопис"))
+        and contains_any(text, ("leave", "leaving", "departure", "salir", "salida", "покин", "уйти"))
+    )
+    unnamed_variant = (
+        contains_any(text, ("mourinho", "моуринью"))
+        and contains_any(text, ("goalkeeping", "goalkeeper", "porteria", "portería", "вратар"))
+        and contains_any(text, ("fundamental pillar", "pilar fundamental", "меняет основу", "меняет фундамент"))
+    )
+    return named_report or unnamed_variant
 
 
 def is_rodri_real_interest_text(text: str) -> bool:
@@ -790,11 +838,20 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_thiago_pitarch_injury_text(text):
         return "injury:thiago-pitarch-knee"
 
+    if is_llopis_goalkeeping_staff_text(text):
+        return "staff:llopis-goalkeeping"
+
     if is_mendy_return_schedule_text(text):
         return "injury:mendy-return-schedule"
 
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
+
+    if is_cucurella_chelsea_farewell_text(text):
+        return "transfer:cucurella-chelsea-farewell"
+
+    if is_mourinho_documentary_text(text):
+        return "media:mourinho-documentary"
 
     if is_real_madrid_green_away_kit_text(text):
         return "club:green-away-kit-2026-27"
@@ -959,8 +1016,14 @@ def canonical_news_key(key: str) -> str:
         return "injury:mendy-return-schedule"
     if is_thiago_pitarch_injury_text(text):
         return "injury:thiago-pitarch-knee"
+    if is_llopis_goalkeeping_staff_text(text):
+        return "staff:llopis-goalkeeping"
     if is_cucurella_welcome_text(text):
         return "social:rodrygo-cucurella-world-cup-welcome"
+    if is_cucurella_chelsea_farewell_text(text):
+        return "transfer:cucurella-chelsea-farewell"
+    if is_mourinho_documentary_text(text):
+        return "media:mourinho-documentary"
     if is_real_madrid_green_away_kit_text(text):
         return "club:green-away-kit-2026-27"
     if is_yan_diomande_real_transfer_text(text):

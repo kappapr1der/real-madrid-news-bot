@@ -197,6 +197,17 @@ FILTERS = {
         "no teniamos tv ni internet en casa", "no teníamos tv ni internet en casa",
         "у нас дома не было телевизора или интернета",
 
+        # July 28: vague transfer-window clickbait, non-club national-team updates,
+        # and pundit-only speculation add noise without a concrete club event.
+        "real madrid are finally realising their biggest mistake", "finally realising their biggest mistake of this transfer window",
+        "kylian mbappe 27 anos no voy a ser entrenador", "kylian mbappé 27 años no voy a ser entrenador",
+        "no voy a ser entrenador despues de mi carrera", "no voy a ser entrenador después de mi carrera",
+        "zinedine zidane confirmed as france manager", "zidane confirmed as new france manager",
+        "chelsea unveil trialist in first game under xabi alonso", "first game under xabi alonso",
+        "aritz gabilondo", "aritz gabilondo comunicador sobre llegada mastantuono real sociedad",
+        "real madrid baraja nombres heredero thibaut courtois", "heredero thibaut courtois",
+        "madrid se mete en un problema", "real madrid faces the need for operations in the transfer market",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

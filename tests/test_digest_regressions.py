@@ -1700,6 +1700,49 @@ def test_july_27_evening_filters_non_club_items_and_groups_vinicius_future():
     assert clean_text("Алонсо о будущем Винисиуса") == "Серрано рассказал о позиции «Реала» по будущему Винисиуса"
 
 
+def test_july_28_filters_clickbait_and_deduplicates_repeated_updates():
+    noise_cases = [
+        ("Real Madrid are finally realising their biggest mistake of this transfer window", "The Real Champs"),
+        ("Kylian Mbappe, 27 anos: no voy a ser entrenador despues de mi carrera", "Defensa Central"),
+        ("Zinedine Zidane confirmed as France manager after World Cup exit", "Independent Football"),
+        ("Chelsea unveil trialist in first game under Xabi Alonso", "FourFourTwo"),
+        ("Aritz Gabilondo, comunicador, sobre llegada Mastantuono Real Sociedad", "Defensa Central"),
+        ("Real Madrid baraja nombres heredero Thibaut Courtois", "Bernabeu Digital"),
+        ("El Madrid se mete en un problema", "Marca - Real Madrid"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    pitarch_titles = [
+        "Thiago Pitarch suffers knee injury, out for around two months",
+        "Real Madrid dealt major injury blow with this youngster to be out for two months",
+    ]
+    assert {semantic_news_key(title) for title in pitarch_titles} == {"injury:thiago-pitarch-knee"}
+
+    cucurella_titles = [
+        "Cucurella bids farewell to Chelsea as Real Madrid move is completed",
+        "Emotiva despedida de Cucurella al Chelsea",
+    ]
+    assert {semantic_news_key(title) for title in cucurella_titles} == {"transfer:cucurella-chelsea-farewell"}
+
+    documentary_titles = [
+        "Desvelan secretos del documental de Mourinho",
+        "Trailer del documental de Netflix sobre Mourinho",
+    ]
+    assert {semantic_news_key(title) for title in documentary_titles} == {"media:mourinho-documentary"}
+
+    goalkeeping_titles = [
+        "Luis Llopis set to leave Real Madrid",
+        "La llegada de Mourinho termina con pilar fundamental de la porteria del Real Madrid",
+    ]
+    assert {semantic_news_key(title) for title in goalkeeping_titles} == {"staff:llopis-goalkeeping"}
+    assert clean_text("MARCA обнаружила третью форму «Реал»") == "MARCA показала третью форму «Реала»"
+    assert clean_text("Приход Моуринью меняет основу «Реал»") == (
+        "В штабе вратарей «Реала» возможны изменения после прихода Моуринью"
+    )
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
