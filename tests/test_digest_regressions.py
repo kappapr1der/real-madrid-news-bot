@@ -1782,6 +1782,27 @@ def test_july_29_deduplicates_fixtures_and_filters_transfer_clickbait():
     }
 
 
+def test_july_29_evening_filters_non_updates_and_cleans_endrick_name():
+    noise_cases = [
+        ("UEFA on FIFA plans: deadline for federations to support proposals", "X - @AranchaMOBILE"),
+        (
+            "Ranking where Real Madrid teams stand among the best Champions League winners since 2020",
+            "The Real Champs",
+        ),
+        (
+            "Tomas Roncero: if Vinicius accepts earning 5-7 million less than Mbappe, he will renew",
+            "Defensa Central",
+        ),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    assert clean_text("Рюдигер и Энрик — последние новички под руководством Моуринью") == (
+        "Рюдигер и Эндрик последними присоединились к команде Моуринью"
+    )
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

@@ -215,6 +215,13 @@ FILTERS = {
         "fabrizio romano offers the michael olise clarity real madrid fans needed",
         "fabrizio romano drops bombs", "fabrizio romano suelta bombas",
 
+        # July 29 evening: federation process notes, historical rankings, and
+        # salary hypotheticals are not current club updates.
+        "uefa sobre planes fifa", "uefa on fifa plans", "fifa deadline for federations",
+        "ranking where real madrid teams stand among the best champions league winners since 2020",
+        "tomas roncero si vinicius acepta cobrar", "si vinicius acepta cobrar", "vinicius accepts earning",
+        "si vinicius acepta cobrar entre 5 7 millones menos mbappe",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
