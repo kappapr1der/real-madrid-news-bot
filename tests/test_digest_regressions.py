@@ -1743,6 +1743,45 @@ def test_july_28_filters_clickbait_and_deduplicates_repeated_updates():
     )
 
 
+def test_july_29_deduplicates_fixtures_and_filters_transfer_clickbait():
+    noise_cases = [
+        ("Aviso de Jose Felix Diaz pone en alerta al madridismo", "Bernabeu Digital"),
+        ("Real Madrid's move for Rodri may have just hit a major stumbling block", "The Real Champs"),
+        ("Fabrizio Romano offers the Michael Olise clarity Real Madrid fans needed", "The Real Champs"),
+        ("Fabrizio Romano drops bombs: Real Madrid broken in the market", "Bernabeu Digital"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    schalke_titles = [
+        "Real Madrid will conclude pre-season with friendly against Schalke 04",
+        "Real Madrid will play Schalke once La Liga has already started",
+        "Official: Real Madrid to face Schalke 04 in a pre-season friendly",
+    ]
+    assert {semantic_news_key(title) for title in schalke_titles} == {
+        "schedule:preseason-schalke-04-friendly"
+    }
+
+    mastantuono_titles = [
+        "Real Madrid teenage wonderkid wants loan move to former club",
+        "Real Madrid's stance on teenage prodigy's wish to rejoin former club on loan",
+        "Mastantuono chooses River Plate for loan, Real Madrid disagree",
+    ]
+    assert {semantic_news_key(title) for title in mastantuono_titles} == {
+        "transfer:loan:mastantuono-river-plate"
+    }
+
+    fulham_titles = [
+        "Cesar Palacios getting closer to joining Fulham",
+        "Premier leauge club in direct talks with Real Madrid over 21-year-old academy gems transfer",
+        "Fulham advance talks with Real Madrid for Palacios and Garcia transfers",
+    ]
+    assert {semantic_news_key(title) for title in fulham_titles} == {
+        "transfer:fulham-palacios-garcia"
+    }
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

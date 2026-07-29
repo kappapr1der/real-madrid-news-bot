@@ -515,6 +515,47 @@ def is_fiorentina_austria_friendly_text(text: str) -> bool:
     )
 
 
+def is_schalke_preseason_friendly_text(text: str) -> bool:
+    """Collapse all reports about Real Madrid's pre-season friendly with Schalke 04."""
+    return (
+        contains_any(text, ("schalke", "schalke 04", "шальке"))
+        and contains_any(text, ("real madrid", "madrid", "реал"))
+    )
+
+
+def is_mastantuono_river_loan_text(text: str) -> bool:
+    """Unify Mastantuono's reported loan preference to return to River Plate."""
+    named_report = (
+        contains_any(text, ("mastantuono", "мастантуоно"))
+        and contains_any(
+            text,
+            ("loan", "on loan", "cedido", "cesion", "cesión", "river plate", "return", "volver", "аренд", "вернут"),
+        )
+    )
+    unnamed_variant = (
+        contains_any(text, ("teenage wonderkid", "teenage prodigy", "teenage star", "подросток"))
+        and contains_any(text, ("loan", "on loan", "cedido", "cesion", "cesión", "аренд"))
+        and contains_any(text, ("former club", "rejoin", "return", "volver", "бывший клуб", "вернуться"))
+    )
+    return named_report or unnamed_variant
+
+
+def is_fulham_palacios_garcia_text(text: str) -> bool:
+    """Group the Fulham thread concerning Cesar Palacios and Garcia."""
+    named_report = (
+        contains_any(text, ("fulham", "фулхэм"))
+        and contains_any(text, ("cesar palacios", "césar palacios", "palacios", "сесар паласиос"))
+    )
+    unnamed_variant = contains_any(
+        text,
+        (
+            "premier league club in direct talks with real madrid over 21 year old academy gems transfer",
+            "premier leauge club in direct talks with real madrid over 21 year old academy gems transfer",
+        ),
+    )
+    return named_report or unnamed_variant
+
+
 def is_haaland_family_real_text(text: str) -> bool:
     return (
         contains_any(text, ("haaland", "haaland", "холанд", "хааланд"))
@@ -874,6 +915,15 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_fiorentina_austria_friendly_text(text):
         return "schedule:preseason-fiorentina-austria-friendly"
 
+    if is_schalke_preseason_friendly_text(text):
+        return "schedule:preseason-schalke-04-friendly"
+
+    if is_mastantuono_river_loan_text(text):
+        return "transfer:loan:mastantuono-river-plate"
+
+    if is_fulham_palacios_garcia_text(text):
+        return "transfer:fulham-palacios-garcia"
+
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
 
@@ -1046,6 +1096,14 @@ def canonical_news_key(key: str) -> str:
         return "schedule:laliga-opener-postponed"
     if is_teresa_herrera_deportivo_text(text):
         return "schedule:teresa-herrera-deportivo-friendly"
+    if is_fiorentina_austria_friendly_text(text):
+        return "schedule:preseason-fiorentina-austria-friendly"
+    if is_schalke_preseason_friendly_text(text):
+        return "schedule:preseason-schalke-04-friendly"
+    if is_mastantuono_river_loan_text(text):
+        return "transfer:loan:mastantuono-river-plate"
+    if is_fulham_palacios_garcia_text(text):
+        return "transfer:fulham-palacios-garcia"
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
     if is_fran_garcia_betis_text(text):

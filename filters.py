@@ -208,6 +208,13 @@ FILTERS = {
         "real madrid baraja nombres heredero thibaut courtois", "heredero thibaut courtois",
         "madrid se mete en un problema", "real madrid faces the need for operations in the transfer market",
 
+        # July 29: source-label clickbait and vague warnings do not carry a
+        # concrete, independently checkable club update.
+        "aviso jose felix diaz pone alerta madridismo", "aviso de jose felix diaz pone en alerta al madridismo",
+        "real madrid's move for rodri may have just hit a major stumbling block",
+        "fabrizio romano offers the michael olise clarity real madrid fans needed",
+        "fabrizio romano drops bombs", "fabrizio romano suelta bombas",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
