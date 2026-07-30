@@ -222,6 +222,15 @@ FILTERS = {
         "tomas roncero si vinicius acepta cobrar", "si vinicius acepta cobrar", "vinicius accepts earning",
         "si vinicius acepta cobrar entre 5 7 millones menos mbappe",
 
+        # July 30 morning: commentary, former-player moves without a club impact,
+        # and unsupported analyst claims must not pad an otherwise short digest.
+        "ancelotti italy", "carlo ancelotti italy brazil coach", "turned down italy job",
+        "kylian mbappe and the ewing theory",
+        "fracaso deportivo", "fracaso deportivo record gastos real madrid",
+        "florentino se ha puesto las pilas", "silencio vinicius no es justo", "silencio de vinicius no es justo",
+        "bayer target former real madrid", "bayer target former real madrid left back miguel gutierrez",
+        "hector gonzalez", "hector gonzalez analista deportivo",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

@@ -504,6 +504,19 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "si vinicius acepta cobrar",
     "vinicius accepts earning",
     "si vinicius acepta cobrar entre 5 7 millones menos mbappe",
+    "ancelotti italy",
+    "carlo ancelotti italy brazil coach",
+    "turned down italy job",
+    "kylian mbappe and the ewing theory",
+    "fracaso deportivo",
+    "fracaso deportivo record gastos real madrid",
+    "florentino se ha puesto las pilas",
+    "silencio vinicius no es justo",
+    "silencio de vinicius no es justo",
+    "bayer target former real madrid",
+    "bayer target former real madrid left back miguel gutierrez",
+    "hector gonzalez",
+    "hector gonzalez analista deportivo",
     "argentina make 3 changes to lineup",
     "argentina makes 3 changes to lineup",
     "argentina 3 changes to lineup",
@@ -1508,6 +1521,11 @@ def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[R
 def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     candidate = item.candidate
     if is_handle_only_x_title(candidate.title, getattr(candidate, "source", "")):
+        return True
+    link = str(getattr(candidate, "link", "")).casefold()
+    if ("marca.com" in link and "/opinion/" in link) or (
+        "managingmadrid.com" in link and "/managing-madrid-editorials/" in link
+    ):
         return True
     text = " ".join(
         [

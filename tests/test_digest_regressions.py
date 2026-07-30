@@ -1803,6 +1803,29 @@ def test_july_29_evening_filters_non_updates_and_cleans_endrick_name():
     )
 
 
+def test_july_30_morning_drops_commentary_and_former_player_noise():
+    noise_cases = [
+        ("Carlo Ancelotti says he turned down Italy job because he remains committed to Brazil", "ESPN FC"),
+        ("Kylian Mbappe and the Ewing Theory", "Managing Madrid"),
+        ("Fracaso deportivo, record de gastos: receta contra Real Madrid", "Sport - Real Madrid"),
+        ("Florentino se ha puesto las pilas y ya no hay excusas", "Marca - Real Madrid"),
+        ("El silencio de Vinicius no es justo", "Marca - Real Madrid"),
+        ("Bayer target former Real Madrid left-back Miguel Gutierrez", "X - @GuillermoRai_"),
+        ("Hector Gonzalez, analista deportivo: interest in Tchouameni is real", "Defensa Central"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    marca_opinion = _item("Any Marca opinion")
+    marca_opinion.candidate.link = "https://www.marca.com/futbol/real-madrid/opinion/2026/07/30/test.html"
+    assert digest_llm_hard_deny(marca_opinion) is True
+
+    managing_editorial = _item("Any Managing Madrid editorial")
+    managing_editorial.candidate.link = "https://www.managingmadrid.com/managing-madrid-editorials/110718/test"
+    assert digest_llm_hard_deny(managing_editorial) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
