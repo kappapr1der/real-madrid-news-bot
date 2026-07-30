@@ -47,6 +47,23 @@ def test_here_we_go_rejects_other_club_deal_mentioning_former_madrid_staff():
     assert breaking.is_here_we_go(title, "Fabrizio Romano - Telegram") is False
 
 
+def test_here_we_go_keeps_only_the_clean_confirmation_sentence(monkeypatch):
+    raw = (
+        "NEWS: Real Madrid sign Carlos Espi as new striker, here we go! "
+        "Levante sent official letter about the compensation payment tonight."
+    )
+    translated_parts = []
+
+    def fake_translate(value):
+        translated_parts.append(value)
+        return "НОВОСТЬ: «Реал» подписал контракт с Карлосом Эспи в качестве нового нападающего, начинаем!"
+
+    monkeypatch.setattr(breaking, "translate_text", fake_translate)
+
+    assert breaking.format_here_we_go_headline(raw) == "«Реал» подписал контракт с Карлосом Эспи."
+    assert translated_parts == ["NEWS: Real Madrid sign Carlos Espi as new striker, here we go!"]
+
+
 def test_here_we_go_bypasses_confirmation_and_keeps_short_freshness_window(monkeypatch, tmp_path):
     monkeypatch.setattr(breaking_confirmation, "CONFIRMATIONS_FILE", tmp_path / "confirmations.json")
     decision = breaking_confirmation.observe_breaking_candidate(

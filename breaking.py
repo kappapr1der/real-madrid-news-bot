@@ -244,6 +244,23 @@ def is_here_we_go(text: str, source: str = "", summary: str = "") -> bool:
     )
 
 
+def format_here_we_go_headline(text: str) -> str:
+    """Render Romano confirmations as one clean, complete Russian sentence."""
+    match = re.search(r"^(.{1,360}?\bhere\s*we\s*go\b[!.]?)", str(text or ""), flags=re.IGNORECASE)
+    lead = match.group(1) if match else str(text or "")
+    headline = clean_text(translate_text(lead))
+
+    headline = re.sub(r"^(?:новость|эксклюзив|срочно)\s*[:!-]\s*", "", headline, flags=re.IGNORECASE)
+    headline = re.sub(r"\s+в качестве (?:нового )?(?:нападающего|форварда)\b", "", headline, flags=re.IGNORECASE)
+    headline = re.sub(r"\s+как (?:нового )?(?:нападающего|форварда)\b", "", headline, flags=re.IGNORECASE)
+    headline = re.sub(r"(?:[,;:]\s*|\s+)(?:начинаем|поехали|here\s*we\s*go)\s*[!.…]*$", "", headline, flags=re.IGNORECASE)
+    headline = re.sub(r"\s+", " ", headline).strip(" ,;:-")
+
+    if headline and headline[-1] not in ".!?":
+        headline += "."
+    return headline
+
+
 def here_we_go_is_fresh(entry: dict[str, Any]) -> bool:
     published_at = entry.get("published_at")
     if not isinstance(published_at, datetime):
@@ -756,8 +773,7 @@ def fetch_breaking(sources):
                     queued += 1
                     logging.info("[LLM BREAKING] queued: %s | %s", label, title)
                     continue
-                news = translate_text(title)
-                clean_news = clean_text(news)
+                clean_news = format_here_we_go_headline(title) if here_we_go else clean_text(translate_text(title))
                 event_type = "here_we_go" if here_we_go else "ucl_draw" if is_draw_alert else ""
                 lifecycle = lifecycle_decision(title, source=label, category="breaking", fingerprint=fingerprint)
                 if lifecycle.relevant and not lifecycle.changed:
