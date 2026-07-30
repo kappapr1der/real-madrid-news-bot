@@ -1859,6 +1859,27 @@ def test_july_30_daytime_groups_asencio_and_gonzalo_and_rejects_clipped_posts():
     assert digest_llm_hard_deny(clipped_item) is True
 
 
+def test_july_30_evening_keeps_only_concrete_club_updates():
+    noise_cases = [
+        ("Carlo Ancelotti officially made the Casemiro realization everyone saw coming", "The Real Champs"),
+        ("Delantero tapado que pedia Mourinho para el Real Madrid sorprende a todos", "Bernabeu Digital"),
+        ("Maxence Lacroix joins Chelsea from Crystal Palace", "Guardian Football"),
+        ("Jaime Marcos, psicologo, sobre la presion de los futbolistas", "Defensa Central"),
+        ("Jueza del caso video sexual de canteranos del Real Madrid rechaza declararlo nulo", "Marca - Real Madrid"),
+        ("El largo viaje de la fotografia inedita de Ricardo Zamora", "Marca - Real Madrid"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    x_title = "@Эндрик"
+    x_source = "X – @realmadrid"
+    x_item = _item(x_title)
+    x_item.candidate.source = x_source
+    assert passes_filters(x_title, source=x_source) is False
+    assert digest_llm_hard_deny(x_item) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

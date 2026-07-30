@@ -237,6 +237,15 @@ FILTERS = {
         "david trezeguet said what even real madrid fans failed to realize",
         "daily thread", "hilo diario",
 
+        # July 30 evening: generic rival-transfer coverage, anonymous rumours,
+        # personal commentary and historical features do not earn a digest slot.
+        "carlo ancelotti officially made the casemiro realization",
+        "delantero tapado pedia mourinho", "delantero tapado que pedia mourinho",
+        "maxence lacroix", "jaime marcos psicologo",
+        "caso video sexual", "jueza caso video sexual canteranos", "jueza del caso video sexual canteranos",
+        "caso video sexual canteranos real madrid",
+        "fotografia inedita ricardo zamora", "fotografia inédita ricardo zamora",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
@@ -730,7 +739,7 @@ def is_handle_only_x_title(text: str, source: str = "") -> bool:
     source_name = _normalize(source)
     if not source_name.startswith("x - @"):
         return False
-    return bool(re.fullmatch(r"(?:@[A-Za-z0-9_]+\s*)+", str(text or "").strip()))
+    return bool(re.fullmatch(r"(?:@[\w]+\s*)+", str(text or "").strip()))
 
 
 def is_truncated_x_title(text: str, source: str = "") -> bool:
