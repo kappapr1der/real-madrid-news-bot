@@ -16,7 +16,7 @@ import requests
 
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
-from filters import is_handle_only_x_title, passes_filters
+from filters import is_handle_only_x_title, is_truncated_x_title, passes_filters
 from feed_utils import is_repost_entry, parse_feed_url, source_is_x
 from match_calendar import digest_block_reason
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
@@ -517,6 +517,11 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "bayer target former real madrid left back miguel gutierrez",
     "hector gonzalez",
     "hector gonzalez analista deportivo",
+    "davoo xeneize",
+    "davoo xeneize comunicador",
+    "david trezeguet said what even real madrid fans failed to realize",
+    "daily thread",
+    "hilo diario",
     "argentina make 3 changes to lineup",
     "argentina makes 3 changes to lineup",
     "argentina 3 changes to lineup",
@@ -1521,6 +1526,8 @@ def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[R
 def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     candidate = item.candidate
     if is_handle_only_x_title(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
         return True
     link = str(getattr(candidate, "link", "")).casefold()
     if ("marca.com" in link and "/opinion/" in link) or (

@@ -1826,6 +1826,39 @@ def test_july_30_morning_drops_commentary_and_former_player_noise():
     assert digest_llm_hard_deny(managing_editorial) is True
 
 
+def test_july_30_daytime_groups_asencio_and_gonzalo_and_rejects_clipped_posts():
+    noise_cases = [
+        ("Davoo Xeneize on Real Madrid's new line-up: Rodri, Bernardo Silva and Valverde", "Defensa Central"),
+        ("David Trezeguet said what even Real Madrid fans failed to realize about Zinedine Zidane", "The Real Champs"),
+        ("DAILY THREAD | JULY 30, 2026", "Managing Madrid"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    asencio_titles = [
+        "Real Madrid suffers muscle injury in pre-season, out for six weeks",
+        "Official: Raul Asencio out for six weeks",
+        "Asencio suffers injury and says goodbye to pre-season",
+    ]
+    assert {semantic_news_key(title) for title in asencio_titles} == {
+        "injury:raul-asencio-preseason-muscle"
+    }
+
+    gonzalo_titles = [
+        "Gonzalo will join Fulham for around 40 million euros",
+        "Real Madrid close record transfer for Gonzalo to Fulham",
+        "Fulham push for full ownership for 60 million euros",
+    ]
+    assert {semantic_news_key(title) for title in gonzalo_titles} == {"transfer:gonzalo-fulham"}
+
+    clipped_x_title = "The first to leave. Mastantuono should be second. https://www.cope…"
+    assert passes_filters(clipped_x_title, source="X - @AranchaMOBILE") is False
+    clipped_item = _item(clipped_x_title)
+    clipped_item.candidate.source = "X - @AranchaMOBILE"
+    assert digest_llm_hard_deny(clipped_item) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

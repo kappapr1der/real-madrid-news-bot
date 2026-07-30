@@ -231,6 +231,12 @@ FILTERS = {
         "bayer target former real madrid", "bayer target former real madrid left back miguel gutierrez",
         "hector gonzalez", "hector gonzalez analista deportivo",
 
+        # July 30 daytime: fan columns and automated daily threads are not
+        # standalone news, even when they mention current squad players.
+        "davoo xeneize", "davoo xeneize comunicador",
+        "david trezeguet said what even real madrid fans failed to realize",
+        "daily thread", "hilo diario",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
@@ -727,6 +733,17 @@ def is_handle_only_x_title(text: str, source: str = "") -> bool:
     return bool(re.fullmatch(r"(?:@[A-Za-z0-9_]+\s*)+", str(text or "").strip()))
 
 
+def is_truncated_x_title(text: str, source: str = "") -> bool:
+    """Reject clipped social snippets that still contain a source URL."""
+    source_name = _normalize(source)
+    plain = str(text or "").strip()
+    return (
+        source_name.startswith("x - @")
+        and ("http://" in plain or "https://" in plain)
+        and (plain.endswith("...") or plain.endswith("…"))
+    )
+
+
 def passes_filters(text: str, summary: Optional[str] = None, source: Optional[str] = None) -> bool:
     """
     Основной фильтр релевантности.
@@ -747,6 +764,10 @@ def passes_filters(text: str, summary: Optional[str] = None, source: Optional[st
 
     if is_handle_only_x_title(text, source):
         logger.info(f"[FILTERED: X HANDLE ONLY] {source}: {text[:90]}...")
+        return False
+
+    if is_truncated_x_title(text, source):
+        logger.info(f"[FILTERED: X TRUNCATED] {source}: {text[:90]}...")
         return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):

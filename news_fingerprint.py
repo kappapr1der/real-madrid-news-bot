@@ -202,6 +202,53 @@ def is_asencio_loan_buy_text(text: str) -> bool:
     )
 
 
+def is_raul_asencio_preseason_injury_text(text: str) -> bool:
+    """Unify reports about Raul Asencio's six-week pre-season muscle injury."""
+    named_report = (
+        contains_any(text, ("raul asencio", "asencio", "асенсио"))
+        and contains_any(text, ("injury", "injured", "muscle", "lesion", "lesionado", "out", "травм", "мышеч"))
+        and contains_any(text, ("six weeks", "seis semanas", "preseason", "pre season", "pretemporada", "выбыл"))
+    )
+    unnamed_variant = contains_any(
+        text,
+        (
+            "real madrid suffers muscle injury in pre season out for six weeks",
+            "real madrid suffer muscle injury in pre season out for six weeks",
+            "real madrid suffers muscle injury in preseason out for six weeks",
+        ),
+    )
+    return named_report or unnamed_variant
+
+
+def is_gonzalo_fulham_transfer_text(text: str) -> bool:
+    """Collapse reports about Gonzalo's proposed Fulham transfer."""
+    named_report = (
+        contains_any(text, ("gonzalo", "гонсало"))
+        and contains_any(text, ("fulham", "фулхэм"))
+        and contains_any(
+            text,
+            (
+                "transfer",
+                "sale",
+                "sell",
+                "join",
+                "joins",
+                "fichaje",
+                "traspaso",
+                "venta",
+                "переход",
+                "продаж",
+            ),
+        )
+    )
+    full_ownership_variant = (
+        contains_any(text, ("fulham", "фулхэм"))
+        and contains_any(text, ("full ownership", "ownership", "propiedad", "выкуп"))
+        and contains_any(text, ("60 million", "60m", "60 millones", "60 миллионов"))
+    )
+    return named_report or full_ownership_variant
+
+
 def is_medical_staff_changes_text(text: str) -> bool:
     return (
         contains_any(
@@ -879,6 +926,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_thiago_pitarch_injury_text(text):
         return "injury:thiago-pitarch-knee"
 
+    if is_raul_asencio_preseason_injury_text(text):
+        return "injury:raul-asencio-preseason-muscle"
+
     if is_llopis_goalkeeping_staff_text(text):
         return "staff:llopis-goalkeeping"
 
@@ -923,6 +973,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_fulham_palacios_garcia_text(text):
         return "transfer:fulham-palacios-garcia"
+
+    if is_gonzalo_fulham_transfer_text(text):
+        return "transfer:gonzalo-fulham"
 
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
@@ -1066,6 +1119,8 @@ def canonical_news_key(key: str) -> str:
         return "injury:mendy-return-schedule"
     if is_thiago_pitarch_injury_text(text):
         return "injury:thiago-pitarch-knee"
+    if is_raul_asencio_preseason_injury_text(text):
+        return "injury:raul-asencio-preseason-muscle"
     if is_llopis_goalkeeping_staff_text(text):
         return "staff:llopis-goalkeeping"
     if is_cucurella_welcome_text(text):
@@ -1104,6 +1159,8 @@ def canonical_news_key(key: str) -> str:
         return "transfer:loan:mastantuono-river-plate"
     if is_fulham_palacios_garcia_text(text):
         return "transfer:fulham-palacios-garcia"
+    if is_gonzalo_fulham_transfer_text(text):
+        return "transfer:gonzalo-fulham"
     if is_arbeloa_fulham_text(text):
         return "staff:arbeloa-fulham-manager"
     if is_fran_garcia_betis_text(text):
