@@ -595,6 +595,7 @@ def is_mastantuono_river_loan_text(text: str) -> bool:
     """Unify Mastantuono's reported loan preference to return to River Plate."""
     named_report = (
         contains_any(text, ("mastantuono", "мастантуоно"))
+        and contains_any(text, ("river plate", "river", "ривер плейт", "ривер"))
         and contains_any(
             text,
             ("loan", "on loan", "cedido", "cesion", "cesión", "river plate", "return", "volver", "аренд", "вернут"),
@@ -606,6 +607,36 @@ def is_mastantuono_river_loan_text(text: str) -> bool:
         and contains_any(text, ("former club", "rejoin", "return", "volver", "бывший клуб", "вернуться"))
     )
     return named_report or unnamed_variant
+
+
+def is_mastantuono_roma_transfer_text(text: str) -> bool:
+    """Collapse the current Roma interest in Mastantuono."""
+    return (
+        contains_any(text, ("mastantuono", "мастантуоно"))
+        and contains_any(text, ("roma", "роме", "рома"))
+        and contains_any(
+            text,
+            (
+                "transfer",
+                "loan",
+                "sign",
+                "signing",
+                "talk",
+                "talks",
+                "negotiat",
+                "offer",
+                "offers",
+                "interest",
+                "interested",
+                "fichaje",
+                "negoci",
+                "oferta",
+                "interes",
+                "cedido",
+                "cesion",
+            ),
+        )
+    )
 
 
 def is_fulham_palacios_garcia_text(text: str) -> bool:
@@ -937,7 +968,25 @@ def is_yan_diomande_real_transfer_text(text: str) -> bool:
 
 def is_carlos_espi_real_transfer_text(text: str) -> bool:
     """Collapse the Carlos Espi signing and immediate follow-up coverage."""
-    return contains_any(text, ("carlos espi", "карлос эспи"))
+    return contains_any(
+        text,
+        (
+            "carlos espi",
+            "карлос эспи",
+            "primeras palabras de espi",
+            "primeras palabras espi",
+            "espi madridista",
+            "espi first words",
+        ),
+    )
+
+
+def is_victor_valdepenas_fiorentina_text(text: str) -> bool:
+    """Collapse confirmation stories for Victor Valdepenas's Fiorentina move."""
+    return (
+        contains_any(text, ("victor valdepenas", "виктор вальдепеньяс", "виктор вальдепес"))
+        and contains_any(text, ("fiorentina", "фиорентина"))
+    )
 
 
 def semantic_news_key(title: str, summary: str = "") -> str:
@@ -979,6 +1028,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_carlos_espi_real_transfer_text(text):
         return "transfer:carlos-espi-real-madrid"
 
+    if is_victor_valdepenas_fiorentina_text(text):
+        return "transfer:victor-valdepenas-fiorentina"
+
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
 
@@ -999,6 +1051,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_mastantuono_river_loan_text(text):
         return "transfer:loan:mastantuono-river-plate"
+
+    if is_mastantuono_roma_transfer_text(text):
+        return "transfer:loan:mastantuono-roma"
 
     if is_fulham_palacios_garcia_text(text):
         return "transfer:fulham-palacios-garcia"
@@ -1164,6 +1219,9 @@ def canonical_news_key(key: str) -> str:
         return "transfer:yan-diomande-real-madrid"
     if is_carlos_espi_real_transfer_text(text):
         return "transfer:carlos-espi-real-madrid"
+
+    if is_victor_valdepenas_fiorentina_text(text):
+        return "transfer:victor-valdepenas-fiorentina"
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
     if is_valverde_mourinho_leadership_text(text):
@@ -1188,6 +1246,9 @@ def canonical_news_key(key: str) -> str:
         return "schedule:preseason-schalke-04-friendly"
     if is_mastantuono_river_loan_text(text):
         return "transfer:loan:mastantuono-river-plate"
+
+    if is_mastantuono_roma_transfer_text(text):
+        return "transfer:loan:mastantuono-roma"
     if is_fulham_palacios_garcia_text(text):
         return "transfer:fulham-palacios-garcia"
     if is_gonzalo_fulham_transfer_text(text):

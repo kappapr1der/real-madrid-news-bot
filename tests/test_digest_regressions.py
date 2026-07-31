@@ -1919,6 +1919,34 @@ def test_july_31_afternoon_groups_gonzalo_departure_and_drops_vinicius_noise():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_31_evening_groups_transfer_followups_and_drops_vague_rival_item():
+    valdepenas_titles = [
+        "Official: Victor Valdepenas moves to Fiorentina",
+        "Real Madrid confirm Victor Valdepenas transfer to Fiorentina",
+        "Oficial: Victor Valdepenas ficha por ACF Fiorentina",
+    ]
+    assert {semantic_news_key(title) for title in valdepenas_titles} == {
+        "transfer:victor-valdepenas-fiorentina"
+    }
+
+    mastantuono_titles = [
+        "Roma travel to Madrid to negotiate signings for Endrick and Mastantuono",
+        "Roma are one of the teams interested in Mastantuono",
+        "Hay ofertas desde Italia por Mastantuono. Roma, uno de los interesados.",
+    ]
+    assert {semantic_news_key(title) for title in mastantuono_titles} == {
+        "transfer:loan:mastantuono-roma"
+    }
+
+    assert semantic_news_key("Primeras palabras de Espi como madridista") == (
+        "transfer:carlos-espi-real-madrid"
+    )
+
+    title = "Real Madrid midfielder to attend Barcelona pre-season friendly in England"
+    assert passes_filters(title, source="Madrid Universal") is False
+    assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

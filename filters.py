@@ -252,6 +252,9 @@ FILTERS = {
         "vinicius ultimatum", "real madrid vinicius ultimatum",
         "vinicius saca su lado paterno", "vinicius saca lado paterno",
         "looks happy with his stepson",
+        "real madrid midfielder to attend barcelona pre season friendly in england",
+        "barcelona pre season friendly in england",
+        "barcelona pre-season friendly in england",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
