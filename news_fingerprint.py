@@ -246,7 +246,28 @@ def is_gonzalo_fulham_transfer_text(text: str) -> bool:
         and contains_any(text, ("full ownership", "ownership", "propiedad", "выкуп"))
         and contains_any(text, ("60 million", "60m", "60 millones", "60 миллионов"))
     )
-    return named_report or full_ownership_variant
+    departure_followup = (
+        contains_any(text, ("gonzalo", "гонсало"))
+        and contains_any(text, ("mourinho", "моуринью"))
+        and contains_any(
+            text,
+            (
+                "leave",
+                "leaves",
+                "left",
+                "departure",
+                "exit",
+                "salida",
+                "se marcha",
+                "marcha",
+                "marcho",
+                "покинул",
+                "ушел",
+                "уход",
+            ),
+        )
+    )
+    return named_report or full_ownership_variant or departure_followup
 
 
 def is_medical_staff_changes_text(text: str) -> bool:

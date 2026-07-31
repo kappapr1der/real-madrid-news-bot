@@ -246,9 +246,12 @@ FILTERS = {
         "caso video sexual canteranos real madrid",
         "fotografia inedita ricardo zamora", "fotografia inédita ricardo zamora",
 
-        # July 31 morning: media-company chatter and vague Rodri clickbait are
-        # not material club developments.
+        # July 31: media-company chatter, unfounded ultimatums and lifestyle
+        # stories do not belong in the club news digest.
         "josep pedrerol", "rodri just joined rare company",
+        "vinicius ultimatum", "real madrid vinicius ultimatum",
+        "vinicius saca su lado paterno", "vinicius saca lado paterno",
+        "looks happy with his stepson",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.

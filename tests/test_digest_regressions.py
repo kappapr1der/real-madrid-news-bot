@@ -1900,6 +1900,25 @@ def test_july_31_morning_groups_carlos_espi_and_drops_commentary_noise():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_july_31_afternoon_groups_gonzalo_departure_and_drops_vinicius_noise():
+    gonzalo_titles = [
+        "Gonzalo will join Fulham for around 40 million euros",
+        "Gonzalo left Real Madrid despite Mourinho wanting him to stay",
+        "Gonzalo se marcho pese a que Mourinho queria que se quedase",
+    ]
+    assert {semantic_news_key(title) for title in gonzalo_titles} == {
+        "transfer:gonzalo-fulham"
+    }
+
+    noise_cases = [
+        ("Real Madrid give Vinicius ultimatum: renew or prepare to leave next summer", "Managing Madrid"),
+        ("Vinicius saca su lado paterno y posa feliz con su hijastro", "Marca - Real Madrid"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
