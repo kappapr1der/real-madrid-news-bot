@@ -535,6 +535,8 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "ricardo zamora",
     "fotografia inedita ricardo zamora",
     "fotografia inédita ricardo zamora",
+    "josep pedrerol",
+    "rodri just joined rare company",
     "argentina make 3 changes to lineup",
     "argentina makes 3 changes to lineup",
     "argentina 3 changes to lineup",

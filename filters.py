@@ -246,6 +246,10 @@ FILTERS = {
         "caso video sexual canteranos real madrid",
         "fotografia inedita ricardo zamora", "fotografia inédita ricardo zamora",
 
+        # July 31 morning: media-company chatter and vague Rodri clickbait are
+        # not material club developments.
+        "josep pedrerol", "rodri just joined rare company",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

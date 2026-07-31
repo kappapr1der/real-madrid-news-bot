@@ -914,6 +914,11 @@ def is_yan_diomande_real_transfer_text(text: str) -> bool:
     return contains_any(text, ("yan diomande", "ян диоманде", "diomande", "диоманде"))
 
 
+def is_carlos_espi_real_transfer_text(text: str) -> bool:
+    """Collapse the Carlos Espi signing and immediate follow-up coverage."""
+    return contains_any(text, ("carlos espi", "карлос эспи"))
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -949,6 +954,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_yan_diomande_real_transfer_text(text):
         return "transfer:yan-diomande-real-madrid"
+
+    if is_carlos_espi_real_transfer_text(text):
+        return "transfer:carlos-espi-real-madrid"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
@@ -1133,6 +1141,8 @@ def canonical_news_key(key: str) -> str:
         return "club:green-away-kit-2026-27"
     if is_yan_diomande_real_transfer_text(text):
         return "transfer:yan-diomande-real-madrid"
+    if is_carlos_espi_real_transfer_text(text):
+        return "transfer:carlos-espi-real-madrid"
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
     if is_valverde_mourinho_leadership_text(text):

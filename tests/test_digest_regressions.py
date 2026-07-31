@@ -1880,6 +1880,26 @@ def test_july_30_evening_keeps_only_concrete_club_updates():
     assert digest_llm_hard_deny(x_item) is True
 
 
+def test_july_31_morning_groups_carlos_espi_and_drops_commentary_noise():
+    carlos_espi_titles = [
+        "Real Madrid sign Carlos Espi as new striker, here we go!",
+        "Official: Real Madrid sign Carlos Espi",
+        "Oficial: Carlos Espi, nuevo jugador del Madrid",
+        "Consecuencias directas del fichaje de Carlos Espi por el Real Madrid",
+    ]
+    assert {semantic_news_key(title) for title in carlos_espi_titles} == {
+        "transfer:carlos-espi-real-madrid"
+    }
+
+    noise_cases = [
+        ("Josep Pedrerol: No es facil trasladar 70 personas de cadena de television", "Defensa Central"),
+        ("Rodri just joined rare company by proving Florentino Perez wrong", "The Real Champs"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
