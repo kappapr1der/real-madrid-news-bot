@@ -256,6 +256,16 @@ FILTERS = {
         "barcelona pre season friendly in england",
         "barcelona pre-season friendly in england",
 
+        # August 1: pundit columns, lifestyle filler and malformed social
+        # attribution should not displace concrete club updates.
+        "chelsea next transfer could give jose mourinho",
+        "chelsea's next transfer could give jose mourinho",
+        "trent alexander arnold 27 anos sobre su infancia",
+        "jugaba ajedrez con mis hermanos",
+        "ibai llanos",
+        "chelsea pensioners policy",
+        "gracias @mariocortegana", "thanks @mariocortegana", "r to @mariocortegana",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

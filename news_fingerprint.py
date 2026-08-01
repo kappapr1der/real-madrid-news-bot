@@ -989,6 +989,15 @@ def is_victor_valdepenas_fiorentina_text(text: str) -> bool:
     )
 
 
+def is_bellingham_barcelona_birmingham_text(text: str) -> bool:
+    """Collapse reports about Bellingham attending Barcelona's Birmingham match."""
+    return (
+        contains_any(text, ("bellingham", "беллингем"))
+        and contains_any(text, ("birmingham", "бирмингем"))
+        and contains_any(text, ("barcelona", "barca", "barça", "барселон", "барса"))
+    )
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -1030,6 +1039,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_victor_valdepenas_fiorentina_text(text):
         return "transfer:victor-valdepenas-fiorentina"
+
+    if is_bellingham_barcelona_birmingham_text(text):
+        return "social:bellingham-barcelona-birmingham"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
@@ -1222,6 +1234,9 @@ def canonical_news_key(key: str) -> str:
 
     if is_victor_valdepenas_fiorentina_text(text):
         return "transfer:victor-valdepenas-fiorentina"
+
+    if is_bellingham_barcelona_birmingham_text(text):
+        return "social:bellingham-barcelona-birmingham"
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"
     if is_valverde_mourinho_leadership_text(text):

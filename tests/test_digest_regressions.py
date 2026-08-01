@@ -1947,6 +1947,30 @@ def test_july_31_evening_groups_transfer_followups_and_drops_vague_rival_item():
     assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_august_1_groups_bellingham_birmingham_and_drops_editorial_noise():
+    bellingham_titles = [
+        "Bellingham, presente en Birmingham-Barca",
+        "Bellingham attending Barcelona's Birmingham friendly",
+        "Bellingham, presente en el partido del Barca en Birmingham",
+    ]
+    assert {semantic_news_key(title) for title in bellingham_titles} == {
+        "social:bellingham-barcelona-birmingham"
+    }
+
+    noise_cases = [
+        ("Chelsea next transfer could give Jose Mourinho the CB he wants for Real Madrid", "The Real Champs"),
+        ("Chelsea's next transfer could give Jose Mourinho the CB he wants for Real Madrid", "The Real Champs"),
+        ("Trent Alexander Arnold, 27 anos, sobre su infancia: jugaba ajedrez con mis hermanos", "Defensa Central"),
+        ("Ibai Llanos: Mourinho comes to Real Madrid to bring order", "Defensa Central"),
+        ("Chelsea pensioners policy: Xabi Alonso is being listened to by the owners", "FourFourTwo"),
+        ("Gracias @MarioCortegana: @quillobarrios desvela por primera vez que Vinicius", "X - @MarioCortegana"),
+        ("R to @MarioCortegana: @quillobarrios first re Vinicius open to lower demands", "X - @MarioCortegana"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
