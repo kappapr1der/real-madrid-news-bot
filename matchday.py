@@ -15,7 +15,13 @@ import requests
 from colorama import Fore, Style, init
 
 from editorial_archive import archive_matchday_story
-from live_providers import fetch_confirmed_lineups, fetch_final_results, fetch_live_events, live_provider_status
+from live_providers import (
+    fetch_confirmed_lineups,
+    fetch_confirmed_rss_live_events,
+    fetch_final_results,
+    fetch_live_events,
+    live_provider_status,
+)
 from matchday_editorial import bernabeu_voice_copy, pre_whistle_copy
 from match_calendar import Match, calendar_read_error, find_match, load_matches, local_now, match_calendar_status, upcoming_matches
 from post_utils import append_hashtags
@@ -406,7 +412,10 @@ def run_live_once() -> int:
         return 0
 
     sent = 0
-    events = fetch_live_events(load_matches())
+    matches = load_matches()
+    events = fetch_live_events(matches)
+    rss_confirmed_events = fetch_confirmed_rss_live_events(matches, events)
+    events.extend(rss_confirmed_events)
     for event in events:
         if stop_event.is_set():
             break
@@ -431,7 +440,12 @@ def run_live_once() -> int:
         "live",
         "ok",
         "live check complete",
-        {"events": len(events), "sent": sent, "dry_run": DRY_RUN},
+        {
+            "events": len(events),
+            "rss_confirmed_events": len(rss_confirmed_events),
+            "sent": sent,
+            "dry_run": DRY_RUN,
+        },
     )
     print(Fore.CYAN + f"[MATCHDAY LIVE] Проверка live-событий завершена, опубликовано: {sent}")
     return sent

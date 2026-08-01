@@ -2,12 +2,15 @@ import hashlib
 import json
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import timedelta
+from html import unescape
 from typing import Any
 
 import requests
 
+from feed_utils import parse_feed_url
 from match_calendar import Match, local_now
 from runtime_config import (
     API_FOOTBALL_BASE_URL,
@@ -21,13 +24,24 @@ from runtime_config import (
     MATCHDAY_LIVE_ENABLED,
     MATCHDAY_LIVE_EVENT_TYPES,
     MATCHDAY_LIVE_PROVIDER,
+    MATCHDAY_RSS_CONFIRMATION_CACHE_SECONDS,
+    MATCHDAY_RSS_CONFIRMATION_ENABLED,
+    MATCHDAY_RSS_CONFIRMATION_ENTRY_SCAN_LIMIT,
     MATCHDAY_LINEUP_BEFORE_MINUTES,
     MATCHDAY_LINEUP_ENABLED,
     MATCHDAY_RESULT_ENABLED,
+    SPORTS_LIVE_RSS_URL,
 )
+from sources_international import X_SOURCES
 
 CANCELLED_STATUSES = {"NS", "TBD", "PST", "CANC", "ABD", "AWD", "WO"}
 FINISHED_STATUSES = {"FT", "AET", "PEN"}
+HTML_TAG_RE = re.compile(r"<[^>]+>")
+SCORE_RE = re.compile(r"(?<!\d)(\d{1,2})\s*[-:]\s*(\d{1,2})(?!\d)")
+MINUTE_RE = re.compile("(?<!\\d)(\\d{1,3})\\s*(?:['\u2019\u2032]|min\\.?|\u043c\u0438\u043d\\.?)(?!\\w)", re.IGNORECASE)
+GOAL_RE = re.compile("\\b(?:go+l+|goal|\u0433\u043e\u043b+)\\b", re.IGNORECASE)
+LIVE_MARKERS = ("\u043c\u0430\u0442\u0447", "live", "\u043e\u043d\u043b\u0430\u0439\u043d", "\u043f\u0435\u0440\u0435\u0440\u044b\u0432", "\u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0446", "\u0441\u0447\u0451\u0442", "\u0441\u0447\u0435\u0442", "goal", "\u0433\u043e\u043b")
+REAL_MADRID_SIGNAL_NAMES = ("real madrid", "\u043c\u0430\u0434\u0440\u0438\u0434\u0441\u043a\u0438\u0439 \u0440\u0435\u0430\u043b", "\u0440\u0435\u0430\u043b \u043c\u0430\u0434\u0440\u0438\u0434", "\u0440\u0435\u0430\u043b")
 REAL_NAME_RE = re.compile(r"\breal\s+madrid\b|\bреал\s+мадрид\b", re.IGNORECASE)
 
 
@@ -39,6 +53,15 @@ class LiveEvent:
     kind: str
     score: str
     text: str
+
+
+@dataclass(frozen=True)
+class RssLiveSignal:
+    match: Match
+    source: str
+    score: str
+    minute: str
+    event_kind: str
 
 
 @dataclass(frozen=True)
@@ -268,6 +291,183 @@ def fixture_score(fixture: dict[str, Any]) -> str:
 
 def score_sentence(score: str) -> str:
     return f" Счет {score}." if score else ""
+
+
+def normalize_signal_text(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value)
+    without_accents = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\u0430-\u044f\u0451:-]+", " ", without_accents.casefold())).strip()
+
+
+def entry_signal_text(entry: dict[str, Any]) -> str:
+    raw = " ".join(
+        str(entry.get(field) or "")
+        for field in ("title", "summary", "description")
+    )
+    return normalize_signal_text(unescape(HTML_TAG_RE.sub(" ", raw)))
+
+
+def text_score(text: str) -> str:
+    match = SCORE_RE.search(text)
+    if not match:
+        return ""
+    home, away = match.groups()
+    if int(home) == 0 and int(away) == 0:
+        return ""
+    return f"{home}:{away}"
+
+
+def text_minute(text: str) -> str:
+    match = MINUTE_RE.search(text)
+    return match.group(1) if match else ""
+
+
+def text_event_kind(text: str) -> str:
+    return "goal" if GOAL_RE.search(text) else ""
+
+
+def text_has_phrase(text: str, phrase: str) -> bool:
+    clean = normalize_signal_text(phrase)
+    return bool(clean) and f" {clean} " in f" {text} "
+
+
+def match_opponent(match: Match) -> str:
+    home_is_real = bool(REAL_NAME_RE.search(match.home))
+    away_is_real = bool(REAL_NAME_RE.search(match.away))
+    return match.away if home_is_real else match.home if away_is_real else ""
+
+
+def sports_entry_matches_match(text: str, match: Match) -> bool:
+    mentions_real = any(text_has_phrase(text, name) for name in REAL_MADRID_SIGNAL_NAMES)
+    if not mentions_real:
+        return False
+    opponent = match_opponent(match)
+    mentions_opponent = text_has_phrase(text, opponent)
+    has_live_context = any(marker in text for marker in LIVE_MARKERS)
+    return mentions_opponent or has_live_context
+
+
+def sports_live_source() -> dict[str, Any] | None:
+    if not SPORTS_LIVE_RSS_URL:
+        return None
+    return {
+        "url": SPORTS_LIVE_RSS_URL,
+        "label": "Sports.ru live signal",
+        "cache_seconds": MATCHDAY_RSS_CONFIRMATION_CACHE_SECONDS,
+        "rss_require_entries": True,
+    }
+
+
+def official_x_live_sources() -> list[dict[str, Any]]:
+    return [source for source in X_SOURCES if source.get("kind") == "x_official"]
+
+
+def fetch_rss_live_signals(matches: list[Match]) -> list[RssLiveSignal]:
+    """Read public RSS only as a signal. Nothing from it is publishable text."""
+    if not MATCHDAY_RSS_CONFIRMATION_ENABLED or not matches:
+        return []
+
+    signals: list[RssLiveSignal] = []
+    sports_source = sports_live_source()
+    if sports_source:
+        feed = parse_feed_url(sports_source)
+        entries = list(getattr(feed, "entries", []) or [])[:MATCHDAY_RSS_CONFIRMATION_ENTRY_SCAN_LIMIT]
+        for entry in entries:
+            text = entry_signal_text(entry)
+            score = text_score(text)
+            if not score:
+                continue
+            for match in matches:
+                if sports_entry_matches_match(text, match):
+                    signals.append(
+                        RssLiveSignal(
+                            match=match,
+                            source="sports",
+                            score=score,
+                            minute=text_minute(text),
+                            event_kind=text_event_kind(text),
+                        )
+                    )
+
+    # The official account supplies match context during the one active Real Madrid game.
+    # It may not include the opponent or score in every post, so its text is never published.
+    if len(matches) == 1:
+        match = matches[0]
+        for source in official_x_live_sources():
+            feed = parse_feed_url(source)
+            entries = list(getattr(feed, "entries", []) or [])[:MATCHDAY_RSS_CONFIRMATION_ENTRY_SCAN_LIMIT]
+            for entry in entries:
+                text = entry_signal_text(entry)
+                score = text_score(text)
+                event_kind = text_event_kind(text)
+                if not score and not event_kind:
+                    continue
+                signals.append(
+                    RssLiveSignal(
+                        match=match,
+                        source="official_x",
+                        score=score,
+                        minute=text_minute(text),
+                        event_kind=event_kind,
+                    )
+                )
+    return signals
+
+
+def render_confirmed_score_text(match: Match, score: str) -> str:
+    return f"\u041d\u0430 \u0442\u0430\u0431\u043b\u043e: {match.home} {score.replace(':', ' \u2013 ')} {match.away}."
+
+
+def fetch_confirmed_rss_live_events(matches: list[Match], api_events: list[LiveEvent]) -> list[LiveEvent]:
+    """Turn a Sports.ru score into a post only after API-Football or @realmadrid confirms it."""
+    if not MATCHDAY_RSS_CONFIRMATION_ENABLED:
+        return []
+
+    active_matches = matches_in_live_window(matches)
+    if not active_matches:
+        return []
+
+    signals = fetch_rss_live_signals(active_matches)
+    sports_signals = [signal for signal in signals if signal.source == "sports"]
+    if not sports_signals:
+        return []
+
+    api_scores = {(event.match.id, event.score) for event in api_events if event.score}
+    api_goal_scores = {
+        (event.match.id, event.score)
+        for event in api_events
+        if event.score and event.kind.casefold() == "\u0433\u043e\u043b"
+    }
+    official_signals = [signal for signal in signals if signal.source == "official_x"]
+    confirmed: list[LiveEvent] = []
+    seen: set[tuple[str, str]] = set()
+    for signal in sports_signals:
+        pair = (signal.match.id, signal.score)
+        if pair in seen or pair in api_goal_scores:
+            continue
+        official_match_signals = [item for item in official_signals if item.match.id == signal.match.id]
+        official_confirms = any(
+            item.score == signal.score or item.event_kind == "goal"
+            for item in official_match_signals
+        )
+        if pair not in api_scores and not official_confirms:
+            continue
+        minute = signal.minute or next(
+            (item.minute for item in official_match_signals if item.minute),
+            "",
+        )
+        confirmed.append(
+            LiveEvent(
+                key=f"rss-confirmed:{signal.match.id}:{signal.score}",
+                match=signal.match,
+                minute=minute,
+                kind="\u0421\u0447\u0451\u0442",
+                score=signal.score,
+                text=render_confirmed_score_text(signal.match, signal.score),
+            )
+        )
+        seen.add(pair)
+    return confirmed
 
 
 def event_kind(raw_event: dict[str, Any]) -> str:
