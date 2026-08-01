@@ -381,6 +381,8 @@ X_RSS_HANDLES=realmadrid,realmadriden,MadridXtra,FabrizioRomano,MarioCortegana,A
 # Матч-день и текстовые трансляции.
 MATCHDAY_ENABLED=true
 MATCH_SCHEDULE_FILE=config/matches.json
+# Confirmed friendlies and one-off tournaments live in config/supplements/*.json.
+# They are merged at runtime and are not overwritten by the league calendar refresh.
 MATCHDAY_BLOCK_BEFORE_HOURS=3
 MATCHDAY_BLOCK_AFTER_HOURS=2
 MATCHDAY_BLOCK_ALL_DAY=false

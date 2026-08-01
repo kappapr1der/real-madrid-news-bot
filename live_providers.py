@@ -12,9 +12,9 @@ from match_calendar import Match, local_now
 from runtime_config import (
     API_FOOTBALL_BASE_URL,
     API_FOOTBALL_KEY,
-    API_FOOTBALL_LEAGUE_IDS,
     API_FOOTBALL_REQUEST_TIMEOUT_SECONDS,
     API_FOOTBALL_TEAM_ID,
+    CALENDAR_REFRESH_SEASON,
     MATCHDAY_FULLTIME_MINUTES,
     MATCHDAY_LIVE_AFTER_MINUTES,
     MATCHDAY_LIVE_BEFORE_MINUTES,
@@ -160,16 +160,6 @@ def fixture_status(fixture: dict[str, Any]) -> str:
     return str(status.get("short") or "")
 
 
-def fixture_allowed(fixture: dict[str, Any]) -> bool:
-    if not API_FOOTBALL_LEAGUE_IDS:
-        return True
-    try:
-        league_id = int((fixture.get("league") or {}).get("id"))
-    except (TypeError, ValueError):
-        return False
-    return league_id in API_FOOTBALL_LEAGUE_IDS
-
-
 def fixture_active_enough(fixture: dict[str, Any]) -> bool:
     status = fixture_status(fixture)
     return bool(status and status not in CANCELLED_STATUSES)
@@ -186,22 +176,53 @@ def fixture_team_names(fixture: dict[str, Any]) -> tuple[str, str]:
     return str(home), str(away)
 
 
+def similar_team_names(first: str, second: str) -> bool:
+    normalized_first = normalize_name(first)
+    normalized_second = normalize_name(second)
+    if not normalized_first or not normalized_second:
+        return False
+    return normalized_first == normalized_second or (
+        min(len(normalized_first), len(normalized_second)) >= 5
+        and (normalized_first in normalized_second or normalized_second in normalized_first)
+    )
+
+
+def fixture_matches_match(fixture: dict[str, Any], match: Match) -> bool:
+    home_name, away_name = fixture_team_names(fixture)
+    direct = similar_team_names(home_name, match.home) and similar_team_names(away_name, match.away)
+    reverse = similar_team_names(home_name, match.away) and similar_team_names(away_name, match.home)
+    return direct or reverse
+
+
 def match_for_fixture(fixture: dict[str, Any], active_matches: list[Match]) -> Match | None:
     current_fixture_id = fixture_id(fixture)
     for match in active_matches:
         if match.api_football_fixture_id and match.api_football_fixture_id == current_fixture_id:
             return match
 
-    if len(active_matches) == 1:
-        return active_matches[0]
-
-    home_name, away_name = fixture_team_names(fixture)
-    fixture_names = {normalize_name(home_name), normalize_name(away_name)}
     for match in active_matches:
-        match_names = {normalize_name(match.home), normalize_name(match.away)}
-        if fixture_names & match_names:
+        if fixture_matches_match(fixture, match):
             return match
 
+    return None
+
+
+def fixture_for_match(client: ApiFootballClient, match: Match) -> dict[str, Any] | None:
+    if match.api_football_fixture_id:
+        return client.fixture_by_id(match.api_football_fixture_id)
+
+    # A concrete entry in the calendar allows a friendly outside the league IDs.
+    fixtures = client.get(
+        "fixtures",
+        {
+            "team": API_FOOTBALL_TEAM_ID,
+            "date": match.kickoff.date().isoformat(),
+            "season": CALENDAR_REFRESH_SEASON,
+        },
+    )
+    for fixture in fixtures:
+        if fixture_matches_match(fixture, match):
+            return fixture
     return None
 
 
@@ -355,16 +376,16 @@ def fetch_live_events(matches: list[Match]) -> list[LiveEvent]:
     try:
         for fixture in client.live_fixtures():
             current_fixture_id = fixture_id(fixture)
-            if current_fixture_id and fixture_allowed(fixture):
+            if current_fixture_id and match_for_fixture(fixture, active_matches):
                 fixtures_by_id[current_fixture_id] = fixture
 
         for match in active_matches:
-            configured_id = match.api_football_fixture_id
-            if not configured_id or configured_id in fixtures_by_id:
+            if any(match_for_fixture(fixture, [match]) for fixture in fixtures_by_id.values()):
                 continue
-            fixture = client.fixture_by_id(configured_id)
-            if fixture and fixture_allowed(fixture) and fixture_active_enough(fixture):
-                fixtures_by_id[configured_id] = fixture
+            fixture = fixture_for_match(client, match)
+            current_fixture_id = fixture_id(fixture) if fixture else ""
+            if fixture and current_fixture_id and fixture_active_enough(fixture):
+                fixtures_by_id[current_fixture_id] = fixture
 
         events: list[LiveEvent] = []
         for fixture in fixtures_by_id.values():
@@ -395,11 +416,9 @@ def fetch_confirmed_lineups(matches: list[Match]) -> list[ConfirmedLineup]:
     lineups: list[ConfirmedLineup] = []
     try:
         for match in active_matches:
-            fixture_ref = match.api_football_fixture_id
-            if not fixture_ref:
-                continue
-            fixture = client.fixture_by_id(fixture_ref)
-            if not fixture or not fixture_allowed(fixture):
+            fixture = fixture_for_match(client, match)
+            fixture_ref = fixture_id(fixture) if fixture else ""
+            if not fixture or not fixture_ref:
                 continue
             for row in client.fixture_lineups(fixture_ref):
                 team = row.get("team") or {}
@@ -440,11 +459,9 @@ def fetch_final_results(matches: list[Match]) -> list[FinalResult]:
     results: list[FinalResult] = []
     try:
         for match in active_matches:
-            fixture_ref = match.api_football_fixture_id
-            if not fixture_ref:
-                continue
-            fixture = client.fixture_by_id(fixture_ref)
-            if not fixture or not fixture_allowed(fixture) or fixture_status(fixture) not in FINISHED_STATUSES:
+            fixture = fixture_for_match(client, match)
+            fixture_ref = fixture_id(fixture) if fixture else ""
+            if not fixture or not fixture_ref or fixture_status(fixture) not in FINISHED_STATUSES:
                 continue
             score = fixture_score(fixture)
             if not score:

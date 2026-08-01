@@ -1,0 +1,49 @@
+{
+  "status": "confirmed",
+  "source": "official-real-madrid-calendar",
+  "matches": [
+    {
+      "id": "friendly-2026-08-01-real-madrid-fiorentina",
+      "competition": "Friendly",
+      "round": "Pre-season",
+      "home": "Real Madrid",
+      "away": "Fiorentina",
+      "kickoff": "2026-08-01T18:00:00+02:00",
+      "venue": "Worthersee Stadion, Klagenfurt",
+      "broadcast": "Realmadrid TV",
+      "source_url": "https://www.realmadrid.com/es-ES/noticias/futbol/primer-equipo/actualidad/el-real-madrid-jugara-un-amistoso-el-1-de-agosto-ante-la-fiorentina-en-austria-10-07-2026"
+    },
+    {
+      "id": "friendly-2026-08-08-ferencvaros-real-madrid",
+      "competition": "Friendly",
+      "round": "Pre-season",
+      "home": "Ferencvaros",
+      "away": "Real Madrid",
+      "kickoff": "2026-08-08T19:00:00+02:00",
+      "venue": "Ferencvaros Stadion, Budapest",
+      "broadcast": "Realmadrid TV",
+      "source_url": "https://www.realmadrid.com/es-ES/noticias/futbol/primer-equipo/actualidad/el-real-madrid-disputara-contra-el-ferencvaros-un-amistoso-en-hungria-el-8-de-agosto-24-07-2026"
+    },
+    {
+      "id": "friendly-2026-08-12-deportivo-real-madrid",
+      "competition": "Trofeo Teresa Herrera",
+      "round": "LXXXI edition",
+      "home": "Deportivo",
+      "away": "Real Madrid",
+      "kickoff": "2026-08-12T21:00:00+02:00",
+      "venue": "Estadio Abanca-Riazor",
+      "broadcast": "TVG",
+      "source_url": "https://www.realmadrid.com/es-ES/noticias/futbol/primer-equipo/actualidad/el-real-madrid-disputara-este-verano-la-lxxxi-edicion-del-trofeo-teresa-herrera-09-07-2026"
+    },
+    {
+      "id": "friendly-2026-08-16-schalke-04-real-madrid",
+      "competition": "Friendly",
+      "round": "Pre-season",
+      "home": "Schalke 04",
+      "away": "Real Madrid",
+      "date_hint": "2026-08-16",
+      "venue": "Veltins-Arena",
+      "source_url": "https://as.com/futbol/primera/el-madrid-cierra-otro-amistoso-contra-el-schalke-04-el-16-de-agosto-f202607-n/"
+    }
+  ]
+}

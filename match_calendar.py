@@ -93,14 +93,40 @@ def read_match_payload(path: Path = MATCH_SCHEDULE_FILE) -> tuple[object | None,
     if not MATCHDAY_ENABLED or not path.exists():
         return None, None
 
+    return _read_json_payload(path)
+
+
+def _read_json_payload(path: Path) -> tuple[object | None, str | None]:
     try:
         return json.loads(path.read_text(encoding="utf-8")), None
     except (OSError, json.JSONDecodeError) as exc:
         return None, f"Не удалось прочитать календарь матчей {path}: {exc}"
 
 
+def supplement_paths(path: Path = MATCH_SCHEDULE_FILE) -> list[Path]:
+    directory = path.parent / "supplements"
+    if not directory.is_dir():
+        return []
+    return sorted(candidate for candidate in directory.glob("*.json") if candidate.is_file())
+
+
+def read_match_payloads(path: Path = MATCH_SCHEDULE_FILE) -> tuple[list[tuple[Path, object]], str | None]:
+    payload, error = read_match_payload(path)
+    if error or payload is None:
+        return [], error
+
+    payloads = [(path, payload)]
+    for supplement in supplement_paths(path):
+        extra_payload, extra_error = _read_json_payload(supplement)
+        if extra_error:
+            return payloads, extra_error
+        if extra_payload is not None:
+            payloads.append((supplement, extra_payload))
+    return payloads, None
+
+
 def calendar_read_error(path: Path = MATCH_SCHEDULE_FILE) -> str | None:
-    _, error = read_match_payload(path)
+    _, error = read_match_payloads(path)
     return error
 
 
@@ -112,17 +138,27 @@ def match_rows(payload: object | None) -> list[Any]:
     return rows if isinstance(rows, list) else []
 
 
+def all_match_rows(payloads: list[tuple[Path, object]]) -> list[Any]:
+    rows: list[Any] = []
+    for _, payload in payloads:
+        rows.extend(match_rows(payload))
+    return rows
+
+
 def match_calendar_status(path: Path = MATCH_SCHEDULE_FILE) -> tuple[str, str, dict[str, Any]]:
     if not MATCHDAY_ENABLED:
         return "disabled", "matchday disabled", {"path": str(path)}
     if not path.exists():
         return "missing", f"календарь матчей не найден: {path}", {"path": str(path)}
 
-    payload, error = read_match_payload(path)
+    payloads, error = read_match_payloads(path)
     if error:
         return "error", error, {"path": str(path)}
+    if not payloads:
+        return "empty", "calendar payload is empty", {"path": str(path)}
 
-    rows = match_rows(payload)
+    payload = payloads[0][1]
+    rows = all_match_rows(payloads)
     metadata = payload if isinstance(payload, dict) else {}
     declared_status = str(metadata.get("status") or "").strip().lower()
     expected_publication = str(metadata.get("expected_publication") or "").strip()
@@ -141,6 +177,10 @@ def match_calendar_status(path: Path = MATCH_SCHEDULE_FILE) -> tuple[str, str, d
 
     metrics: dict[str, Any] = {
         "path": str(path),
+        "schedule_files": len(payloads),
+        "supplement_files": max(len(payloads) - 1, 0),
+        "base_matches": len(match_rows(payload)),
+        "supplement_matches": max(len(rows) - len(match_rows(payload)), 0),
         "matches": len(rows),
         "scheduled_matches": scheduled_matches,
         "date_hint_matches": date_hint_matches,
@@ -169,24 +209,25 @@ def match_calendar_status(path: Path = MATCH_SCHEDULE_FILE) -> tuple[str, str, d
 
 
 def load_matches(path: Path = MATCH_SCHEDULE_FILE) -> list[Match]:
-    payload, error = read_match_payload(path)
+    payloads, error = read_match_payloads(path)
     if error:
         logging.error(error)
         return []
-    if payload is None:
+    if not payloads:
         return []
 
-    rows = match_rows(payload)
-    matches: list[Match] = []
-    for raw in rows:
+    matches: dict[str, Match] = {}
+    for raw in all_match_rows(payloads):
         if not isinstance(raw, dict) or not raw.get("kickoff"):
             continue
         try:
-            matches.append(match_from_dict(raw))
+            match = match_from_dict(raw)
+            # A supplement may intentionally replace an older base-calendar row.
+            matches[match.id] = match
         except (KeyError, ValueError, TypeError) as exc:
             logging.warning("Матч пропущен из-за ошибки в календаре: %s", exc)
 
-    return sorted(matches, key=lambda item: item.kickoff)
+    return sorted(matches.values(), key=lambda item: item.kickoff)
 
 
 def find_match(match_id: str) -> Match | None:
