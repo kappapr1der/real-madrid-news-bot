@@ -266,6 +266,14 @@ FILTERS = {
         "chelsea pensioners policy",
         "gracias @mariocortegana", "thanks @mariocortegana", "r to @mariocortegana",
 
+        # August 2: opinionated Vinicius clickbait and vague Camavinga framing
+        # are not concrete club updates.
+        "florentino perez has to sacrifice vinicius", "sacrifice vinicius jr",
+        "learn from his real galactico mistake", "galactico mistake",
+        "sinsentido camavinga", "el sinsentido de camavinga",
+        "surprising camavinga case", "camavinga case",
+        "удивительный случай камавинги",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

@@ -1971,6 +1971,21 @@ def test_august_1_groups_bellingham_birmingham_and_drops_editorial_noise():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_august_2_drops_vinicius_opinion_clickbait_and_vague_camavinga_story():
+    noise_cases = [
+        (
+            "Florentino Perez has to sacrifice Vinicius Jr in order to learn from his Real Galactico mistake",
+            "The Real Champs",
+        ),
+        ("El sinsentido de Camavinga", "Sport - Real Madrid"),
+        ("Удивительный случай Камавинги", "Sport - Real Madrid"),
+    ]
+
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
