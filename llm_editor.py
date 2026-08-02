@@ -274,6 +274,13 @@ def review_digest_items(items: list[dict[str, Any]], label: str = "") -> LLMRevi
         "\"importance\":0,\"reason\":\"...\"}]}. "
         "headline_ru must be <= 140 characters, no clickbait, no source names, no time."
     )
+    if label.strip().casefold() == "weekly":
+        system_prompt += (
+            " This is a seven-day recap, not a news feed: keep only distinct,"
+            " meaningful club events and confirmed developments. Reject duplicate"
+            " follow-ups, single-source transfer speculation, and items that only"
+            " repeat a claim from another outlet."
+        )
     result = _call_yandex_json("digest", system_prompt, {"label": label, "items": prepared})
     if not result.used:
         return result

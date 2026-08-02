@@ -107,10 +107,10 @@ def test_weekly_recap_renders_archived_stories_and_market_block():
     assert "#ИтогиНедели" in message
 
 
-def test_weekly_recap_rechecks_archived_story_relevance_and_uses_raw_title(monkeypatch):
+def test_weekly_recap_rechecks_archived_story_relevance_and_keeps_clean_russian_copy(monkeypatch):
     stories = [
         {
-            "title": "Плохой сохраненный перевод",
+            "title": "Официально: «Реал» объявил о переходе",
             "metadata": {"raw_title": "Real Madrid confirm a signing"},
             "link": "https://example.test/good",
             "source": "Marca – Real Madrid",
@@ -127,10 +127,20 @@ def test_weekly_recap_rechecks_archived_story_relevance_and_uses_raw_title(monke
     ]
 
     selected = select_weekly_stories(stories, limit=8)
-    monkeypatch.setattr(weekly_recap, "translate_text", lambda title: "Переведенный заголовок")
+    monkeypatch.setattr(weekly_recap, "translate_text", lambda title: "Хуже сохраненной версии")
 
     assert selected == [stories[0]]
-    assert weekly_recap.weekly_story_title(selected[0]) == "Переведенный заголовок"
+    assert weekly_recap.weekly_story_title(selected[0]) == "Официально: «Реал» объявил о переходе"
+
+
+def test_weekly_recap_translates_raw_title_when_archive_has_no_russian_copy(monkeypatch):
+    story = {
+        "title": "Real Madrid confirm a signing",
+        "metadata": {"raw_title": "Real Madrid confirm a signing"},
+    }
+    monkeypatch.setattr(weekly_recap, "translate_text", lambda title: "«Реал» объявил о переходе")
+
+    assert weekly_recap.weekly_story_title(story) == "«Реал» объявил о переходе"
 
 
 def test_weekly_recap_collapses_semantic_transfer_duplicates_and_keeps_russian_archive_copy(monkeypatch):
@@ -159,6 +169,142 @@ def test_weekly_recap_collapses_semantic_transfer_duplicates_and_keeps_russian_a
 
     assert selected == [stories[0]]
     assert weekly_recap.weekly_story_title(selected[0]) == "«Реал» согласовал личные условия с Яном Диоманде"
+
+
+def test_weekly_recap_collapses_injury_followups_and_prefers_official_confirmation():
+    stories = [
+        {
+            "title": "Асенсио выбыл из предсезонки",
+            "metadata": {"raw_title": "Asencio is first to fall in preseason"},
+            "link": "https://example.test/asencio-first",
+            "source": "Marca – Real Madrid",
+            "kinds": ["digest"],
+            "category": "injury",
+        },
+        {
+            "title": "Официально: Рауль Асенсио выбыл на шесть недель",
+            "metadata": {"raw_title": "Official: Raul Asencio out for six weeks"},
+            "link": "https://example.test/asencio-official",
+            "source": "Bernabéu Digital",
+            "kinds": ["digest"],
+            "category": "injury",
+        },
+    ]
+
+    assert select_weekly_stories(stories, limit=8) == [stories[1]]
+
+
+def test_weekly_recap_excludes_analysis_and_unconfirmed_negotiations():
+    stories = [
+        {
+            "title": "Официально: «Реал» объявил товарищеский матч",
+            "link": "https://example.test/official",
+            "source": "Real Madrid",
+            "kinds": ["digest"],
+            "category": "official",
+        },
+        {
+            "title": "Kylian Mbappe and the Ewing Theory",
+            "link": "https://example.test/theory",
+            "source": "Managing Madrid",
+            "kinds": ["digest"],
+            "category": "general",
+        },
+        {
+            "title": "Roma travel to Madrid to negotiate a loan clause",
+            "link": "https://example.test/rumour",
+            "source": "Defensa Central",
+            "kinds": ["digest"],
+            "category": "transfer",
+        },
+    ]
+
+    assert select_weekly_stories(stories, limit=8) == [stories[0]]
+
+
+def test_weekly_recap_collapses_carlos_espi_confirmation_even_with_russian_case_ending():
+    stories = [
+        {
+            "title": "НОВОСТЬ: «Реал» подписал контракт с Карлосом Эспи, начинаем!",
+            "link": "https://example.test/espi-romano",
+            "source": "Fabrizio Romano - Telegram",
+            "kinds": ["breaking"],
+            "category": "general",
+        },
+        {
+            "title": "Официально: Реал подписал Карлоса Эспи",
+            "metadata": {"raw_title": "Official: Real Madrid sign Carlos Espi"},
+            "link": "https://example.test/espi-official",
+            "source": "Managing Madrid",
+            "kinds": ["digest"],
+            "category": "official",
+        },
+    ]
+
+    assert select_weekly_stories(stories, limit=8) == [stories[1]]
+
+
+def test_weekly_recap_collapses_friendly_announcements_when_the_opponent_is_only_in_the_link():
+    stories = [
+        {
+            "title": "Официально: «Реал» сыграет с Шальке 04",
+            "metadata": {"raw_title": "Friendly confirmed: Real Madrid face Schalke 04"},
+            "link": "https://example.test/real-madrid-schalke",
+            "source": "Bernabéu Digital",
+            "kinds": ["digest"],
+            "category": "official",
+        },
+        {
+            "title": "«Реал» объявил о новом товарищеском матче",
+            "metadata": {"raw_title": "Real Madrid announce a new friendly"},
+            "link": "https://example.test/real-madrid-schalke-preseason",
+            "source": "Sport – Real Madrid",
+            "kinds": ["digest"],
+            "category": "matchday",
+        },
+    ]
+
+    assert select_weekly_stories(stories, limit=8) == [stories[0]]
+
+
+def test_weekly_recap_applies_editorial_review_before_formatting(monkeypatch):
+    stories = [
+        {
+            "id": "keep",
+            "title": "Официально: Карлос Эспи стал игроком «Реала»",
+            "metadata": {"raw_title": "Official: Carlos Espi signs for Real Madrid"},
+            "source": "Managing Madrid",
+            "kinds": ["digest"],
+            "category": "official",
+        },
+        {
+            "id": "drop",
+            "title": "Шумная спекуляция",
+            "metadata": {"raw_title": "Wild transfer speculation"},
+            "source": "Noisy Feed",
+            "kinds": ["digest"],
+            "category": "transfer",
+        },
+    ]
+    monkeypatch.setattr(
+        weekly_recap,
+        "review_digest_items",
+        lambda items, label: SimpleNamespace(
+            used=True,
+            reason="ok",
+            metrics={"items_reviewed": len(items)},
+            decisions={
+                1: {"keep": True, "headline_ru": "«Реал» подписал Карлоса Эспи"},
+                2: {"keep": False},
+            },
+        ),
+    )
+
+    approved, titles, metrics = weekly_recap.review_weekly_stories(stories)
+
+    assert approved == [stories[0]]
+    assert titles == {"keep": "«Реал» подписал Карлоса Эспи"}
+    assert metrics["llm_editor_kept"] == 1
 
 
 def test_match_center_adds_day_before_and_confirmed_lineup_formats():

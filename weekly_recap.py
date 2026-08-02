@@ -11,6 +11,7 @@ import requests
 
 from editorial_archive import recent_stories
 from filters import passes_filters
+from llm_editor import review_digest_items
 from match_calendar import digest_block_reason
 from news_fingerprint import semantic_news_key
 from post_utils import append_hashtags
@@ -80,6 +81,8 @@ def _story_score(story: dict) -> tuple[int, str]:
         score += 12
     if category == "transfer":
         score += 8
+    if weekly_story_is_official(story):
+        score += 18
     return score, str(story.get("last_archived_at") or "")
 
 
@@ -88,21 +91,33 @@ def weekly_source_title(story: dict) -> str:
     return str(metadata.get("raw_title") or story.get("title") or "").strip()
 
 
+def weekly_story_identity(story: dict) -> str:
+    return str(story.get("id") or story.get("link") or weekly_story_key(story))
+
+
+def _letter_counts(value: str) -> tuple[int, int]:
+    return len(re.findall(r"[\u0410-\u042f\u0430-\u044f\u0401\u0451]", value)), len(re.findall(r"[A-Za-z\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff]", value))
+
+
 def weekly_story_title(story: dict) -> str:
-    title = clean_text(weekly_source_title(story))
+    archived_title = clean_text(str(story.get("title") or ""))
+    raw_title = clean_text(weekly_source_title(story))
+
+    # The archive stores the editor's Russian copy from the original digest.
+    # Reusing it is safer than translating the same foreign headline again.
+    archived_cyrillic, archived_latin = _letter_counts(archived_title)
+    if archived_title and archived_cyrillic and archived_cyrillic >= archived_latin:
+        return archived_title
+
+    title = raw_title or archived_title
     if not title:
         return ""
 
-    cyrillic_count = len(re.findall(r"[А-Яа-яЁё]", title))
-    latin_count = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", title))
+    cyrillic_count, latin_count = _letter_counts(title)
     if latin_count > cyrillic_count:
         translated = clean_text(translate_text(title))
-        translated_cyrillic = len(re.findall(r"[А-Яа-яЁё]", translated))
-        translated_latin = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", translated))
+        translated_cyrillic, translated_latin = _letter_counts(translated)
         if translated_latin > translated_cyrillic:
-            archived_title = clean_text(str(story.get("title") or ""))
-            archived_cyrillic = len(re.findall(r"[А-Яа-яЁё]", archived_title))
-            archived_latin = len(re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ]", archived_title))
             if archived_title and archived_cyrillic >= archived_latin:
                 return archived_title
         return translated
@@ -110,10 +125,72 @@ def weekly_story_title(story: dict) -> str:
 
 
 def weekly_story_key(story: dict) -> str:
-    key = semantic_news_key(weekly_source_title(story))
-    if not key.startswith("generic:"):
-        return key
-    return str(story.get("link") or key)
+    combined = " ".join(
+        (
+            weekly_source_title(story),
+            str(story.get("title") or ""),
+            str(story.get("link") or ""),
+        )
+    ).casefold()
+    # A weekly recap needs broader grouping than a live feed: a first injury
+    # report and its official confirmation are still one weekly story.
+    is_asencio = "asencio" in combined or "\u0430\u0441\u0435\u043d\u0441\u0438\u043e" in combined
+    injury_markers = ("injur", "lesion", "lesiona", "seman", "pretemporada", "\u0442\u0440\u0430\u0432\u043c", "\u0432\u044b\u0431\u044b\u043b", "\u0441\u043b\u043e\u043c")
+    if is_asencio and any(marker in combined for marker in injury_markers):
+        return "injury:raul-asencio"
+    is_carlos_espi = (
+        ("carlos" in combined and "espi" in combined)
+        or ("\u043a\u0430\u0440\u043b\u043e\u0441" in combined and "\u044d\u0441\u043f\u0438" in combined)
+    )
+    if is_carlos_espi:
+        return "transfer:carlos-espi-real-madrid"
+    if "schalke" in combined and ("friendly" in combined or "amistoso" in combined):
+        return "schedule:preseason-schalke-04-friendly"
+
+    for title in (weekly_source_title(story), str(story.get("title") or "")):
+        key = semantic_news_key(title)
+        if key.startswith("injury:raul-asencio"):
+            return "injury:raul-asencio"
+        if not key.startswith("generic:"):
+            return key
+
+    key = semantic_news_key(combined)
+    return str(story.get("link") or key) if key.startswith("generic:") else key
+
+
+def weekly_story_is_official(story: dict) -> bool:
+    text = " ".join((weekly_source_title(story), str(story.get("title") or ""))).casefold()
+    return any(marker in text for marker in ("official", "oficial", "confirmed", "confirmado", "\u043e\u0444\u0438\u0446\u0438\u0430\u043b\u044c\u043d\u043e"))
+
+
+def weekly_story_is_low_signal(story: dict) -> bool:
+    text = " ".join((weekly_source_title(story), str(story.get("title") or ""))).casefold()
+    # The live feed may cover a developing rumour. A once-a-week recap should
+    # only preserve facts that held up, not analysis pieces or negotiations.
+    markers = (
+        " theory",
+        "\u0442\u0435\u043e\u0440\u0438\u044f",
+        "rumou",
+        "speculat",
+        "negoci",
+        "\u043f\u0435\u0440\u0435\u0433\u043e\u0432\u043e\u0440",
+        "cl\u00e1usula",
+        "clause",
+        "psycholog",
+        "psic\u00f3log",
+        "\u043f\u0441\u0438\u0445\u043e\u043b\u043e\u0433",
+    )
+    if any(marker in text for marker in markers) and not weekly_story_is_official(story):
+        return True
+
+    kinds = set(story.get("kinds") or [])
+    is_unconfirmed_transfer = weekly_story_key(story).startswith("transfer:") and "breaking" not in kinds
+    if is_unconfirmed_transfer and not weekly_story_is_official(story):
+        return True
+
+    is_uefa_or_fifa = "uefa" in text or "fifa" in text
+    mentions_real_madrid = "real madrid" in text or "\u0440\u0435\u0430\u043b" in text
+    return is_uefa_or_fifa and not mentions_real_madrid
 
 
 def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
@@ -123,6 +200,8 @@ def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
     for story in sorted(stories, key=_story_score, reverse=True):
         title = weekly_source_title(story)
         if not title or not passes_filters(title, source=str(story.get("source") or "")):
+            continue
+        if weekly_story_is_low_signal(story):
             continue
         category = str(story.get("category") or "general")
         if category_counts.get(category, 0) >= 3:
@@ -136,6 +215,45 @@ def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
         if len(selected) >= limit:
             break
     return selected
+
+
+def review_weekly_stories(stories: list[dict]) -> tuple[list[dict], dict[str, str], dict[str, object]]:
+    review_items = [
+        {
+            "title": weekly_source_title(story),
+            "summary": weekly_story_title(story),
+            "source": str(story.get("source") or ""),
+            "score": _story_score(story)[0],
+            "reason": str(story.get("category") or "weekly archive"),
+        }
+        for story in stories
+    ]
+    result = review_digest_items(review_items, label="weekly")
+    metrics: dict[str, object] = {
+        "llm_editor_used": result.used,
+        "llm_editor_reason": result.reason,
+        **result.metrics,
+    }
+    if not result.used:
+        return stories, {}, metrics
+
+    approved: list[dict] = []
+    title_overrides: dict[str, str] = {}
+    for index, story in enumerate(stories, start=1):
+        decision = result.decisions.get(index, {})
+        if decision and not decision.get("keep", True):
+            continue
+        approved.append(story)
+        headline = clean_text(str(decision.get("headline_ru") or ""))
+        if headline:
+            title_overrides[weekly_story_identity(story)] = headline
+
+    # A temporary LLM problem must not make the recap disappear altogether.
+    if not approved:
+        metrics["llm_editor_fallback"] = "all stories rejected"
+        return stories, {}, metrics
+    metrics["llm_editor_kept"] = len(approved)
+    return approved, title_overrides, metrics
 
 
 def format_weekly_recap(stories: list[dict], transfers: list[dict], title_formatter=weekly_story_title) -> str:
@@ -197,13 +315,23 @@ def send_weekly_recap(force: bool = False) -> bool:
         return False
 
     stories = select_weekly_stories(recent_stories(days=WEEKLY_RECAP_DAYS), WEEKLY_RECAP_LIMIT)
-    metrics["stories"] = len(stories)
+    metrics["stories_before_editor"] = len(stories)
     if len(stories) < WEEKLY_RECAP_MIN_ITEMS:
         record_status("weekly_recap", "empty", "not enough archived stories", metrics)
         return False
+    stories, title_overrides, editor_metrics = review_weekly_stories(stories)
+    metrics.update(editor_metrics)
+    metrics["stories"] = len(stories)
+    if len(stories) < WEEKLY_RECAP_MIN_ITEMS:
+        record_status("weekly_recap", "empty", "not enough approved archived stories", metrics)
+        return False
     # A block made only of rumours reads as filler, not as a useful market summary.
     transfers = recent_updates(days=WEEKLY_RECAP_DAYS, limit=4, include_rumours=False)
-    message = format_weekly_recap(stories, transfers)
+    message = format_weekly_recap(
+        stories,
+        transfers,
+        title_formatter=lambda story: title_overrides.get(weekly_story_identity(story), weekly_story_title(story)),
+    )
     if not post_telegram_message(message):
         record_error("weekly_recap", "Telegram send failed", metrics)
         return False
