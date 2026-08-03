@@ -2014,6 +2014,34 @@ def test_august_3_evening_drops_opinion_noise_and_groups_fifa_rights_withdrawal(
     assert clean_text(misspelled) == "\u042d\u043d\u0434\u0440\u0438\u043a"
 
 
+def test_august_3_evening_drops_filler_and_groups_betis_fixture():
+    noise_cases = [
+        (
+            "Transfer roundup: Chelsea sell Trevoh Chalobah and sign Jordan Henderson",
+            "Guardian Football",
+        ),
+        ("BRING THE NOISE | Aug. 3rd, 2026", "Managing Madrid"),
+        (
+            "Fulham are a side edging closer to domestic success, but can new boss Alvaro Arbeloa get them over the line? Fulham 2026/27 Season Preview",
+            "FourFourTwo",
+        ),
+        ("Real Madrid receive an Endrick offer they're unlikely to approve for one reason", "The Real Champs"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    fixture_titles = [
+        "Confirmado: Betis-Real Madrid se jugara viernes 4 septiembre a las 21:00",
+        "Betis-Real Madrid will be played Friday 4 September at 21:00",
+    ]
+    assert {semantic_news_key(title) for title in fixture_titles} == {
+        "schedule:betis-real-madrid-2026-09-04"
+    }
+    misspelled = "\u0411\u0435\u0440\u043d\u0430\u043d\u0434\u043e \u0421\u0438\u043b\u044c\u0432\u0430"
+    assert clean_text(misspelled) == "\u0411\u0435\u0440\u043d\u0430\u0440\u0434\u0443 \u0421\u0438\u043b\u044c\u0432\u0430"
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

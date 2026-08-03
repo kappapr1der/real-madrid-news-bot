@@ -1019,6 +1019,19 @@ def is_fifa_commercial_rights_withdrawal_text(text: str) -> bool:
     return has_federation and has_rights_plan and (has_reversal or has_cvc_privatisation_comparison)
 
 
+def is_betis_real_madrid_september_fixture_text(text: str) -> bool:
+    """Unify the confirmed Betis-Real Madrid fixture on September 4."""
+    has_teams = "betis" in text and "real madrid" in text
+    has_date = contains_any(
+        text,
+        (
+            "4 september", "september 4", "sept 4", "4 sept",
+            "4 septiembre", "septiembre 4",
+        ),
+    )
+    return has_teams and has_date
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -1066,6 +1079,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_fifa_commercial_rights_withdrawal_text(text):
         return "governance:fifa-commercial-rights-withdrawal"
+
+    if is_betis_real_madrid_september_fixture_text(text):
+        return "schedule:betis-real-madrid-2026-09-04"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"

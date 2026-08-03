@@ -283,6 +283,12 @@ FILTERS = {
         "everything you didn't see in our first pre-season match",
         "trophyless since 2024", "isnt the real reason they have been trophyless",
         "isn't the real reason they have been trophyless",
+        "transfer roundup: chelsea sell trevoh chalobah",
+        "bring the noise",
+        "fulham 2026 27 season preview", "fulham 2026/27 season preview",
+        "can new boss alvaro arbeloa get them over the line",
+        "endrick offer they re unlikely to approve",
+        "endrick offer they're unlikely to approve",
         "удивительный случай камавинги",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
