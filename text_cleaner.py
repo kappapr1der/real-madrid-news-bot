@@ -482,6 +482,9 @@ def _apply_editorial_rewrites(text: str) -> str:
     for bad, good in replacements.items():
         text = text.replace(bad, good)
 
+    # A recurring translation typo; keep the player's name correct in any context.
+    text = text.replace("\u042d\u043d\u0440\u0438\u043a", "\u042d\u043d\u0434\u0440\u0438\u043a")
+
     text = re.sub(
         r"^Килиан Мбаппе сообщил об обновлении по травме$",
         "Мбаппе рассказал о состоянии после травмы",

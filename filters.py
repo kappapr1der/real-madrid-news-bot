@@ -272,6 +272,17 @@ FILTERS = {
         "learn from his real galactico mistake", "galactico mistake",
         "sinsentido camavinga", "el sinsentido de camavinga",
         "surprising camavinga case", "camavinga case",
+        "xabi alonso on why he left real madrid and joined chelsea",
+        "xabi alonso on his departure from real madrid and move to chelsea",
+        "alonso heals real madrid scars to lead chelseas senior revolution",
+        "alonso heals real madrid scars to lead chelsea's senior revolution",
+        "xabi alonso no olvida su salida del real madrid",
+        "otros rodris de jose mourinho", "otros rodris de josé mourinho",
+        "todo lo que no viste en nuestro primer partido de pretemporada",
+        "everything you did not see in our first pre season match",
+        "everything you didn't see in our first pre-season match",
+        "trophyless since 2024", "isnt the real reason they have been trophyless",
+        "isn't the real reason they have been trophyless",
         "удивительный случай камавинги",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle

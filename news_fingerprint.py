@@ -998,6 +998,27 @@ def is_bellingham_barcelona_birmingham_text(text: str) -> bool:
     )
 
 
+def is_fifa_commercial_rights_withdrawal_text(text: str) -> bool:
+    """Group reports about FIFA backing away from World Cup rights privatisation."""
+    has_federation = contains_any(text, ("fifa", "infantino"))
+    has_reversal = contains_any(
+        text,
+        (
+            "abandons", "abandon", "withdraw", "withdrawal", "backed away",
+            "marcha atras", "da marcha atras", "retira", "retirada",
+        ),
+    )
+    has_rights_plan = contains_any(
+        text,
+        (
+            "commercial rights", "derechos comerciales", "commercialisation rights",
+            "commercialization rights", "privatiz", "privatis", "cvc",
+        ),
+    )
+    has_cvc_privatisation_comparison = "cvc" in text and contains_any(text, ("privatiz", "privatis"))
+    return has_federation and has_rights_plan and (has_reversal or has_cvc_privatisation_comparison)
+
+
 def semantic_news_key(title: str, summary: str = "") -> str:
     text = normalize_news_text(f"{title} {summary}")
 
@@ -1042,6 +1063,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_bellingham_barcelona_birmingham_text(text):
         return "social:bellingham-barcelona-birmingham"
+
+    if is_fifa_commercial_rights_withdrawal_text(text):
+        return "governance:fifa-commercial-rights-withdrawal"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"

@@ -1986,6 +1986,34 @@ def test_august_2_drops_vinicius_opinion_clickbait_and_vague_camavinga_story():
         assert digest_llm_hard_deny(_item(title), title) is True
 
 
+def test_august_3_evening_drops_opinion_noise_and_groups_fifa_rights_withdrawal():
+    noise_cases = [
+        ("Xabi Alonso on why he left Real Madrid and joined Chelsea", "BBC Sport Football"),
+        ("Alonso heals Real Madrid scars to lead Chelsea's senior revolution", "BBC Sport Football"),
+        ("Otros Rodris de Jose Mourinho", "Marca - Real Madrid"),
+        ("Todo lo que no viste en nuestro primer partido de pretemporada", "X - @realmadrid"),
+        (
+            "It's become clear to Real Madrid that Kylian Mbappe isn't the real reason they have been trophyless since 2024",
+            "The Real Champs",
+        ),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    fifa_titles = [
+        "Real Madrid issue official statement after FIFA abandons commercial rights proposal",
+        "El Real Madrid compara la medida de privatizacion del Mundial de Infantino con el CVC de Tebas",
+        "Real Madrid reacts after FIFA withdraws commercial rights project",
+    ]
+    assert {semantic_news_key(title) for title in fifa_titles} == {
+        "governance:fifa-commercial-rights-withdrawal"
+    }
+
+    misspelled = "\u042d\u043d\u0440\u0438\u043a"
+    assert clean_text(misspelled) == "\u042d\u043d\u0434\u0440\u0438\u043a"
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
