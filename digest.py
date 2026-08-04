@@ -16,7 +16,12 @@ import requests
 
 from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
-from filters import is_handle_only_x_title, is_truncated_x_title, passes_filters
+from filters import (
+    is_handle_only_x_title,
+    is_low_signal_x_question,
+    is_truncated_x_title,
+    passes_filters,
+)
 from feed_utils import is_repost_entry, parse_feed_url, source_is_x
 from match_calendar import digest_block_reason
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
@@ -583,6 +588,12 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "fulham va con todo por gonzalo",
     "fulham gonzalo oferton delantero",
     "удивительный случай камавинги",
+    "the real reason why chelsea signed jordan henderson",
+    "wedding ronaldo and georgina",
+    "ronaldo and georgina wedding",
+    "georgina's wedding",
+    "свадьба роналду и джорджины",
+    "ibrahima konate arrives at real madrid facing",
     "real madrid midfielder to attend barcelona pre season friendly in england",
     "barcelona pre season friendly in england",
     "barcelona pre-season friendly in england",
@@ -1599,6 +1610,8 @@ def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[R
 def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     candidate = item.candidate
     if is_handle_only_x_title(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_low_signal_x_question(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
         return True

@@ -303,6 +303,13 @@ FILTERS = {
         "fulham gonzalo oferton delantero",
         "удивительный случай камавинги",
 
+        # August 4 late evening: unrelated Chelsea, celebrity and speculative
+        # opinion pieces should not fill a Real Madrid digest.
+        "the real reason why chelsea signed jordan henderson",
+        "wedding ronaldo and georgina", "ronaldo and georgina wedding", "georgina's wedding",
+        "свадьба роналду и джорджины",
+        "ibrahima konate arrives at real madrid facing",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
@@ -796,7 +803,19 @@ def is_handle_only_x_title(text: str, source: str = "") -> bool:
     source_name = _normalize(source)
     if not source_name.startswith("x - @"):
         return False
-    return bool(re.fullmatch(r"(?:@[\w]+\s*)+", str(text or "").strip()))
+    plain = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", str(text or "")).strip()
+    return bool(re.fullmatch(r"(?:@[\w]+\s*)+", plain))
+
+
+def is_low_signal_x_question(text: str, source: str = "") -> bool:
+    """Reject bare reporter questions that offer no actual update to readers."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @"):
+        return False
+    plain = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", str(text or "")).strip()
+    if not plain.endswith(("?", "؟")):
+        return False
+    return len(re.findall(r"\w+", plain)) <= 10
 
 
 def is_truncated_x_title(text: str, source: str = "") -> bool:
@@ -830,6 +849,10 @@ def passes_filters(text: str, summary: Optional[str] = None, source: Optional[st
 
     if is_handle_only_x_title(text, source):
         logger.info(f"[FILTERED: X HANDLE ONLY] {source}: {text[:90]}...")
+        return False
+
+    if is_low_signal_x_question(text, source):
+        logger.info(f"[FILTERED: X QUESTION LOW SIGNAL] {source}: {text[:90]}...")
         return False
 
     if is_truncated_x_title(text, source):

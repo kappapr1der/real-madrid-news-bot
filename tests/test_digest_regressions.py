@@ -2092,6 +2092,21 @@ def test_august_4_evening_groups_pink_kit_and_drops_stale_or_unrelated_items():
     assert {semantic_news_key(title) for title in kit_titles} == {"club:pink-third-kit-2026-27"}
 
 
+def test_august_4_late_evening_drops_malformed_x_and_side_stories():
+    noise_cases = [
+        ("The real reason why Chelsea signed Jordan Henderson", "Independent Football"),
+        ("Ronaldo and Georgina's wedding is this Saturday in Madeira", "Sports.ru"),
+        ("Ibrahima Konate arrives at Real Madrid facing an unusual kind of pressure", "The Real Champs"),
+        ("Will Vinicius renew his contract by September 1?", "X - @AranchaMOBILE"),
+        ("@TrentAA\u200f", "X - @realmadrid"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        item = _item(title)
+        item.candidate.source = source
+        assert digest_llm_hard_deny(item, title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
