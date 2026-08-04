@@ -292,6 +292,15 @@ FILTERS = {
         "alineaciones jornada 1 laliga ea sports",
         "most overrated myth about real madrid",
         "the most overrated myth about real madrid just got debunked",
+        "acuerdos publicitarios",
+        "real madrid penso en luka vuskovic",
+        "xabi alonso's first chelsea game",
+        "first chelsea game was all about four forwards",
+        "real leganes resultado partido 28 julio 2026",
+        "leganes: resultado del partido 28 julio",
+        "real leganes result match july 28 2026",
+        "fulham va con todo por gonzalo",
+        "fulham gonzalo oferton delantero",
         "удивительный случай камавинги",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle

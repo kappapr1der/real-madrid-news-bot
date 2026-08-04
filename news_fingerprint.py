@@ -983,6 +983,20 @@ def is_real_madrid_green_away_kit_text(text: str) -> bool:
     )
 
 
+def is_real_madrid_pink_third_kit_text(text: str) -> bool:
+    """Group the pink third-kit stories, including the France retail leak."""
+    has_real = contains_any(text, ("real madrid", "madrid"))
+    has_pink_third_kit = contains_any(
+        text,
+        (
+            "pink third", "pink kit", "pink shirt", "rosa tercera",
+            "tercera equipacion", "tercera camiseta",
+        ),
+    )
+    has_france_retail_leak = "francia" in text and contains_any(text, ("camiseta", "shirt", "kit"))
+    return has_real and (has_pink_third_kit or has_france_retail_leak)
+
+
 def is_yan_diomande_real_transfer_text(text: str) -> bool:
     """Collapse the current Yan Diomande transfer saga across all source phrasings."""
     return contains_any(text, ("yan diomande", "ян диоманде", "diomande", "диоманде"))
@@ -1086,6 +1100,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_real_madrid_green_away_kit_text(text):
         return "club:green-away-kit-2026-27"
+
+    if is_real_madrid_pink_third_kit_text(text):
+        return "club:pink-third-kit-2026-27"
 
     if is_yan_diomande_real_transfer_text(text):
         return "transfer:yan-diomande-real-madrid"

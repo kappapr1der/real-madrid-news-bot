@@ -2073,6 +2073,25 @@ def test_august_4_morning_groups_bernardo_gonzalo_and_vinicius_updates():
     assert clean_text("Bernardo Silva") == "\u0411\u0435\u0440\u043d\u0430\u0440\u0434\u0443 \u0421\u0438\u043b\u044c\u0432\u0430"
 
 
+def test_august_4_evening_groups_pink_kit_and_drops_stale_or_unrelated_items():
+    noise_cases = [
+        ("Acuerdos publicitarios de Vinicius Junior lejos del Real Madrid", "Defensa Central"),
+        ("El Real Madrid penso en Luka Vuskovic como fichaje para la defensa", "Bernabeu Digital"),
+        ("Xabi Alonso's first Chelsea game was all about four forwards", "BBC Sport Football"),
+        ("Real-Leganes: resultado del partido 28 julio 2026", "Чемпионат - Футбол"),
+        ("Fulham va con todo por Gonzalo: ofertón por el delantero", "Bernabeu Digital"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    kit_titles = [
+        "IMAGE: A closer look at Real Madrid's pink third jersey for 2026-27 season",
+        "Inedita camiseta del Real Madrid llegara proximamente y ya se vende en Francia",
+    ]
+    assert {semantic_news_key(title) for title in kit_titles} == {"club:pink-third-kit-2026-27"}
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
