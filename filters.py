@@ -289,6 +289,9 @@ FILTERS = {
         "can new boss alvaro arbeloa get them over the line",
         "endrick offer they re unlikely to approve",
         "endrick offer they're unlikely to approve",
+        "alineaciones jornada 1 laliga ea sports",
+        "most overrated myth about real madrid",
+        "the most overrated myth about real madrid just got debunked",
         "удивительный случай камавинги",
 
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle

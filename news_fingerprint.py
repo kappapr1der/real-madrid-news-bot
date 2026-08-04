@@ -267,7 +267,11 @@ def is_gonzalo_fulham_transfer_text(text: str) -> bool:
             ),
         )
     )
-    return named_report or full_ownership_variant or departure_followup
+    official_announcement = "gonzalo" in text and contains_any(
+        text,
+        ("comunicado oficial", "official announcement", "official statement"),
+    )
+    return named_report or full_ownership_variant or departure_followup or official_announcement
 
 
 def is_medical_staff_changes_text(text: str) -> bool:
@@ -487,6 +491,11 @@ def is_vinicius_renewal_text(text: str) -> bool:
                 "talks",
                 "conversation",
                 "conversaciones",
+                "contact",
+                "contacto",
+                "hablar",
+                "sentarse",
+                "operacion salida",
                 "переговор",
                 "будущ",
                 "arsenal",
@@ -494,6 +503,19 @@ def is_vinicius_renewal_text(text: str) -> bool:
             ),
         )
     )
+
+
+def is_bernardo_silva_real_arrival_text(text: str) -> bool:
+    """Collapse Bernardo Silva's first Real Madrid arrival quotes into one story."""
+    has_bernardo = "bernardo silva" in text
+    has_arrival_quote = contains_any(
+        text,
+        (
+            "impossible not to say no", "imposible decir no",
+            "no me lo pense dos veces", "mejor club historia",
+        ),
+    )
+    return has_bernardo and has_arrival_quote
 
 
 def is_tchouameni_extension_text(text: str) -> bool:
@@ -1082,6 +1104,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
 
     if is_betis_real_madrid_september_fixture_text(text):
         return "schedule:betis-real-madrid-2026-09-04"
+
+    if is_bernardo_silva_real_arrival_text(text):
+        return "player:bernardo-silva-real-arrival"
 
     if is_rodri_real_interest_text(text):
         return "transfer:rumour:rodri"

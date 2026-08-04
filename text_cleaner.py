@@ -488,6 +488,7 @@ def _apply_editorial_rewrites(text: str) -> str:
         "\u0411\u0435\u0440\u043d\u0430\u043d\u0434\u043e \u0421\u0438\u043b\u044c\u0432\u0430",
         "\u0411\u0435\u0440\u043d\u0430\u0440\u0434\u0443 \u0421\u0438\u043b\u044c\u0432\u0430",
     )
+    text = text.replace("Bernardo Silva", "\u0411\u0435\u0440\u043d\u0430\u0440\u0434\u0443 \u0421\u0438\u043b\u044c\u0432\u0430")
 
     text = re.sub(
         r"^Килиан Мбаппе сообщил об обновлении по травме$",

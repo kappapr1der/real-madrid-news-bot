@@ -2042,6 +2042,37 @@ def test_august_3_evening_drops_filler_and_groups_betis_fixture():
     assert clean_text(misspelled) == "\u0411\u0435\u0440\u043d\u0430\u0440\u0434\u0443 \u0421\u0438\u043b\u044c\u0432\u0430"
 
 
+def test_august_4_morning_groups_bernardo_gonzalo_and_vinicius_updates():
+    noise_cases = [
+        ("Alineaciones jornada 1 LaLiga EA Sports", "Marca - Real Madrid"),
+        ("The most overrated myth about Real Madrid just got debunked", "The Real Champs"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+    bernardo_titles = [
+        "Bernardo Silva: When Real Madrid came calling, it was impossible not to say no",
+        "Bernardo Silva: Cuando aparecio el Real Madrid no me lo pense dos veces",
+    ]
+    assert {semantic_news_key(title) for title in bernardo_titles} == {
+        "player:bernardo-silva-real-arrival"
+    }
+
+    gonzalo_titles = [
+        "Comunicado Oficial: Gonzalo",
+        "Gonzalo joins Fulham from Real Madrid",
+    ]
+    assert {semantic_news_key(title) for title in gonzalo_titles} == {"transfer:gonzalo-fulham"}
+
+    vinicius_titles = [
+        "Vinicius afronta su segundo dia en Madrid a la espera de sentarse a hablar",
+        "Cero contacto entre Vini y Real Madrid, operacion salida activada",
+    ]
+    assert {semantic_news_key(title) for title in vinicius_titles} == {"contract:vinicius-renewal"}
+    assert clean_text("Bernardo Silva") == "\u0411\u0435\u0440\u043d\u0430\u0440\u0434\u0443 \u0421\u0438\u043b\u044c\u0432\u0430"
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
