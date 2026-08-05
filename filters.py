@@ -310,6 +310,15 @@ FILTERS = {
         "свадьба роналду и джорджины",
         "ibrahima konate arrives at real madrid facing",
 
+        # August 5 morning: market roundups and unnamed opinion features can
+        # be rewritten into false transfer claims, while tennis is out of scope.
+        "resumen mercado fichajes real madrid martes 4 agosto",
+        "resumen del mercado de fichajes",
+        "real madrid show their brains once again",
+        "deals for gonzalo garcia and cesar palacios",
+        "real madrid versatile attacker ready to fight for place",
+        "rublev", "рублев", "упущенных матчболов",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

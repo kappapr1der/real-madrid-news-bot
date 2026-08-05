@@ -2107,6 +2107,27 @@ def test_august_4_late_evening_drops_malformed_x_and_side_stories():
         assert digest_llm_hard_deny(item, title) is True
 
 
+def test_august_5_morning_drops_false_market_summary_and_tennis_noise():
+    noise_cases = [
+        ("Resumen del mercado de fichajes del Real Madrid: martes 4 de agosto", "Bernabeu Digital"),
+        (
+            "Real Madrid show their brains once again in the deals for Gonzalo Garcia and Cesar Palacios",
+            "The Real Champs",
+        ),
+        (
+            "Real Madrid versatile attacker ready to fight for place as competition grows",
+            "Madrid Universal",
+        ),
+        ("How, #####?! Rublev misses five matchballs", "Sports.ru"),
+        ("У Рублева все пошло наперекосяк и 5 упущенных матчболов", "Sports.ru"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        item = _item(title)
+        item.candidate.source = source
+        assert digest_llm_hard_deny(item, title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
