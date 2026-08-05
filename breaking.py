@@ -731,7 +731,7 @@ def fetch_breaking(sources):
                 if here_we_go_source and not has_direct_real_madrid_reference(title, summary=summary):
                     logging.info("[HERE WE GO SKIPPED: NOT REAL MADRID] %s", title)
                     continue
-                if not title or not passes_filters(title, summary=summary, source=label):
+                if not title or not passes_filters(title, summary=summary, source=label, link=link):
                     continue
 
                 here_we_go = is_here_we_go(title, source=label, summary=summary)

@@ -199,7 +199,11 @@ def select_weekly_stories(stories: list[dict], limit: int) -> list[dict]:
     selected_keys: set[str] = set()
     for story in sorted(stories, key=_story_score, reverse=True):
         title = weekly_source_title(story)
-        if not title or not passes_filters(title, source=str(story.get("source") or "")):
+        if not title or not passes_filters(
+            title,
+            source=str(story.get("source") or ""),
+            link=str(story.get("link") or ""),
+        ):
             continue
         if weekly_story_is_low_signal(story):
             continue

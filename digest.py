@@ -19,6 +19,7 @@ from sources_ru import SOURCES_RU
 from filters import (
     is_handle_only_x_title,
     is_low_signal_x_question,
+    is_managing_madrid_dated_general_thread,
     is_truncated_x_title,
     passes_filters,
 )
@@ -602,6 +603,13 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "rublev",
     "рублев",
     "упущенных матчболов",
+    "fichajes real madrid 2026/27",
+    "fichajes real madrid 2026 27",
+    "real madrid midfielder fails to convince",
+    "pretemporada laliga 2026",
+    "lille piensa en cestero",
+    "palco bd",
+    "alton towers",
     "real madrid midfielder to attend barcelona pre season friendly in england",
     "barcelona pre season friendly in england",
     "barcelona pre-season friendly in england",
@@ -1536,7 +1544,7 @@ def collect_candidates(sources, cutoff: datetime):
 
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "")
-                if not title or not passes_filters(title, summary=summary, source=label):
+                if not title or not passes_filters(title, summary=summary, source=label, link=link):
                     continue
 
                 fingerprint = story_fingerprint(title, summary)
@@ -1620,6 +1628,12 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     if is_handle_only_x_title(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_low_signal_x_question(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_managing_madrid_dated_general_thread(
+        candidate.title,
+        getattr(candidate, "source", ""),
+        getattr(candidate, "link", ""),
+    ):
         return True
     if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
         return True

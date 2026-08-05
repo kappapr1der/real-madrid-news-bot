@@ -319,6 +319,13 @@ FILTERS = {
         "real madrid versatile attacker ready to fight for place",
         "rublev", "рублев", "упущенных матчболов",
 
+        # August 5 daytime: SEO transfer hubs, broad league listings, lifestyle
+        # and ungrounded squad speculation are not individual club updates.
+        "fichajes real madrid 2026/27", "fichajes real madrid 2026 27",
+        "real madrid midfielder fails to convince",
+        "pretemporada laliga 2026", "lille piensa en cestero",
+        "palco bd", "alton towers",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
@@ -838,12 +845,30 @@ def is_truncated_x_title(text: str, source: str = "") -> bool:
     )
 
 
-def passes_filters(text: str, summary: Optional[str] = None, source: Optional[str] = None) -> bool:
+def is_managing_madrid_dated_general_thread(text: str, source: str = "", link: str = "") -> bool:
+    """Reject the source's dated /general/ discussion threads from news selection."""
+    if _normalize(source) != "managing madrid" or "/general/" not in str(link or "").casefold():
+        return False
+    plain = _normalize(text)
+    months = (
+        "january|february|march|april|may|june|july|august|september|"
+        "october|november|december"
+    )
+    return bool(re.search(rf"\b\d{{1,2}}\s+(?:{months})\s+20\d{{2}}\b", plain))
+
+
+def passes_filters(
+    text: str,
+    summary: Optional[str] = None,
+    source: Optional[str] = None,
+    link: Optional[str] = None,
+) -> bool:
     """
     Основной фильтр релевантности.
     :param text: заголовок/лид
     :param summary: опционально — подводка/анонс
     :param source: опционально — бренд источника. Профильные источники Real Madrid проходят мягче.
+    :param link: ссылка на материал. Нужна для отсечения служебных тредов источника.
     """
     if not text:
         logger.info("[FILTERED: EMPTY]")
@@ -866,6 +891,10 @@ def passes_filters(text: str, summary: Optional[str] = None, source: Optional[st
 
     if is_truncated_x_title(text, source):
         logger.info(f"[FILTERED: X TRUNCATED] {source}: {text[:90]}...")
+        return False
+
+    if is_managing_madrid_dated_general_thread(text, source, link):
+        logger.info(f"[FILTERED: MANAGING MADRID GENERAL THREAD] {text[:90]}...")
         return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
@@ -914,8 +943,13 @@ def passes_filters(text: str, summary: Optional[str] = None, source: Optional[st
     return False
 
 
-def filter_news(text: str, summary: Optional[str] = None, source: Optional[str] = None) -> bool:
+def filter_news(
+    text: str,
+    summary: Optional[str] = None,
+    source: Optional[str] = None,
+    link: Optional[str] = None,
+) -> bool:
     """
     Обёртка для совместимости. Старые вызовы с одним аргументом продолжают работать.
     """
-    return passes_filters(text, summary=summary, source=source)
+    return passes_filters(text, summary=summary, source=source, link=link)

@@ -2128,6 +2128,36 @@ def test_august_5_morning_drops_false_market_summary_and_tennis_noise():
         assert digest_llm_hard_deny(item, title) is True
 
 
+def test_august_5_daytime_drops_roundups_lifestyle_and_dated_general_threads():
+    noise_cases = [
+        ("Fichajes Real Madrid 2026/27: ultimas noticias, rumores y traspasos", "Sport - Real Madrid", ""),
+        (
+            "Real Madrid midfielder fails to convince in pre-season amid uncertain future",
+            "Madrid Universal",
+            "",
+        ),
+        (
+            "Pretemporada LaLiga 2026/27: fechas y horarios de todos los amistosos",
+            "Marca - Real Madrid",
+            "",
+        ),
+        ("Lille piensa en Cestero para reemplazar a Bouaddi", "Bernabeu Digital", ""),
+        ("El mejor fichaje del Real Madrid - Palco BD #9", "Bernabeu Digital", ""),
+        ("Asi vive Jude Bellingham sus vacaciones en Alton Towers", "Marca - Real Madrid", ""),
+        (
+            "Different but the same | 5 August 2026",
+            "Managing Madrid",
+            "https://www.managingmadrid.com/general/110945/different-but-the-same-august-5th-2026",
+        ),
+    ]
+    for title, source, link in noise_cases:
+        assert passes_filters(title, source=source, link=link) is False
+        item = _item(title)
+        item.candidate.source = source
+        item.candidate.link = link
+        assert digest_llm_hard_deny(item, title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"
