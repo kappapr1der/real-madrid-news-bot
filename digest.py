@@ -20,6 +20,7 @@ from filters import (
     is_handle_only_x_title,
     is_low_signal_x_question,
     is_managing_madrid_dated_general_thread,
+    is_non_football_sports_link,
     is_truncated_x_title,
     passes_filters,
 )
@@ -610,6 +611,8 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "lille piensa en cestero",
     "palco bd",
     "alton towers",
+    "santos issued a statement amid criticism of neymar",
+    "criticism of neymar by remo",
     "real madrid midfielder to attend barcelona pre season friendly in england",
     "barcelona pre season friendly in england",
     "barcelona pre-season friendly in england",
@@ -1634,6 +1637,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
         getattr(candidate, "source", ""),
         getattr(candidate, "link", ""),
     ):
+        return True
+    if is_non_football_sports_link(getattr(candidate, "link", "")):
         return True
     if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
         return True

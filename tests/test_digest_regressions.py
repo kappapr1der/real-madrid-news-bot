@@ -2158,6 +2158,27 @@ def test_august_5_daytime_drops_roundups_lifestyle_and_dated_general_threads():
         assert digest_llm_hard_deny(item, title) is True
 
 
+def test_august_6_drops_non_football_url_and_unrelated_neymar_dispute():
+    noise_cases = [
+        (
+            "Trent Rockets continue dominant form as Jos Buttler makes history",
+            "Sky Sports Football",
+            "https://www.skysports.com/cricket/news/12040/13570084/the-hundred-trent-rockets",
+        ),
+        (
+            "Santos issued a statement amid criticism of Neymar by Remo president",
+            "Чемпионат - Футбол",
+            "https://www.championat.com/football/news-6572070-santos-neymar.html",
+        ),
+    ]
+    for title, source, link in noise_cases:
+        assert passes_filters(title, source=source, link=link) is False
+        item = _item(title)
+        item.candidate.source = source
+        item.candidate.link = link
+        assert digest_llm_hard_deny(item, title) is True
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

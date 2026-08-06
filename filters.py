@@ -326,6 +326,11 @@ FILTERS = {
         "pretemporada laliga 2026", "lille piensa en cestero",
         "palco bd", "alton towers",
 
+        # August 6: a Neymar dispute has no club angle, even if a feed summary
+        # happens to contain a broad football keyword.
+        "santos issued a statement amid criticism of neymar",
+        "criticism of neymar by remo",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",
@@ -857,6 +862,15 @@ def is_managing_madrid_dated_general_thread(text: str, source: str = "", link: s
     return bool(re.search(rf"\b\d{{1,2}}\s+(?:{months})\s+20\d{{2}}\b", plain))
 
 
+def is_non_football_sports_link(link: str = "") -> bool:
+    """Reject broad-sports feed entries by their canonical URL section."""
+    lower_link = str(link or "").casefold()
+    return any(
+        f"/{sport}/" in lower_link
+        for sport in ("cricket", "tennis", "rugby", "golf", "boxing", "mma", "ufc", "motorsport")
+    )
+
+
 def passes_filters(
     text: str,
     summary: Optional[str] = None,
@@ -895,6 +909,10 @@ def passes_filters(
 
     if is_managing_madrid_dated_general_thread(text, source, link):
         logger.info(f"[FILTERED: MANAGING MADRID GENERAL THREAD] {text[:90]}...")
+        return False
+
+    if is_non_football_sports_link(link):
+        logger.info(f"[FILTERED: NON-FOOTBALL URL] {text[:90]}...")
         return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
