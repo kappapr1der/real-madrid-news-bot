@@ -331,6 +331,13 @@ FILTERS = {
         "santos issued a statement amid criticism of neymar",
         "criticism of neymar by remo",
 
+        # August 6 afternoon: Europe-wide lists, rival-only transfers and
+        # player leisure features must not pad a club-specific digest.
+        "six promoted teams to look out for in europe",
+        "todas las equipaciones", "equipaciones de primera y segunda division",
+        "chelsea boss xabi alonso wants ambitious martin zubimendi",
+        "rincon donde desconecta raul asencio",
+
         # The late July 19 catch-up mixed generic World Cup coverage, lifestyle
         # snippets, and ungrounded transfer clickbait into the club digest.
         "argentina make 3 changes to lineup", "argentina makes 3 changes to lineup",

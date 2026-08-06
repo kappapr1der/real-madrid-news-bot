@@ -2179,6 +2179,29 @@ def test_august_6_drops_non_football_url_and_unrelated_neymar_dispute():
         assert digest_llm_hard_deny(item, title) is True
 
 
+def test_august_6_afternoon_groups_rodri_race_and_drops_non_club_lists():
+    noise_cases = [
+        ("Coming up: six promoted teams to look out for in Europe this season", "Guardian Football"),
+        ("Todas las equipaciones de Primera y Segunda Division", "Marca - Real Madrid"),
+        (
+            "Chelsea boss Xabi Alonso wants ambitious Martin Zubimendi move",
+            "FourFourTwo",
+        ),
+        ("El rincon donde desconecta Raul Asencio", "Defensa Central"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        item = _item(title)
+        item.candidate.source = source
+        assert digest_llm_hard_deny(item, title) is True
+
+    rodri_titles = [
+        "Real Madrid starting to consider Rodri as lost as Barcelona take lead in race",
+        "Sources: Barcelona mulling Rodri move as Real Madrid transfer talks stall",
+    ]
+    assert {semantic_news_key(title) for title in rodri_titles} == {"transfer:rumour:rodri"}
+
+
 def test_july_24_headline_cleanup_is_readable():
     assert clean_text(
         "В академии «Реал» несколько претендентов на игрока, который может покинуть клуб летом"

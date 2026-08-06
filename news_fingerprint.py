@@ -913,7 +913,7 @@ def is_llopis_goalkeeping_staff_text(text: str) -> bool:
 
 def is_rodri_real_interest_text(text: str) -> bool:
     """Unify the current Rodri-to-Real-Madrid transfer thread across sources."""
-    return (
+    basic_interest = (
         contains_any(text, ("rodri", "родри"))
         and contains_any(text, ("real madrid", "real", "madrid", "реал"))
         and contains_any(
@@ -932,6 +932,13 @@ def is_rodri_real_interest_text(text: str) -> bool:
             ),
         )
     )
+    barcelona_race = (
+        contains_any(text, ("rodri", "родри"))
+        and contains_any(text, ("real madrid", "real", "madrid", "реал"))
+        and contains_any(text, ("barcelona", "barca", "barça", "барселон", "барса"))
+        and contains_any(text, ("lead in race", "consider as lost", "mulling", "talks stall", "transfer talks"))
+    )
+    return basic_interest or barcelona_race
 
 
 def is_valverde_mourinho_leadership_text(text: str) -> bool:
