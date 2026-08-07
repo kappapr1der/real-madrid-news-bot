@@ -98,22 +98,56 @@ def save_state(state: set[str]) -> None:
 
 posted_keys = load_state()
 
+TEAM_NAMES_RU = {
+    "real madrid": "«Реал»",
+    "ferencvaros": "«Ференцварош»",
+    "fiorentina": "«Фиорентина»",
+    "schalke 04": "«Шальке 04»",
+    "real betis": "«Бетис»",
+    "leganes": "«Леганес»",
+    "deportivo la coruna": "«Депортиво»",
+    "deportivo": "«Депортиво»",
+    "barcelona": "«Барселона»",
+}
+COMPETITION_NAMES_RU = {
+    "friendly": "Товарищеский матч",
+    "la liga": "Ла Лига",
+    "champions league": "Лига чемпионов",
+    "uefa champions league": "Лига чемпионов",
+    "copa del rey": "Кубок Испании",
+    "supercopa de espana": "Суперкубок Испании",
+}
+ROUND_NAMES_RU = {
+    "pre-season": "Предсезонка",
+    "preseason": "Предсезонка",
+}
+MONTHS_RU = (
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+)
+
+
+def display_team_name(name: str) -> str:
+    return TEAM_NAMES_RU.get(str(name or "").strip().casefold(), str(name or "").strip())
+
+
+def display_match_title(match: Match) -> str:
+    return f"{display_team_name(match.home)} - {display_team_name(match.away)}"
+
 
 def match_meta(match: Match) -> str:
-    details = [match.competition]
+    details = [COMPETITION_NAMES_RU.get(match.competition.casefold(), match.competition)]
     if match.round:
-        details.append(match.round)
-    if match.venue:
-        details.append(match.venue)
+        details.append(ROUND_NAMES_RU.get(match.round.casefold(), match.round))
     return " · ".join(details)
 
 
 def kickoff_label(match: Match) -> str:
-    return match.kickoff.strftime("%d.%m %H:%M")
+    return f"{match.kickoff.day} {MONTHS_RU[match.kickoff.month - 1]}, {match.kickoff:%H:%M} МСК"
 
 
 def format_auto_message(match: Match, phase: str) -> str:
-    safe_title = escape(match.title)
+    safe_title = escape(display_match_title(match))
     safe_meta = escape(match_meta(match))
     safe_kickoff = escape(kickoff_label(match))
 
@@ -122,11 +156,12 @@ def format_auto_message(match: Match, phase: str) -> str:
         lines = [
             f"<b>{'Перед свистком' if pre_whistle else 'Завтра матч'}: {safe_title}</b>",
             safe_meta,
-            f"Начало: {safe_kickoff}",
-            pre_whistle or "Заранее собираем всё важное к матчу и оставляем день без лишнего шума.",
+            safe_kickoff,
         ]
+        if pre_whistle:
+            lines.append(pre_whistle)
         if match.broadcast:
-            lines.append(f"Трансляция: {escape(match.broadcast)}")
+            lines.append(f"Где смотреть: {escape(match.broadcast)}")
         hashtags = f"{MATCHDAY_HASHTAGS} #ПередСвистком" if pre_whistle else MATCHDAY_HASHTAGS
         return append_hashtags("\n".join(lines), hashtags)
 
@@ -134,11 +169,11 @@ def format_auto_message(match: Match, phase: str) -> str:
         lines = [
             f"<b>Матч-день: {safe_title}</b>",
             safe_meta,
-            f"Начало: {safe_kickoff}",
-            "На время матча обычные дайджесты приглушены.",
+            safe_kickoff,
+            "Сегодня играем.",
         ]
         if match.broadcast:
-            lines.append(f"Трансляция: {escape(match.broadcast)}")
+            lines.append(f"Где смотреть: {escape(match.broadcast)}")
         message = "\n".join(lines)
         return append_hashtags(message, MATCHDAY_HASHTAGS)
 
@@ -165,7 +200,7 @@ def format_auto_message(match: Match, phase: str) -> str:
 
 
 def format_event_message(match: Match, minute: str, text: str, kind: str = "update", score: str = "") -> str:
-    safe_title = escape(match.title)
+    safe_title = escape(display_match_title(match))
     safe_text = escape(text.strip())
     safe_kind = escape(kind.strip() or "update")
     safe_minute = escape(minute.strip()) if minute else ""
@@ -188,7 +223,7 @@ def format_lineup_message(lineup) -> str:
     names = ", ".join(escape(name) for name in lineup.starters)
     message = "\n".join(
         [
-            f"<b>Состав «Реала» на матч с {escape(lineup.match.away if lineup.match.is_home else lineup.match.home)}{formation}</b>",
+            f"<b>Состав «Реала» на матч с {escape(display_team_name(lineup.match.away if lineup.match.is_home else lineup.match.home))}{formation}</b>",
             names,
         ]
     )
@@ -197,7 +232,7 @@ def format_lineup_message(lineup) -> str:
 
 def format_final_result_message(result) -> str:
     lines = [
-        f"<b>Финальный свист: {escape(result.match.title)}</b>",
+        f"<b>Финальный свист: {escape(display_match_title(result.match))}</b>",
         f"Счёт: <b>{escape(result.score)}</b>",
     ]
     goals = []

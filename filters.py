@@ -733,6 +733,18 @@ FILTERS = {
         "rincon donde desconecta luka modric", "rincón donde desconecta luka modric",
         "comer carne a la brasa", "7 minutos del estadio santiago bernabeu",
 
+        # August 7: pundit speculation, generic market roundups and lifestyle
+        # posts should not dilute the matchday or confirmed club news.
+        "franco mastantuono 19 anos sobre su infancia", "dejar mi casa tan pronto me hizo madurar",
+        "tranquilidad definitiva vini nervios totales centro campo",
+        "ni interior ni extremo derecho mourinho ve mastantuono",
+        "ideal starting midfield trio",
+        "mbappe machaca ibiza", "mbappe trains in ibiza",
+        "why arsenal move for chelsea's josh acheampong",
+        "confirmado nueva sede supercopa espana 2027",
+        "decision rodri retomada operacion central",
+        "madrid no llora a rodri", "respuesta roncero al no de rodri",
+
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",
         "спартак", "цска", "зенит", "локомотив", "рубин",

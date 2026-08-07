@@ -47,6 +47,29 @@ def test_ordinary_matchday_copy_stays_compact():
     assert "ГолосБернабеу" not in format_final_result_message(result)
 
 
+def test_day_before_match_post_is_localized_without_internal_copy():
+    match = Match(
+        id="ferencvaros-test",
+        competition="Friendly",
+        round="Pre-season",
+        home="Ferencvaros",
+        away="Real Madrid",
+        kickoff=datetime(2026, 8, 8, 20, 0, tzinfo=timezone.utc),
+        venue="Ferencvaros Stadion, Budapest",
+        broadcast="Realmadrid TV",
+    )
+
+    message = format_auto_message(match, "day_before")
+
+    assert "«Ференцварош» - «Реал»" in message
+    assert "Товарищеский матч · Предсезонка" in message
+    assert "8 августа, 20:00 МСК" in message
+    assert "Где смотреть: Realmadrid TV" in message
+    assert "Friendly" not in message
+    assert "Ferencvaros Stadion" not in message
+    assert "Заранее собираем" not in message
+
+
 def test_white_frame_allows_club_moments_but_not_shop_posts():
     assert suitable_frame_title("First training session of pre-season in Valdebebas") is True
     assert suitable_frame_title("Semana 1") is True

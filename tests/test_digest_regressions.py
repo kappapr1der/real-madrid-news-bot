@@ -2240,3 +2240,44 @@ def test_july_26_diomande_headline_cleanup_is_readable():
     assert clean_text(
         "На всякий случай: «Реал» согласовал личные условия с Яном Диоманде, несмотря на то, что «ПСЖ» давит на Романо"
     ) == "«Реал» согласовал личные условия с Яном Диоманде, несмотря на давление «ПСЖ»"
+
+
+def test_august_7_groups_rodri_and_mastantuono_stories_and_drops_filler():
+    rodri_titles = [
+        "El Real Madrid respeta la decision de Rodri y le da por perdido",
+        "World Cup-winning midfielder has personally informed Real Madrid of decision to join Barcelona",
+        "El Madrid no llora a Rodri",
+    ]
+    assert {semantic_news_key(title) for title in rodri_titles} == {"transfer:rumour:rodri"}
+
+    mastantuono_titles = [
+        "Mastantuono cedido a la Fiorentina",
+        "Real Madrid teenage prodigy secures Serie A loan move",
+        "Real Madrid prodigy arrives in Italy ahead of Fiorentina loan move",
+    ]
+    assert {semantic_news_key(title) for title in mastantuono_titles} == {
+        "transfer:loan:mastantuono-fiorentina"
+    }
+
+    noise_cases = [
+        ("@FedeeValverde", "X – @realmadrid"),
+        ("Picking Jose Mourinho's ideal starting midfield trio for Real Madrid", "The Real Champs"),
+        ("Mbappe machaca Ibiza antes de volver al Real Madrid", "Marca – Real Madrid"),
+        ("Why Arsenal move for Chelsea's Josh Acheampong makes sense", "FourFourTwo"),
+        ("Decision Rodri; retomada operacion central; y oferta por Zubimendi", "Bernabeu Digital"),
+        ("Respuesta de Roncero al no de Rodri", "Mundo Deportivo – Real Madrid"),
+    ]
+    for title, source in noise_cases:
+        assert passes_filters(title, source=source) is False
+        item = _item(title)
+        item.candidate.source = source
+        assert digest_llm_hard_deny(item, title) is True
+
+
+def test_reporter_contract_claim_keeps_visible_attribution():
+    item = _item("Vinicius extends contract until 2032")
+    item.candidate.source = "X – @JLSanchez78"
+    item.related_sources = []
+    rendered = format_news_entry(1, item, title_override="Винисиус продлил контракт до 2032 года")
+
+    assert "По данным @JLSanchez78, Винисиус продлил контракт до 2032 года" in rendered

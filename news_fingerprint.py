@@ -661,6 +661,23 @@ def is_mastantuono_roma_transfer_text(text: str) -> bool:
     )
 
 
+def is_mastantuono_fiorentina_loan_text(text: str) -> bool:
+    """Collapse the confirmed Mastantuono loan to Fiorentina across source wording."""
+    named_report = (
+        contains_any(text, ("mastantuono", "мастантуоно"))
+        and contains_any(text, ("fiorentina", "фиорентина"))
+    )
+    unnamed_variant = contains_any(
+        text,
+        (
+            "teenage prodigy secures serie a loan move",
+            "real madrid teenage prodigy secures serie a loan",
+            "prodigy arrives in italy ahead of fiorentina loan move",
+        ),
+    )
+    return named_report or unnamed_variant
+
+
 def is_fulham_palacios_garcia_text(text: str) -> bool:
     """Group the Fulham thread concerning Cesar Palacios and Garcia."""
     named_report = (
@@ -938,7 +955,26 @@ def is_rodri_real_interest_text(text: str) -> bool:
         and contains_any(text, ("barcelona", "barca", "barça", "барселон", "барса"))
         and contains_any(text, ("lead in race", "consider as lost", "mulling", "talks stall", "transfer talks"))
     )
-    return basic_interest or barcelona_race
+    decision_story = (
+        contains_any(text, ("rodri", "родри"))
+        and contains_any(text, ("real madrid", "real", "madrid", "реал"))
+        and contains_any(
+            text,
+            (
+                "da por perdido",
+                "respeta la decision de rodri",
+                "respects rodri decision",
+                "madrid no llora a rodri",
+                "madrid no llora rodri",
+            ),
+        )
+    )
+    unnamed_barcelona_decision = (
+        contains_any(text, ("world cup winning midfielder", "world cup-winning midfielder"))
+        and contains_any(text, ("real madrid", "реал"))
+        and contains_any(text, ("decision to join barcelona", "decision to join barca"))
+    )
+    return basic_interest or barcelona_race or decision_story or unnamed_barcelona_decision
 
 
 def is_valverde_mourinho_leadership_text(text: str) -> bool:
@@ -1156,6 +1192,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_mastantuono_roma_transfer_text(text):
         return "transfer:loan:mastantuono-roma"
 
+    if is_mastantuono_fiorentina_loan_text(text):
+        return "transfer:loan:mastantuono-fiorentina"
+
     if is_fulham_palacios_garcia_text(text):
         return "transfer:fulham-palacios-garcia"
 
@@ -1353,6 +1392,9 @@ def canonical_news_key(key: str) -> str:
 
     if is_mastantuono_roma_transfer_text(text):
         return "transfer:loan:mastantuono-roma"
+
+    if is_mastantuono_fiorentina_loan_text(text):
+        return "transfer:loan:mastantuono-fiorentina"
     if is_fulham_palacios_garcia_text(text):
         return "transfer:fulham-palacios-garcia"
     if is_gonzalo_fulham_transfer_text(text):

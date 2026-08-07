@@ -5,6 +5,7 @@ import calendar
 import json
 import logging
 import random
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -1098,6 +1099,12 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "rincón donde desconecta luka modric",
     "comer carne a la brasa",
     "7 minutos del estadio santiago bernabeu",
+    "ideal starting midfield trio",
+    "mbappe machaca ibiza",
+    "mbappe trains in ibiza",
+    "why arsenal move for chelsea's josh acheampong",
+    "decision rodri; retomada operacion central",
+    "respuesta de roncero al no de rodri",
 )
 
 DIGEST_LLM_CLUB_IMPACT_TERMS = (
@@ -1469,7 +1476,17 @@ def digest_topic_hashtags(items: list[RankedDigestItem]) -> str:
 
 def format_news_entry(i: int, item: RankedDigestItem, title_override: str | None = None) -> str:
     candidate = item.candidate
-    safe_text = escape(title_override or polish_title(candidate.title))
+    title = title_override or polish_title(candidate.title)
+    source_match = re.search(r"\bX\s*[–-]\s*(@[A-Za-z0-9_]+)", str(candidate.source), flags=re.IGNORECASE)
+    raw_title = str(candidate.title).casefold()
+    if (
+        source_match
+        and "vinici" in raw_title
+        and any(term in raw_title for term in ("renew", "extend", "renueva", "renov", "продлил", "продлен"))
+    ):
+        title = f"По данным {source_match.group(1)}, {title}"
+
+    safe_text = escape(title)
     safe_source = escape(candidate.source)
     safe_link = escape(candidate.link, quote=True)
     provenance = source_provenance_label(candidate.source)
