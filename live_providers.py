@@ -26,6 +26,7 @@ from runtime_config import (
     MATCHDAY_LIVE_EVENT_TYPES,
     MATCHDAY_LIVE_PROVIDER,
     MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED,
+    MATCHDAY_LIVE_SUBSTITUTIONS_REAL_ONLY,
     MATCHDAY_RSS_CONFIRMATION_CACHE_SECONDS,
     MATCHDAY_RSS_CONFIRMATION_ENABLED,
     MATCHDAY_RSS_CONFIRMATION_ENTRY_SCAN_LIMIT,
@@ -264,7 +265,9 @@ def event_allowed(raw_event: dict[str, Any]) -> bool:
     if MATCHDAY_LIVE_EVENT_TYPES and event_type not in MATCHDAY_LIVE_EVENT_TYPES:
         return False
     if event_type == "subst":
-        return MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED
+        return MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED and (
+            not MATCHDAY_LIVE_SUBSTITUTIONS_REAL_ONLY or team_is_real(raw_event)
+        )
     if event_type == "card":
         detail = str(raw_event.get("detail") or "").casefold()
         return "red" in detail or "second yellow" in detail
@@ -349,10 +352,6 @@ def fixture_score(fixture: dict[str, Any]) -> str:
     if home is None or away is None:
         return ""
     return f"{home}:{away}"
-
-
-def score_sentence(score: str) -> str:
-    return f" Счет {score}." if score else ""
 
 
 def normalize_signal_text(value: str) -> str:
@@ -536,11 +535,11 @@ def event_kind(raw_event: dict[str, Any]) -> str:
     event_type = str(raw_event.get("type") or "")
     event_type_lower = event_type.casefold()
     if event_type_lower == "goal":
-        return "Гол"
+        return "Гол «Реала»" if team_is_real(raw_event) else "Гол соперника"
     if event_type_lower == "card":
-        return "Карточка"
+        return "Удаление «Реала»" if team_is_real(raw_event) else "Удаление соперника"
     if event_type_lower == "subst":
-        return "Замена"
+        return "Белая ротация" if team_is_real(raw_event) else "Ротация соперника"
     if event_type_lower == "var":
         return "VAR"
     return event_type or "Live"
@@ -554,44 +553,41 @@ def render_event_text(match: Match, raw_event: dict[str, Any], score: str) -> st
     assist = player_name(raw_event, "assist")
     event_team = team_name(raw_event)
     is_real = team_is_real(raw_event)
-    score_text = score_sentence(score)
+    side = live_team_label(match, is_real)
 
     if event_type == "goal":
-        scorer = player or ("Игрок Реала" if is_real else event_team or "Соперник")
+        scorer = player or ("игрок «Реала»" if is_real else event_team or "соперник")
         if "own" in detail_lower:
             if is_real:
-                return f"Автогол у Мадрида: {scorer}.{score_text} Нужно быстро возвращать контроль."
-            return f"Автогол соперника, Мадрид получает подарок.{score_text} Сливочные снова ближе к своему."
+                return f"Автогол «Реала»: {scorer}."
+            return "Автогол соперника. «Реал» получает преимущество."
         if "penalty" in detail_lower:
-            action = "реализует пенальти" if is_real else "забивает с пенальти"
+            action = "точен с пенальти" if is_real else "забивает с пенальти"
         else:
-            action = "забивает за Мадрид" if is_real else "забивает"
+            action = "завершает атаку «Реала»" if is_real else "забивает"
         if is_real:
-            extra = f" Передача: {assist}." if assist else ""
-            return f"{scorer} {action}.{score_text}{extra} Сливочные получают важный импульс."
-        return f"{event_team or 'Соперник'} отвечает: {scorer} {action}.{score_text} Мадриду нужно прибавлять."
+            extra = f" Голевой пас: {assist}." if assist else ""
+            return f"ГОЛ! {scorer} {action}.{extra}"
+        return f"{side} отвечает: {scorer} {action}."
 
     if event_type == "card":
-        card = detail or "карточка"
         target = player or event_team or "участник эпизода"
         if is_real:
-            return f"{card} для Мадрида: {target}.{score_text} Теперь аккуратнее в единоборствах."
-        return f"{card} у соперника: {target}.{score_text} Можно давить на этот фланг сильнее."
+            return f"Удаление у «Реала»: {target}. Впереди игра в меньшинстве."
+        return f"Удаление у {side}: {target}. «Реал» получает численное преимущество."
 
     if event_type == "subst":
         out_player = player or "игрок"
         in_player = assist or "свежий игрок"
-        side = "Мадрид" if is_real else event_team or "соперник"
-        return f"Замена у команды {side}: {in_player} вместо {out_player}.{score_text}"
+        return f"{side} меняет состав: {in_player} вместо {out_player}."
 
     if event_type == "var":
-        subject = player or event_team or match.title
-        detail_text = f": {detail}" if detail else ""
-        return f"VAR проверяет эпизод с участием {subject}{detail_text}.{score_text} Ждем решения арбитра."
+        subject = player or side
+        return f"VAR в деле: проверяют эпизод с участием {subject}. Ждём решения."
 
-    subject = player or event_team or match.title
+    subject = player or side
     detail_text = f" ({detail})" if detail else ""
-    return f"Событие матча: {subject}{detail_text}.{score_text}"
+    return f"Эпизод у {subject}{detail_text}."
 
 
 def event_key(fixture: dict[str, Any], raw_event: dict[str, Any]) -> str:
@@ -621,7 +617,10 @@ def event_key(fixture: dict[str, Any], raw_event: dict[str, Any]) -> str:
 def normalize_event(match: Match, fixture: dict[str, Any], raw_event: dict[str, Any]) -> LiveEvent | None:
     if not event_allowed(raw_event):
         return None
-    if str(raw_event.get("type") or "").casefold() == "goal" and not player_name(raw_event, "player"):
+    event_type = str(raw_event.get("type") or "").casefold()
+    if event_type == "subst":
+        return None
+    if event_type == "goal" and not player_name(raw_event, "player"):
         return None
     score = fixture_score(fixture)
     return LiveEvent(
@@ -632,6 +631,78 @@ def normalize_event(match: Match, fixture: dict[str, Any], raw_event: dict[str, 
         score=score,
         text=render_event_text(match, raw_event, score),
     )
+
+
+def substitution_group_key(fixture: dict[str, Any], events: list[dict[str, Any]]) -> str:
+    first = events[0]
+    payload = {
+        "fixture": fixture_id(fixture),
+        "minute": event_minute(first),
+        "team": first.get("team"),
+    }
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+    return f"api-football:{fixture_id(fixture)}:subst:{digest}"
+
+
+def compact_player_names(names: list[str], limit: int = 5) -> str:
+    visible = [name for name in names if name][:limit]
+    suffix = f" и ещё {len(names) - len(visible)}" if len(names) > len(visible) else ""
+    return ", ".join(visible) + suffix
+
+
+def render_substitution_group_text(match: Match, events: list[dict[str, Any]]) -> str:
+    first = events[0]
+    side = live_team_label(match, team_is_real(first))
+    incoming = compact_player_names([player_name(event, "assist") for event in events])
+    outgoing = compact_player_names([player_name(event, "player") for event in events])
+    if len(events) == 1:
+        incoming_name = incoming or "свежий игрок"
+        outgoing_name = outgoing or "игрок"
+        return f"{side} меняет деталь в составе: {incoming_name} вместо {outgoing_name}."
+    return "\n".join(
+        [
+            f"{side} освежает состав.",
+            f"На поле: {incoming or 'свежие игроки'}.",
+            f"Покидают поле: {outgoing or 'игроки стартового состава'}.",
+        ]
+    )
+
+
+def normalize_live_events(match: Match, fixture: dict[str, Any], raw_events: list[dict[str, Any]]) -> list[LiveEvent]:
+    indexed_events: list[tuple[int, LiveEvent]] = []
+    substitution_groups: dict[tuple[str, str], tuple[int, list[dict[str, Any]]]] = {}
+    for index, raw_event in enumerate(raw_events):
+        if str(raw_event.get("type") or "").casefold() == "subst":
+            if not event_allowed(raw_event):
+                continue
+            group = (event_minute(raw_event), json.dumps(raw_event.get("team") or {}, sort_keys=True))
+            if group not in substitution_groups:
+                substitution_groups[group] = (index, [])
+            substitution_groups[group][1].append(raw_event)
+            continue
+        event = normalize_event(match, fixture, raw_event)
+        if event:
+            indexed_events.append((index, event))
+
+    score = fixture_score(fixture)
+    for first_index, events in substitution_groups.values():
+        if not events:
+            continue
+        indexed_events.append(
+            (
+                first_index,
+                LiveEvent(
+                    key=substitution_group_key(fixture, events),
+                    match=match,
+                    minute=event_minute(events[0]),
+                    kind=event_kind(events[0]),
+                    score=score,
+                    text=render_substitution_group_text(match, events),
+                ),
+            )
+        )
+    return [event for _, event in sorted(indexed_events, key=lambda item: item[0])]
 
 
 def fetch_live_events(matches: list[Match]) -> list[LiveEvent]:
@@ -668,10 +739,7 @@ def fetch_live_events(matches: list[Match]) -> list[LiveEvent]:
             if not current_fixture_id:
                 continue
             remember_fixture_id(match, fixture)
-            for raw_event in client.fixture_events(current_fixture_id):
-                event = normalize_event(match, fixture, raw_event)
-                if event:
-                    events.append(event)
+            events.extend(normalize_live_events(match, fixture, client.fixture_events(current_fixture_id)))
         return events
     except (requests.RequestException, ValueError, TypeError) as exc:
         logging.warning("Не удалось получить live-события API-FOOTBALL: %s", exc)

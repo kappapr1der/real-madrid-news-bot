@@ -86,6 +86,20 @@ def test_live_event_copy_localizes_api_football_team_names():
     assert "Мадриду" not in message
 
 
+def test_live_event_header_keeps_white_rotation_tone():
+    match = marquee_match(home="Ferencvaros", away="Real Madrid")
+    message = format_event_message(
+        match,
+        "46",
+        "«Реал» освежает состав.\nНа поле: C. Espi.\nПокидают поле: M. Rivas.",
+        "Белая ротация",
+        "0:1",
+    )
+
+    assert "46' · Белая ротация · 0:1" in message
+    assert "«Реал» освежает состав" in message
+
+
 def test_white_frame_allows_club_moments_but_not_shop_posts():
     assert suitable_frame_title("First training session of pre-season in Valdebebas") is True
     assert suitable_frame_title("Semana 1") is True

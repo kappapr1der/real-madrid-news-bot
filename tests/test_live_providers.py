@@ -9,6 +9,7 @@ from live_providers import (
     fixture_matches_match,
     load_observed_fixture_ids,
     normalize_event,
+    normalize_live_events,
     remember_fixture_id,
 )
 from match_calendar import Match
@@ -94,6 +95,56 @@ def test_live_events_skip_substitutions_yellows_and_incomplete_goals(monkeypatch
         "player": {"name": ""},
     }
     assert normalize_event(_friendly_match(), fixture, raw_goal) is None
+
+
+def test_real_substitutions_are_grouped_into_one_white_rotation(monkeypatch):
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_EVENT_TYPES", {"goal", "card", "subst", "var"})
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED", True)
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_SUBSTITUTIONS_REAL_ONLY", True)
+    fixture = {"fixture": {"id": 1604780}, "goals": {"home": 0, "away": 1}}
+    substitutions = [
+        {
+            "type": "subst",
+            "time": {"elapsed": 46},
+            "team": {"id": 541, "name": "Real Madrid"},
+            "player": {"name": "M. Rivas"},
+            "assist": {"name": "C. Espi"},
+        },
+        {
+            "type": "subst",
+            "time": {"elapsed": 46},
+            "team": {"id": 541, "name": "Real Madrid"},
+            "player": {"name": "A. Guler"},
+            "assist": {"name": "F. Valverde"},
+        },
+    ]
+
+    events = normalize_live_events(_friendly_match(), fixture, substitutions)
+    first_change = normalize_live_events(_friendly_match(), fixture, substitutions[:1])
+
+    assert len(events) == 1
+    assert first_change[0].key == events[0].key
+    assert events[0].kind == "Белая ротация"
+    assert events[0].minute == "46"
+    assert "«Реал» освежает состав" in events[0].text
+    assert "На поле: C. Espi, F. Valverde" in events[0].text
+    assert "Покидают поле: M. Rivas, A. Guler" in events[0].text
+
+
+def test_opponent_substitutions_stay_out_of_white_rotation(monkeypatch):
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_EVENT_TYPES", {"subst"})
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED", True)
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_SUBSTITUTIONS_REAL_ONLY", True)
+    fixture = {"fixture": {"id": 1604780}, "goals": {"home": 0, "away": 1}}
+    opponent_change = {
+        "type": "subst",
+        "time": {"elapsed": 46},
+        "team": {"id": 999, "name": "Ferencvarosi TC"},
+        "player": {"name": "A. Out"},
+        "assist": {"name": "B. In"},
+    }
+
+    assert normalize_live_events(_friendly_match(), fixture, [opponent_change]) == []
 
 
 class Feed:
