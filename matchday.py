@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import logging
+import re
 import signal
 import threading
 import time
@@ -101,6 +102,7 @@ posted_keys = load_state()
 TEAM_NAMES_RU = {
     "real madrid": "«Реал»",
     "ferencvaros": "«Ференцварош»",
+    "ferencvarosi tc": "«Ференцварош»",
     "fiorentina": "«Фиорентина»",
     "schalke 04": "«Шальке 04»",
     "real betis": "«Бетис»",
@@ -133,6 +135,23 @@ def display_team_name(name: str) -> str:
 
 def display_match_title(match: Match) -> str:
     return f"{display_team_name(match.home)} - {display_team_name(match.away)}"
+
+
+def localize_live_text(match: Match, text: str) -> str:
+    opponent = match.away if match.is_home else match.home
+    replacements = (
+        ("Ferencvarosi TC", display_team_name(opponent)),
+        ("Real Madrid", "«Реал»"),
+        ("Madrid", "«Реал»"),
+        ("Red Card", "Красная карточка"),
+        ("Мадриду", "«Реалу»"),
+        ("Мадрида", "«Реала»"),
+        ("Мадрид", "«Реал»"),
+    )
+    localized = str(text or "")
+    for original, replacement in replacements:
+        localized = localized.replace(original, replacement)
+    return re.sub(r"\s+", " ", localized).strip()
 
 
 def match_meta(match: Match) -> str:
@@ -201,7 +220,7 @@ def format_auto_message(match: Match, phase: str) -> str:
 
 def format_event_message(match: Match, minute: str, text: str, kind: str = "update", score: str = "") -> str:
     safe_title = escape(display_match_title(match))
-    safe_text = escape(text.strip())
+    safe_text = escape(localize_live_text(match, text))
     safe_kind = escape(kind.strip() or "update")
     safe_minute = escape(minute.strip()) if minute else ""
     safe_score = escape(score.strip()) if score else ""

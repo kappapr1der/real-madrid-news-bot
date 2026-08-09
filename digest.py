@@ -19,6 +19,7 @@ from sources_international import SOURCES_INTERNATIONAL
 from sources_ru import SOURCES_RU
 from filters import (
     is_handle_only_x_title,
+    is_name_only_x_title,
     is_low_signal_x_question,
     is_managing_madrid_dated_general_thread,
     is_non_football_sports_link,
@@ -482,6 +483,20 @@ DIGEST_LLM_ABSOLUTE_DENY_TERMS = (
     "no teniamos tv ni internet en casa",
     "no teníamos tv ni internet en casa",
     "у нас дома не было телевизора или интернета",
+    "the real madrid trio jose mourinho can t trust",
+    "the real madrid trio jose mourinho can't trust",
+    "endrick 20 anos sobre su padre",
+    "endrick 20 años sobre su padre",
+    "endrick 20 on his father",
+    "endrick, 20, on his father",
+    "chicharito",
+    "what does next years midfield look like",
+    "what does next year's midfield look like",
+    "jeno kalmar",
+    "jeno kálmár",
+    "man united psg live",
+    "man united vs psg",
+    "мбаппе тренируется на ибице",
     "real madrid are finally realising their biggest mistake",
     "finally realising their biggest mistake of this transfer window",
     "kylian mbappe 27 anos no voy a ser entrenador",
@@ -1651,6 +1666,8 @@ def update_digest_quarantine(candidates: list[DigestCandidate], selected: list[R
 def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     candidate = item.candidate
     if is_handle_only_x_title(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_name_only_x_title(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_low_signal_x_question(candidate.title, getattr(candidate, "source", "")):
         return True

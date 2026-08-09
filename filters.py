@@ -745,6 +745,19 @@ FILTERS = {
         "decision rodri retomada operacion central",
         "madrid no llora a rodri", "respuesta roncero al no de rodri",
 
+        # August 8-9: personal anecdotes, generic opinion pieces and rival-only
+        # stories leaked into the first matchday run and weekly recap.
+        "the real madrid trio jose mourinho can t trust",
+        "the real madrid trio jose mourinho can't trust",
+        "endrick 20 anos sobre su padre", "endrick 20 años sobre su padre", "endrick 20 on his father",
+        "endrick, 20, on his father",
+        "endrick's father", "father of endrick", "chicharito", "jose hernandez balcarcel",
+        "what does next years midfield look like", "what does next year's midfield look like",
+        "jeno kalmar", "jeno kálmár", "man united psg live", "man united vs psg",
+        "liverpool want ronald araujo", "ronald araujo loan to liverpool",
+        "tchouameni 26 anos sobre su infancia", "tchouameni 26 años sobre su infancia",
+        "мбаппе тренируется на ибице", "мбаппе готовится на ибице",
+
         # Российский футбол, если новость не имеет явной связи с Реалом
         "рпл", "российская премьер-лига", "rpl",
         "спартак", "цска", "зенит", "локомотив", "рубин",
@@ -847,6 +860,15 @@ def is_handle_only_x_title(text: str, source: str = "") -> bool:
     return bool(re.fullmatch(r"(?:@[\w]+\s*)+", plain))
 
 
+def is_name_only_x_title(text: str, source: str = "") -> bool:
+    """Reject social cards that contain only a person's name without an update."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @"):
+        return False
+    plain = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", str(text or "")).strip()
+    return bool(re.fullmatch(r"[^\W\d_]+(?:\s+[^\W\d_]+){0,2}", plain, flags=re.UNICODE))
+
+
 def is_low_signal_x_question(text: str, source: str = "") -> bool:
     """Reject bare reporter questions that offer no actual update to readers."""
     source_name = _normalize(source)
@@ -916,6 +938,10 @@ def passes_filters(
 
     if is_handle_only_x_title(text, source):
         logger.info(f"[FILTERED: X HANDLE ONLY] {source}: {text[:90]}...")
+        return False
+
+    if is_name_only_x_title(text, source):
+        logger.info(f"[FILTERED: X NAME ONLY] {source}: {text[:90]}...")
         return False
 
     if is_low_signal_x_question(text, source):

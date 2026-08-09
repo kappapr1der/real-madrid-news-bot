@@ -6,7 +6,7 @@ from feed_utils import normalize_x_media_url
 from la_fabrica import is_concrete_la_fabrica_story, send_la_fabrica
 from live_providers import FinalResult
 from match_calendar import Match
-from matchday import format_auto_message, format_final_result_message
+from matchday import format_auto_message, format_event_message, format_final_result_message
 from publication_registry import published_editorial_links, remember_editorial_link
 from white_frame import WhiteFrame, original_x_post_url, send_white_frame, suitable_frame_title
 
@@ -68,6 +68,22 @@ def test_day_before_match_post_is_localized_without_internal_copy():
     assert "Friendly" not in message
     assert "Ferencvaros Stadion" not in message
     assert "Заранее собираем" not in message
+
+
+def test_live_event_copy_localizes_api_football_team_names():
+    match = marquee_match(home="Ferencvaros", away="Real Madrid")
+    message = format_event_message(
+        match,
+        "57",
+        "Ferencvarosi TC отвечает: K. Kodro забивает. Счет 1:2. Мадриду нужно прибавлять.",
+        "Гол",
+        "1:2",
+    )
+
+    assert "«Ференцварош» отвечает" in message
+    assert "«Реалу» нужно прибавлять" in message
+    assert "Ferencvarosi TC" not in message
+    assert "Мадриду" not in message
 
 
 def test_white_frame_allows_club_moments_but_not_shop_posts():

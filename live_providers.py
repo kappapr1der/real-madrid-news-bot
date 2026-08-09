@@ -6,6 +6,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from datetime import timedelta
 from html import unescape
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -24,6 +25,7 @@ from runtime_config import (
     MATCHDAY_LIVE_ENABLED,
     MATCHDAY_LIVE_EVENT_TYPES,
     MATCHDAY_LIVE_PROVIDER,
+    MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED,
     MATCHDAY_RSS_CONFIRMATION_CACHE_SECONDS,
     MATCHDAY_RSS_CONFIRMATION_ENABLED,
     MATCHDAY_RSS_CONFIRMATION_ENTRY_SCAN_LIMIT,
@@ -31,6 +33,7 @@ from runtime_config import (
     MATCHDAY_LINEUP_ENABLED,
     MATCHDAY_RESULT_ENABLED,
     SPORTS_LIVE_RSS_URL,
+    get_state_file,
 )
 from sources_international import X_SOURCES
 
@@ -43,6 +46,7 @@ GOAL_RE = re.compile("\\b(?:go+l+|goal|\u0433\u043e\u043b+)\\b", re.IGNORECASE)
 LIVE_MARKERS = ("\u043c\u0430\u0442\u0447", "live", "\u043e\u043d\u043b\u0430\u0439\u043d", "\u043f\u0435\u0440\u0435\u0440\u044b\u0432", "\u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0446", "\u0441\u0447\u0451\u0442", "\u0441\u0447\u0435\u0442", "goal", "\u0433\u043e\u043b")
 REAL_MADRID_SIGNAL_NAMES = ("real madrid", "\u043c\u0430\u0434\u0440\u0438\u0434\u0441\u043a\u0438\u0439 \u0440\u0435\u0430\u043b", "\u0440\u0435\u0430\u043b \u043c\u0430\u0434\u0440\u0438\u0434", "\u0440\u0435\u0430\u043b")
 REAL_NAME_RE = re.compile(r"\breal\s+madrid\b|\bреал\s+мадрид\b", re.IGNORECASE)
+LIVE_FIXTURES_FILE = get_state_file("live_fixtures.json")
 
 
 @dataclass(frozen=True)
@@ -234,6 +238,12 @@ def fixture_for_match(client: ApiFootballClient, match: Match) -> dict[str, Any]
     if match.api_football_fixture_id:
         return client.fixture_by_id(match.api_football_fixture_id)
 
+    observed_fixture_id = load_observed_fixture_ids().get(match.id, "")
+    if observed_fixture_id:
+        fixture = client.fixture_by_id(observed_fixture_id)
+        if fixture:
+            return fixture
+
     # A concrete entry in the calendar allows a friendly outside the league IDs.
     fixtures = client.get(
         "fixtures",
@@ -251,7 +261,14 @@ def fixture_for_match(client: ApiFootballClient, match: Match) -> dict[str, Any]
 
 def event_allowed(raw_event: dict[str, Any]) -> bool:
     event_type = str(raw_event.get("type") or "").casefold()
-    return not MATCHDAY_LIVE_EVENT_TYPES or event_type in MATCHDAY_LIVE_EVENT_TYPES
+    if MATCHDAY_LIVE_EVENT_TYPES and event_type not in MATCHDAY_LIVE_EVENT_TYPES:
+        return False
+    if event_type == "subst":
+        return MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED
+    if event_type == "card":
+        detail = str(raw_event.get("detail") or "").casefold()
+        return "red" in detail or "second yellow" in detail
+    return True
 
 
 def event_minute(raw_event: dict[str, Any]) -> str:
@@ -278,6 +295,51 @@ def team_is_real(raw_event: dict[str, Any]) -> bool:
     if str(team.get("id") or "") == str(API_FOOTBALL_TEAM_ID):
         return True
     return bool(REAL_NAME_RE.search(str(team.get("name") or "")))
+
+
+def load_observed_fixture_ids(path: Path | None = None) -> dict[str, str]:
+    path = path or LIVE_FIXTURES_FILE
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(match_id): str(fixture_id)
+        for match_id, fixture_id in raw.items()
+        if str(match_id).strip() and str(fixture_id).strip()
+    }
+
+
+def remember_fixture_id(match: Match, fixture: dict[str, Any], path: Path | None = None) -> None:
+    path = path or LIVE_FIXTURES_FILE
+    fixture_ref = fixture_id(fixture)
+    if not fixture_ref:
+        return
+    known = load_observed_fixture_ids(path)
+    if known.get(match.id) == fixture_ref:
+        return
+    known[match.id] = fixture_ref
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(known, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as exc:
+        logging.warning("Не удалось сохранить live fixture ID: %s", exc)
+
+
+def live_team_label(match: Match, is_real: bool) -> str:
+    if is_real:
+        return "«Реал»"
+    opponent = match.away if match.is_home else match.home
+    names = {
+        "ferencvaros": "«Ференцварош»",
+        "ferencvarosi tc": "«Ференцварош»",
+        "fiorentina": "«Фиорентина»",
+        "schalke 04": "«Шальке 04»",
+        "deportivo": "«Депортиво»",
+    }
+    return names.get(opponent.casefold(), opponent)
 
 
 def fixture_score(fixture: dict[str, Any]) -> str:
@@ -533,16 +595,24 @@ def render_event_text(match: Match, raw_event: dict[str, Any], score: str) -> st
 
 
 def event_key(fixture: dict[str, Any], raw_event: dict[str, Any]) -> str:
+    event_type = str(raw_event.get("type") or "").casefold()
     payload = {
         "fixture": fixture_id(fixture),
         "time": raw_event.get("time"),
         "team": raw_event.get("team"),
-        "player": raw_event.get("player"),
-        "assist": raw_event.get("assist"),
-        "type": raw_event.get("type"),
-        "detail": raw_event.get("detail"),
-        "comments": raw_event.get("comments"),
+        "type": event_type,
     }
+    if event_type == "goal":
+        payload["score"] = fixture_score(fixture)
+    else:
+        payload.update(
+            {
+                "player": raw_event.get("player"),
+                "assist": raw_event.get("assist"),
+                "detail": raw_event.get("detail"),
+                "comments": raw_event.get("comments"),
+            }
+        )
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
     return f"api-football:{fixture_id(fixture)}:{digest}"
@@ -550,6 +620,8 @@ def event_key(fixture: dict[str, Any], raw_event: dict[str, Any]) -> str:
 
 def normalize_event(match: Match, fixture: dict[str, Any], raw_event: dict[str, Any]) -> LiveEvent | None:
     if not event_allowed(raw_event):
+        return None
+    if str(raw_event.get("type") or "").casefold() == "goal" and not player_name(raw_event, "player"):
         return None
     score = fixture_score(fixture)
     return LiveEvent(
@@ -595,6 +667,7 @@ def fetch_live_events(matches: list[Match]) -> list[LiveEvent]:
             current_fixture_id = fixture_id(fixture)
             if not current_fixture_id:
                 continue
+            remember_fixture_id(match, fixture)
             for raw_event in client.fixture_events(current_fixture_id):
                 event = normalize_event(match, fixture, raw_event)
                 if event:

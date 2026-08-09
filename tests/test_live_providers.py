@@ -1,7 +1,16 @@
 from datetime import datetime, timezone
 
 import live_providers
-from live_providers import LiveEvent, fetch_confirmed_rss_live_events, fixture_for_match, fixture_matches_match
+from live_providers import (
+    LiveEvent,
+    event_allowed,
+    fetch_confirmed_rss_live_events,
+    fixture_for_match,
+    fixture_matches_match,
+    load_observed_fixture_ids,
+    normalize_event,
+    remember_fixture_id,
+)
 from match_calendar import Match
 
 
@@ -43,6 +52,48 @@ def test_fixture_for_scheduled_friendly_uses_calendar_allow_list():
             {"team": 541, "date": "2026-08-08", "season": 2026},
         )
     ]
+
+
+def test_fixture_for_match_reuses_live_fixture_id_for_final_result(monkeypatch, tmp_path):
+    match = _friendly_match()
+    fixture = {
+        "fixture": {"id": 1604780},
+        "league": {"id": 667, "name": "Club Friendlies"},
+        "teams": {"home": {"name": "Ferencvarosi TC"}, "away": {"name": "Real Madrid"}},
+    }
+    fixture_state = tmp_path / "live-fixtures.json"
+    monkeypatch.setattr(live_providers, "LIVE_FIXTURES_FILE", fixture_state)
+    remember_fixture_id(match, fixture)
+
+    class Client:
+        def fixture_by_id(self, fixture_id):
+            assert fixture_id == "1604780"
+            return fixture
+
+        def get(self, *_args, **_kwargs):
+            raise AssertionError("season lookup must not run after a live fixture was observed")
+
+    assert load_observed_fixture_ids() == {match.id: "1604780"}
+    assert fixture_for_match(Client(), match) == fixture
+
+
+def test_live_events_skip_substitutions_yellows_and_incomplete_goals(monkeypatch):
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_EVENT_TYPES", {"goal", "card", "subst", "var"})
+    monkeypatch.setattr(live_providers, "MATCHDAY_LIVE_SUBSTITUTIONS_ENABLED", False)
+
+    assert event_allowed({"type": "subst"}) is False
+    assert event_allowed({"type": "Card", "detail": "Yellow Card"}) is False
+    assert event_allowed({"type": "Card", "detail": "Red Card"}) is True
+
+    fixture = {"fixture": {"id": 1604780}, "goals": {"home": 0, "away": 2}}
+    raw_goal = {
+        "type": "Goal",
+        "detail": "Normal Goal",
+        "time": {"elapsed": 49},
+        "team": {"name": "Real Madrid"},
+        "player": {"name": ""},
+    }
+    assert normalize_event(_friendly_match(), fixture, raw_goal) is None
 
 
 class Feed:

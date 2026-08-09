@@ -10,7 +10,7 @@ from digest import (
     digest_topic_hashtags,
     pick_template_without_recent_repeats,
 )
-from filters import passes_filters
+from filters import is_name_only_x_title, passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
 from source_quality import source_provenance_label, source_quality_adjustment
@@ -108,6 +108,31 @@ def test_handle_only_x_post_is_filtered_from_digest():
 
     assert passes_filters(title, source=source) is False
     assert digest_llm_hard_deny(item, title) is True
+
+
+def test_name_only_x_post_is_filtered_from_digest():
+    title = "Тибо Куртуа"
+    source = "X - @realmadrid"
+    item = _item(title)
+    item.candidate.source = source
+
+    assert is_name_only_x_title(title, source) is True
+    assert passes_filters(title, source=source) is False
+    assert digest_llm_hard_deny(item, title) is True
+
+
+def test_august_eighth_matchday_noise_is_filtered():
+    cases = [
+        ("The Real Madrid trio Jose Mourinho can't trust", "The Real Champs"),
+        ("Endrick, 20, on his father and difficult childhood", "Defensa Central"),
+        ("Chicharito on Benzema", "Defensa Central"),
+        ("What does next year's midfield look like without Rodri?", "Managing Madrid"),
+        ("Jeno Kalmar, Real Madrid history", "Marca - Real Madrid"),
+        ("Man United vs PSG live", "Sky Sports Football"),
+    ]
+    for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
 
 
 def test_july_twenty_first_day_noise_is_filtered():
