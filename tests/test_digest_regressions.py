@@ -10,7 +10,7 @@ from digest import (
     digest_topic_hashtags,
     pick_template_without_recent_repeats,
 )
-from filters import is_name_only_x_title, is_vague_status_headline, passes_filters
+from filters import is_low_value_feature, is_name_only_x_title, is_promotional_link, is_vague_status_headline, passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
 from source_quality import source_provenance_label, source_quality_adjustment
@@ -144,6 +144,25 @@ def test_anonymous_status_and_vague_doubt_headlines_are_filtered():
         assert is_vague_status_headline(title) is True
         assert passes_filters(title, source=source) is False
         assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_promotional_and_low_value_features_are_filtered():
+    cases = [
+        ("Mourinho refuses to apologise to Eva Carneiro", "Mundo Deportivo - Real Madrid", ""),
+        ("Jude Bellingham, 23, on his childhood", "Defensa Central", ""),
+        ("Endrick's best possible destination away from Real Madrid is painfully obvious", "The Real Champs", ""),
+        ("Real Madrid necesita jugadores: minimo centrocampista y defensa", "Bernabeu Digital", ""),
+        ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
+    ]
+    for title, source, link in cases:
+        item = _item(title)
+        item.candidate.source = source
+        item.candidate.link = link
+        assert passes_filters(title, source=source, link=link) is False
+        assert digest_llm_hard_deny(item, title) is True
+
+    assert is_low_value_feature("Jude Bellingham, 23, on his childhood") is True
+    assert is_promotional_link("https://www.sports.ru/fantasy/football/spain/") is True
 
 
 def test_july_twenty_first_day_noise_is_filtered():
@@ -1261,6 +1280,18 @@ def test_digest_entry_keeps_story_category_out_of_title_and_shows_provenance():
 
     assert "[Лазарет]" not in rendered
     assert "официальный источник" in rendered
+
+
+def test_digest_entry_attributes_journalist_x_updates():
+    item = _item("Bellingham travelled to London and will return early")
+    item.candidate.source = "X - @AranchaMOBILE"
+    item.candidate.link = "https://example.com/arancha"
+    item.related_sources = []
+
+    rendered = format_news_entry(1, item)
+
+    assert "По данным @AranchaMOBILE" in rendered
+    assert "журналист" in rendered
 
 
 def test_digest_topic_hashtags_use_title_context_over_broad_rank_category():

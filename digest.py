@@ -23,6 +23,8 @@ from filters import (
     is_low_signal_x_question,
     is_managing_madrid_dated_general_thread,
     is_non_football_sports_link,
+    is_promotional_link,
+    is_low_value_feature,
     is_vague_status_headline,
     is_truncated_x_title,
     passes_filters,
@@ -1494,13 +1496,10 @@ def format_news_entry(i: int, item: RankedDigestItem, title_override: str | None
     candidate = item.candidate
     title = title_override or polish_title(candidate.title)
     source_match = re.search(r"\bX\s*[–-]\s*(@[A-Za-z0-9_]+)", str(candidate.source), flags=re.IGNORECASE)
-    raw_title = str(candidate.title).casefold()
-    if (
-        source_match
-        and "vinici" in raw_title
-        and any(term in raw_title for term in ("renew", "extend", "renueva", "renov", "продлил", "продлен"))
-    ):
-        title = f"По данным {source_match.group(1)}, {title}"
+    if source_match and source_match.group(1).casefold() != "@realmadrid":
+        attribution = f"По данным {source_match.group(1)}"
+        if not title.casefold().startswith(attribution.casefold()):
+            title = f"{attribution}, {title}"
 
     safe_text = escape(title)
     safe_source = escape(candidate.source)
@@ -1679,6 +1678,10 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     ):
         return True
     if is_non_football_sports_link(getattr(candidate, "link", "")):
+        return True
+    if is_promotional_link(getattr(candidate, "link", "")):
+        return True
+    if is_low_value_feature(candidate.title):
         return True
     if is_vague_status_headline(candidate.title):
         return True

@@ -912,6 +912,35 @@ def is_non_football_sports_link(link: str = "") -> bool:
     )
 
 
+def is_promotional_link(link: str = "") -> bool:
+    """Reject commercial or game-promotion pages that merely mention football."""
+    lower_link = str(link or "").casefold()
+    return "/fantasy/" in lower_link or "utm_campaign=fantasy" in lower_link
+
+
+def is_low_value_feature(text: str) -> bool:
+    """Reject personal anecdotes, stale controversy and unsupported opinion hooks."""
+    title = _normalize(text)
+    personal_markers = (
+        "sobre su infancia",
+        "on his childhood",
+        "sobre su padre",
+        "on his father",
+        "о своем детстве",
+        "о своём детстве",
+    )
+    clickbait_opinions = (
+        "best possible destination away from real madrid",
+        "real madrid necesita jugadores",
+        "реалу нужно больше игроков",
+    )
+    return bool(
+        "eva carneiro" in title
+        or any(marker in title for marker in personal_markers)
+        or any(marker in title for marker in clickbait_opinions)
+    )
+
+
 def is_vague_status_headline(text: str) -> bool:
     """Reject anonymous status reports and non-updates about a named player."""
     title = _normalize(text)
@@ -969,6 +998,14 @@ def passes_filters(
 
     if is_non_football_sports_link(link):
         logger.info(f"[FILTERED: NON-FOOTBALL URL] {text[:90]}...")
+        return False
+
+    if is_promotional_link(link):
+        logger.info(f"[FILTERED: PROMOTIONAL LINK] {text[:90]}...")
+        return False
+
+    if is_low_value_feature(text):
+        logger.info(f"[FILTERED: LOW-VALUE FEATURE] {text[:90]}...")
         return False
 
     if is_vague_status_headline(text):
