@@ -10,7 +10,7 @@ from digest import (
     digest_topic_hashtags,
     pick_template_without_recent_repeats,
 )
-from filters import is_name_only_x_title, passes_filters
+from filters import is_name_only_x_title, is_vague_status_headline, passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
 from source_quality import source_provenance_label, source_quality_adjustment
@@ -131,6 +131,17 @@ def test_august_eighth_matchday_noise_is_filtered():
         ("Man United vs PSG live", "Sky Sports Football"),
     ]
     for title, source in cases:
+        assert passes_filters(title, source=source) is False
+        assert digest_llm_hard_deny(_item(title), title) is True
+
+
+def test_anonymous_status_and_vague_doubt_headlines_are_filtered():
+    cases = [
+        ("Real Madrid midfielder will stay amid uncertainty, set to have an important role", "Madrid Universal"),
+        ("Camavinga no despeja dudas Real Madrid", "Mundo Deportivo - Real Madrid"),
+    ]
+    for title, source in cases:
+        assert is_vague_status_headline(title) is True
         assert passes_filters(title, source=source) is False
         assert digest_llm_hard_deny(_item(title), title) is True
 

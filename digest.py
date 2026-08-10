@@ -23,6 +23,7 @@ from filters import (
     is_low_signal_x_question,
     is_managing_madrid_dated_general_thread,
     is_non_football_sports_link,
+    is_vague_status_headline,
     is_truncated_x_title,
     passes_filters,
 )
@@ -1678,6 +1679,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     ):
         return True
     if is_non_football_sports_link(getattr(candidate, "link", "")):
+        return True
+    if is_vague_status_headline(candidate.title):
         return True
     if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
         return True

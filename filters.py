@@ -912,6 +912,17 @@ def is_non_football_sports_link(link: str = "") -> bool:
     )
 
 
+def is_vague_status_headline(text: str) -> bool:
+    """Reject anonymous status reports and non-updates about a named player."""
+    title = _normalize(text)
+    anonymous_status = re.search(
+        r"\b(?:real madrid )?(?:midfielder|defender|forward|player|star)\b.*"
+        r"\b(?:will stay|important role|amid uncertainty)\b",
+        title,
+    )
+    return bool(anonymous_status or "no despeja dudas" in title or "не развеивает сомнения" in title)
+
+
 def passes_filters(
     text: str,
     summary: Optional[str] = None,
@@ -958,6 +969,10 @@ def passes_filters(
 
     if is_non_football_sports_link(link):
         logger.info(f"[FILTERED: NON-FOOTBALL URL] {text[:90]}...")
+        return False
+
+    if is_vague_status_headline(text):
+        logger.info(f"[FILTERED: VAGUE STATUS] {text[:90]}...")
         return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
