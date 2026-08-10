@@ -906,6 +906,29 @@ def is_cucurella_chelsea_farewell_text(text: str) -> bool:
     )
 
 
+def is_cucurella_real_arrival_text(text: str) -> bool:
+    """Group arrival and first-training reactions from Cucurella into one story."""
+    return (
+        contains_any(text, ("cucurella", "кукурелья"))
+        and contains_any(text, ("real madrid", "реал мадрид"))
+        and contains_any(
+            text,
+            (
+                "joining real madrid",
+                "on joining real madrid",
+                "first real madrid training",
+                "first training under mourinho",
+                "primer entrenamiento",
+                "primeros entrenamientos",
+                "no tenia dudas",
+                "no tenía dudas",
+                "didnt have any doubts",
+                "didn't have any doubts",
+            ),
+        )
+    )
+
+
 def is_mourinho_documentary_text(text: str) -> bool:
     """Keep trailers and write-ups about the same Mourinho documentary together."""
     return (
@@ -1138,6 +1161,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_cucurella_chelsea_farewell_text(text):
         return "transfer:cucurella-chelsea-farewell"
 
+    if is_cucurella_real_arrival_text(text):
+        return "player:cucurella-real-arrival"
+
     if is_mourinho_documentary_text(text):
         return "media:mourinho-documentary"
 
@@ -1351,6 +1377,8 @@ def canonical_news_key(key: str) -> str:
         return "social:rodrygo-cucurella-world-cup-welcome"
     if is_cucurella_chelsea_farewell_text(text):
         return "transfer:cucurella-chelsea-farewell"
+    if is_cucurella_real_arrival_text(text):
+        return "player:cucurella-real-arrival"
     if is_mourinho_documentary_text(text):
         return "media:mourinho-documentary"
     if is_real_madrid_green_away_kit_text(text):

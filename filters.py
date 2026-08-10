@@ -921,6 +921,15 @@ def is_promotional_link(link: str = "") -> bool:
 def is_low_value_feature(text: str) -> bool:
     """Reject personal anecdotes, stale controversy and unsupported opinion hooks."""
     title = _normalize(text)
+    domestic_clickbait = (
+        any(marker in title for marker in ("climatizacion", "aire acondicionado"))
+        and any(marker in title for marker in ("piscina", "casa", "mando", "boton", "button", "remote"))
+    )
+    pundit_transfer_opinion = (
+        "michael owen" in title
+        and "haaland" in title
+        and "real madrid" in title
+    )
     personal_markers = (
         "sobre su infancia",
         "on his childhood",
@@ -932,12 +941,16 @@ def is_low_value_feature(text: str) -> bool:
     clickbait_opinions = (
         "best possible destination away from real madrid",
         "real madrid necesita jugadores",
+        "pista real madrid endrick apunta continuidad",
+        "mercado fichajes: sorpreson final",
         "реалу нужно больше игроков",
     )
     return bool(
         "eva carneiro" in title
         or any(marker in title for marker in personal_markers)
         or any(marker in title for marker in clickbait_opinions)
+        or domestic_clickbait
+        or pundit_transfer_opinion
     )
 
 

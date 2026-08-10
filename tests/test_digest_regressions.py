@@ -152,6 +152,10 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Jude Bellingham, 23, on his childhood", "Defensa Central", ""),
         ("Endrick's best possible destination away from Real Madrid is painfully obvious", "The Real Champs", ""),
         ("Real Madrid necesita jugadores: minimo centrocampista y defensa", "Bernabeu Digital", ""),
+        ("Pista Real Madrid Endrick apunta continuidad", "Bernabeu Digital", ""),
+        ("Mercado fichajes: sorpreson final, Zubimendi cerca del Real Madrid", "Bernabeu Digital", ""),
+        ("Michael Owen explains why a Haaland move to Real Madrid is unlikely", "Championat", ""),
+        ("Expertos coinciden: piscina cubierta casa Mbappe complica climatizacion con aire acondicionado", "Defensa Central", ""),
         ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
     ]
     for title, source, link in cases:
@@ -279,6 +283,15 @@ def test_cucurella_welcome_reports_share_a_semantic_key():
     assert semantic_news_key(morning_title) == semantic_news_key(day_title)
     assert semantic_news_key(morning_title) == "social:rodrygo-cucurella-world-cup-welcome"
     assert clean_text("Следующий этап сагаа Олисе - «Реал»") == "Новый этап саги Олисе и «Реала»"
+
+
+def test_cucurella_arrival_and_first_training_reports_share_a_semantic_key():
+    titles = [
+        "Marc Cucurella speaks out after first Real Madrid training under Mourinho: a source of pride",
+        "Marc Cucurella on joining Real Madrid: I didn't have any doubts",
+    ]
+
+    assert {semantic_news_key(title) for title in titles} == {"player:cucurella-real-arrival"}
 
 
 def test_mendy_recovery_reports_share_a_semantic_key():
