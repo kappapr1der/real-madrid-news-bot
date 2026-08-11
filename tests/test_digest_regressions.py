@@ -10,7 +10,7 @@ from digest import (
     digest_topic_hashtags,
     pick_template_without_recent_repeats,
 )
-from filters import is_low_value_feature, is_name_only_x_title, is_promotional_link, is_vague_status_headline, passes_filters
+from filters import is_handle_only_x_title, is_low_value_feature, is_name_only_x_title, is_promotional_link, is_vague_status_headline, passes_filters
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
 from source_quality import source_provenance_label, source_quality_adjustment
@@ -108,6 +108,7 @@ def test_handle_only_x_post_is_filtered_from_digest():
 
     assert passes_filters(title, source=source) is False
     assert digest_llm_hard_deny(item, title) is True
+    assert is_handle_only_x_title("@KMbappe") is True
 
 
 def test_name_only_x_post_is_filtered_from_digest():
@@ -156,6 +157,11 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Mercado fichajes: sorpreson final, Zubimendi cerca del Real Madrid", "Bernabeu Digital", ""),
         ("Michael Owen explains why a Haaland move to Real Madrid is unlikely", "Championat", ""),
         ("Expertos coinciden: piscina cubierta casa Mbappe complica climatizacion con aire acondicionado", "Defensa Central", ""),
+        ("El Madrid que viene", "Marca - Real Madrid", ""),
+        ("Gitte Lambrechts, madre de Thibaut Courtois: cuando iba al colegio", "Defensa Central", ""),
+        ("Jorge Mendes, Zubimendi y una sorpresa vigilan al Real Madrid", "Bernabeu Digital", ""),
+        ("Three best loan destinations for Endrick to advance his career", "The Real Champs", ""),
+        ("Luis Enrique wants to emulate Real Madrid's UCL three-peat", "Madrid Universal", ""),
         ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
     ]
     for title, source, link in cases:
@@ -292,6 +298,20 @@ def test_cucurella_arrival_and_first_training_reports_share_a_semantic_key():
     ]
 
     assert {semantic_news_key(title) for title in titles} == {"player:cucurella-real-arrival"}
+
+
+def test_august_eleventh_duplicate_reports_share_semantic_keys():
+    squad_numbers_titles = [
+        "New Real Madrid player numbers announced",
+        "Dean Huijsen shares delight over getting the number four shirt at Real Madrid",
+    ]
+    analyst_titles = [
+        "Real Madrid sign Fran Lapiedra as first-team analyst",
+        "Fran Lapiedra joins Real Madrid's analysis staff from Valencia",
+    ]
+
+    assert {semantic_news_key(title) for title in squad_numbers_titles} == {"club:real-madrid-squad-numbers"}
+    assert {semantic_news_key(title) for title in analyst_titles} == {"staff:fran-lapiedra-analyst"}
 
 
 def test_mendy_recovery_reports_share_a_semantic_key():

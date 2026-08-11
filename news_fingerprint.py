@@ -929,6 +929,27 @@ def is_cucurella_real_arrival_text(text: str) -> bool:
     )
 
 
+def is_real_madrid_squad_numbers_text(text: str) -> bool:
+    """Group the new squad-number announcement with Huijsen's number-four reports."""
+    return (
+        "real madrid" in text
+        and contains_any(text, ("number", "numbers", "numero", "numeros", "dorsal"))
+        and (
+            contains_any(text, ("huijsen", "new player", "new players", "nuevo jugador", "nuevos jugadores"))
+            or ("new" in text and "player" in text)
+        )
+    )
+
+
+def is_fran_lapiedra_analyst_text(text: str) -> bool:
+    """Unify reports about Fran Lapiedra joining the first-team analysis staff."""
+    return (
+        "fran lapiedra" in text
+        and "real madrid" in text
+        and contains_any(text, ("analyst", "analista", "analysis staff", "staff"))
+    )
+
+
 def is_mourinho_documentary_text(text: str) -> bool:
     """Keep trailers and write-ups about the same Mourinho documentary together."""
     return (
@@ -1164,6 +1185,12 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_cucurella_real_arrival_text(text):
         return "player:cucurella-real-arrival"
 
+    if is_real_madrid_squad_numbers_text(text):
+        return "club:real-madrid-squad-numbers"
+
+    if is_fran_lapiedra_analyst_text(text):
+        return "staff:fran-lapiedra-analyst"
+
     if is_mourinho_documentary_text(text):
         return "media:mourinho-documentary"
 
@@ -1379,6 +1406,10 @@ def canonical_news_key(key: str) -> str:
         return "transfer:cucurella-chelsea-farewell"
     if is_cucurella_real_arrival_text(text):
         return "player:cucurella-real-arrival"
+    if is_real_madrid_squad_numbers_text(text):
+        return "club:real-madrid-squad-numbers"
+    if is_fran_lapiedra_analyst_text(text):
+        return "staff:fran-lapiedra-analyst"
     if is_mourinho_documentary_text(text):
         return "media:mourinho-documentary"
     if is_real_madrid_green_away_kit_text(text):

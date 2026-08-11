@@ -853,9 +853,6 @@ def _real_source_has_topic_signal(title: str, body: str) -> bool:
 
 def is_handle_only_x_title(text: str, source: str = "") -> bool:
     """Reject social cards that contain only tagged accounts, not a news headline."""
-    source_name = _normalize(source)
-    if not source_name.startswith("x - @"):
-        return False
     plain = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", str(text or "")).strip()
     return bool(re.fullmatch(r"(?:@[\w]+\s*)+", plain))
 
@@ -930,6 +927,16 @@ def is_low_value_feature(text: str) -> bool:
         and "haaland" in title
         and "real madrid" in title
     )
+    courtois_school_anecdote = "courtois" in title and "madre" in title and "colegio" in title
+    mendes_zubimendi_teaser = all(marker in title for marker in ("jorge mendes", "zubimendi", "sorpresa"))
+    external_historical_comparison = (
+        "real madrid" in title
+        and (
+            "luis enrique" in title
+            or "psg manager" in title
+        )
+        and any(marker in title for marker in ("three-peat", "three champions", "3 champions", "tres champions"))
+    )
     personal_markers = (
         "sobre su infancia",
         "on his childhood",
@@ -943,6 +950,8 @@ def is_low_value_feature(text: str) -> bool:
         "real madrid necesita jugadores",
         "pista real madrid endrick apunta continuidad",
         "mercado fichajes: sorpreson final",
+        "el madrid que viene",
+        "three best loan destinations for endrick",
         "реалу нужно больше игроков",
     )
     return bool(
@@ -951,6 +960,9 @@ def is_low_value_feature(text: str) -> bool:
         or any(marker in title for marker in clickbait_opinions)
         or domestic_clickbait
         or pundit_transfer_opinion
+        or courtois_school_anecdote
+        or mendes_zubimendi_teaser
+        or external_historical_comparison
     )
 
 
