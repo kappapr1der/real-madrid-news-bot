@@ -929,6 +929,10 @@ def is_low_value_feature(text: str) -> bool:
     )
     courtois_school_anecdote = "courtois" in title and "madre" in title and "colegio" in title
     mendes_zubimendi_teaser = all(marker in title for marker in ("jorge mendes", "zubimendi", "sorpresa"))
+    family_profile = (
+        any(marker in title for marker in ("mother of", "father of", "madre de", "padre de"))
+        and any(marker in title for marker in ("anos", "años", "years old"))
+    )
     external_historical_comparison = (
         "real madrid" in title
         and (
@@ -937,6 +941,15 @@ def is_low_value_feature(text: str) -> bool:
         )
         and any(marker in title for marker in ("three-peat", "three champions", "3 champions", "tres champions"))
     )
+    generic_editorial_noise = any(
+        marker in title
+        for marker in (
+            "unbreakable champions league record",
+            "luis enrique pone madrid en el punto de mira",
+            "miguel munoz le dio al madrid la primera teresa herrera",
+        )
+    )
+    aubameyang_depor_feature = "aubameyang" in title and "depor" in title
     personal_markers = (
         "sobre su infancia",
         "on his childhood",
@@ -962,7 +975,10 @@ def is_low_value_feature(text: str) -> bool:
         or pundit_transfer_opinion
         or courtois_school_anecdote
         or mendes_zubimendi_teaser
+        or family_profile
         or external_historical_comparison
+        or generic_editorial_noise
+        or aubameyang_depor_feature
     )
 
 

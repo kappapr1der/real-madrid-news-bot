@@ -162,6 +162,11 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Jorge Mendes, Zubimendi y una sorpresa vigilan al Real Madrid", "Bernabeu Digital", ""),
         ("Three best loan destinations for Endrick to advance his career", "The Real Champs", ""),
         ("Luis Enrique wants to emulate Real Madrid's UCL three-peat", "Madrid Universal", ""),
+        ("The ball is in Real Madrid's court to keep their unbreakable Champions League record intact", "The Real Champs", ""),
+        ("Aubameyang no esta solo en el Depor", "Marca - Real Madrid", ""),
+        ("Luis Enrique pone Madrid en el punto de mira", "Mundo Deportivo - Real Madrid", ""),
+        ("Miguel Munoz le dio al Madrid la primera Teresa Herrera", "Marca - Real Madrid", ""),
+        ("Cintia Ramos, 45 anos, madre de Endrick: mi hijo lleva una carga muy pesada", "Defensa Central", ""),
         ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
     ]
     for title, source, link in cases:
@@ -1447,6 +1452,9 @@ def test_mbappe_role_headline_is_shortened():
 
 
 def test_morning_digest_translation_glitches_are_cleaned():
+    assert clean_text("Эндрик будет делать ставку на Эндика") == (
+        "Эндрик остаётся ключевым игроком в планах Моуринью"
+    )
     assert clean_text(
         "«Реал» сыграет с Депортиво Ла Корунья в рамках турнира Teresa Herrera Trophy в предсезонке"
     ) == "«Реал» сыграет с «Депортиво» в предсезонном Трофее Тересы Эрреры"
