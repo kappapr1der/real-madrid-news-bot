@@ -5,6 +5,7 @@ from live_providers import (
     LiveEvent,
     event_allowed,
     fetch_confirmed_rss_live_events,
+    fetch_live_events,
     fixture_for_match,
     fixture_matches_match,
     load_observed_fixture_ids,
@@ -127,8 +128,62 @@ def test_real_substitutions_are_grouped_into_one_white_rotation(monkeypatch):
     assert events[0].kind == "Белая ротация"
     assert events[0].minute == "46"
     assert "«Реал» освежает состав" in events[0].text
-    assert "На поле: C. Espi, F. Valverde" in events[0].text
-    assert "Покидают поле: M. Rivas, A. Guler" in events[0].text
+    assert "На поле: Карлос Эспи, Феде Вальверде" in events[0].text
+    assert "Покидают поле: М. Ривас, Арда Гюлер" in events[0].text
+    assert first_change[0].text == "Замена у «Реала»: Карлос Эспи вместо М. Ривас."
+
+
+def test_live_events_localize_known_real_madrid_player_names():
+    fixture = {"fixture": {"id": 1591931}}
+    raw_goal = {
+        "type": "Goal",
+        "detail": "Normal Goal",
+        "time": {"elapsed": 45, "extra": 1},
+        "team": {"id": 541, "name": "Real Madrid"},
+        "player": {"name": "B. Diaz"},
+        "assist": {"name": "A. Lunin"},
+    }
+
+    event = normalize_event(_friendly_match(), fixture, raw_goal, score="0:1")
+
+    assert event is not None
+    assert event.minute == "45+1"
+    assert event.score == "0:1"
+    assert event.text == "ГОЛ! Браим Диас завершает атаку «Реала». Голевой пас: Андрей Лунин."
+
+
+def test_live_events_reuse_observed_fixture_without_extra_fixture_request(monkeypatch, tmp_path):
+    match = _friendly_match()
+    fixture_state = tmp_path / "live-fixtures.json"
+    fixture_state.write_text('{"friendly-ferencvaros": "1604780"}', encoding="utf-8")
+    monkeypatch.setattr(live_providers, "LIVE_FIXTURES_FILE", fixture_state)
+    monkeypatch.setattr(live_providers, "provider_ready", lambda: True)
+    monkeypatch.setattr(live_providers, "matches_in_live_window", lambda matches: matches)
+
+    class Client:
+        def live_fixtures(self):
+            raise AssertionError("observed fixture should avoid live fixture discovery")
+
+        def fixture_events(self, fixture_id):
+            assert fixture_id == "1604780"
+            return [
+                {
+                    "type": "Goal",
+                    "detail": "Normal Goal",
+                    "time": {"elapsed": 49},
+                    "team": {"id": 541, "name": "Real Madrid"},
+                    "player": {"name": "B. Diaz"},
+                    "assist": {"name": "A. Lunin"},
+                }
+            ]
+
+    monkeypatch.setattr(live_providers, "ApiFootballClient", Client)
+
+    events = fetch_live_events([match])
+
+    assert len(events) == 1
+    assert events[0].score == "0:1"
+    assert "Браим Диас" in events[0].text
 
 
 def test_opponent_substitutions_stay_out_of_white_rotation(monkeypatch):

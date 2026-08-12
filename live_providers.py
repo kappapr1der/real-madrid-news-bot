@@ -21,7 +21,6 @@ from runtime_config import (
     CALENDAR_REFRESH_SEASON,
     MATCHDAY_FULLTIME_MINUTES,
     MATCHDAY_LIVE_AFTER_MINUTES,
-    MATCHDAY_LIVE_BEFORE_MINUTES,
     MATCHDAY_LIVE_ENABLED,
     MATCHDAY_LIVE_EVENT_TYPES,
     MATCHDAY_LIVE_PROVIDER,
@@ -32,6 +31,7 @@ from runtime_config import (
     MATCHDAY_RSS_CONFIRMATION_ENTRY_SCAN_LIMIT,
     MATCHDAY_LINEUP_BEFORE_MINUTES,
     MATCHDAY_LINEUP_ENABLED,
+    MATCHDAY_RESULT_AFTER_MINUTES,
     MATCHDAY_RESULT_ENABLED,
     SPORTS_LIVE_RSS_URL,
     get_state_file,
@@ -48,6 +48,62 @@ LIVE_MARKERS = ("\u043c\u0430\u0442\u0447", "live", "\u043e\u043d\u043b\u0430\u0
 REAL_MADRID_SIGNAL_NAMES = ("real madrid", "\u043c\u0430\u0434\u0440\u0438\u0434\u0441\u043a\u0438\u0439 \u0440\u0435\u0430\u043b", "\u0440\u0435\u0430\u043b \u043c\u0430\u0434\u0440\u0438\u0434", "\u0440\u0435\u0430\u043b")
 REAL_NAME_RE = re.compile(r"\breal\s+madrid\b|\bреал\s+мадрид\b", re.IGNORECASE)
 LIVE_FIXTURES_FILE = get_state_file("live_fixtures.json")
+
+# API-Football often returns abbreviated Latin names. Keep the feed readable
+# without trying to machine-translate proper names at publication time.
+PLAYER_DISPLAY_NAMES = {
+    "aciria": "Алексис Чириа",
+    "aguler": "Арда Гюлер",
+    "alaba": "Давид Алаба",
+    "alunin": "Андрей Лунин",
+    "andriylunin": "Андрей Лунин",
+    "arudiger": "Антонио Рюдигер",
+    "atchouameni": "Орельен Тчуамени",
+    "alexisciria": "Алексис Чириа",
+    "antoniorudiger": "Антонио Рюдигер",
+    "ardaguler": "Арда Гюлер",
+    "aurelientchouameni": "Орельен Тчуамени",
+    "bdiaz": "Браим Диас",
+    "bsilva": "Бернарду Силва",
+    "bernardosilva": "Бернарду Силва",
+    "brahimdiaz": "Браим Диас",
+    "cespi": "Карлос Эспи",
+    "carlosespi": "Карлос Эспи",
+    "ddumfries": "Дензел Думфрис",
+    "deanhuijsen": "Дин Хёйсен",
+    "dcarvajal": "Дани Карвахаль",
+    "dhuijsen": "Дин Хёйсен",
+    "dumfries": "Дензел Думфрис",
+    "edermilitao": "Эдер Милитао",
+    "emilitao": "Эдер Милитао",
+    "ecamavinga": "Эдуарду Камавинга",
+    "endrick": "Эндрик",
+    "fcamavinga": "Эдуарду Камавинга",
+    "fvalverde": "Феде Вальверде",
+    "fmendy": "Ферлан Менди",
+    "ferlandmendy": "Ферлан Менди",
+    "francomastantuono": "Франко Мастантуоно",
+    "gonzalogarcia": "Гонсало Гарсия",
+    "ibrahimakonate": "Ибраима Конате",
+    "ikonate": "Ибраима Конате",
+    "jbellingham": "Джуд Беллингем",
+    "jcesterosancho": "Х. Сестеро Санчо",
+    "judebellingham": "Джуд Беллингем",
+    "kmbappe": "Килиан Мбаппе",
+    "kylianmbappe": "Килиан Мбаппе",
+    "mcucurella": "Марк Кукурелья",
+    "marccucurella": "Марк Кукурелья",
+    "mrivas": "М. Ривас",
+    "rodrygo": "Родриго",
+    "rodrygogoes": "Родриго",
+    "talexanderarnold": "Трент Александер-Арнольд",
+    "tcourtois": "Тибо Куртуа",
+    "trentalexanderarnold": "Трент Александер-Арнольд",
+    "thibautcourtois": "Тибо Куртуа",
+    "viniciusjr": "Винисиус Жуниор",
+    "viniciusjunior": "Винисиус Жуниор",
+    "vjunior": "Винисиус Жуниор",
+}
 
 
 @dataclass(frozen=True)
@@ -148,7 +204,7 @@ def matches_in_live_window(matches: list[Match]) -> list[Match]:
     active = []
     for match in matches:
         kickoff = match.kickoff.astimezone(now.tzinfo)
-        start = kickoff - timedelta(minutes=MATCHDAY_LIVE_BEFORE_MINUTES)
+        start = kickoff
         end = kickoff + timedelta(minutes=MATCHDAY_FULLTIME_MINUTES + MATCHDAY_LIVE_AFTER_MINUTES)
         if start <= now <= end:
             active.append(match)
@@ -173,7 +229,7 @@ def matches_in_result_window(matches: list[Match]) -> list[Match]:
     for match in matches:
         kickoff = match.kickoff.astimezone(now.tzinfo)
         start = kickoff + timedelta(minutes=max(MATCHDAY_FULLTIME_MINUTES - 20, 90))
-        end = kickoff + timedelta(minutes=MATCHDAY_FULLTIME_MINUTES + MATCHDAY_LIVE_AFTER_MINUTES)
+        end = kickoff + timedelta(minutes=MATCHDAY_FULLTIME_MINUTES + MATCHDAY_RESULT_AFTER_MINUTES)
         if start <= now <= end:
             active.append(match)
     return active
@@ -285,7 +341,17 @@ def event_minute(raw_event: dict[str, Any]) -> str:
 
 def player_name(raw_event: dict[str, Any], field: str) -> str:
     value = (raw_event.get(field) or {}).get("name")
-    return str(value or "").strip()
+    return display_player_name(str(value or ""))
+
+
+def display_player_name(value: str) -> str:
+    clean = value.strip()
+    if not clean:
+        return ""
+    decomposed = unicodedata.normalize("NFKD", clean)
+    ascii_name = "".join(char for char in decomposed if not unicodedata.combining(char))
+    key = re.sub(r"[^a-z0-9]+", "", ascii_name.casefold())
+    return PLAYER_DISPLAY_NAMES.get(key, clean)
 
 
 def team_name(raw_event: dict[str, Any]) -> str:
@@ -352,6 +418,30 @@ def fixture_score(fixture: dict[str, Any]) -> str:
     if home is None or away is None:
         return ""
     return f"{home}:{away}"
+
+
+def score_from_events(match: Match, raw_events: list[dict[str, Any]]) -> str:
+    home_goals = 0
+    away_goals = 0
+    real_is_home = bool(REAL_NAME_RE.search(match.home))
+    for raw_event in raw_events:
+        if str(raw_event.get("type") or "").casefold() != "goal":
+            continue
+        scored_by_real = team_is_real(raw_event)
+        if "own" in str(raw_event.get("detail") or "").casefold():
+            scored_by_real = not scored_by_real
+        if scored_by_real == real_is_home:
+            home_goals += 1
+        else:
+            away_goals += 1
+    return f"{home_goals}:{away_goals}" if home_goals or away_goals else ""
+
+
+def observed_fixture_shell(match: Match, observed_fixture_id: str) -> dict[str, Any]:
+    return {
+        "fixture": {"id": observed_fixture_id},
+        "teams": {"home": {"name": match.home}, "away": {"name": match.away}},
+    }
 
 
 def normalize_signal_text(value: str) -> str:
@@ -614,7 +704,12 @@ def event_key(fixture: dict[str, Any], raw_event: dict[str, Any]) -> str:
     return f"api-football:{fixture_id(fixture)}:{digest}"
 
 
-def normalize_event(match: Match, fixture: dict[str, Any], raw_event: dict[str, Any]) -> LiveEvent | None:
+def normalize_event(
+    match: Match,
+    fixture: dict[str, Any],
+    raw_event: dict[str, Any],
+    score: str | None = None,
+) -> LiveEvent | None:
     if not event_allowed(raw_event):
         return None
     event_type = str(raw_event.get("type") or "").casefold()
@@ -622,7 +717,7 @@ def normalize_event(match: Match, fixture: dict[str, Any], raw_event: dict[str, 
         return None
     if event_type == "goal" and not player_name(raw_event, "player"):
         return None
-    score = fixture_score(fixture)
+    score = score if score is not None else fixture_score(fixture)
     return LiveEvent(
         key=event_key(fixture, raw_event),
         match=match,
@@ -659,7 +754,8 @@ def render_substitution_group_text(match: Match, events: list[dict[str, Any]]) -
     if len(events) == 1:
         incoming_name = incoming or "свежий игрок"
         outgoing_name = outgoing or "игрок"
-        return f"{side} меняет деталь в составе: {incoming_name} вместо {outgoing_name}."
+        owner = "«Реала»" if team_is_real(first) else side
+        return f"Замена у {owner}: {incoming_name} вместо {outgoing_name}."
     return "\n".join(
         [
             f"{side} освежает состав.",
@@ -669,7 +765,12 @@ def render_substitution_group_text(match: Match, events: list[dict[str, Any]]) -
     )
 
 
-def normalize_live_events(match: Match, fixture: dict[str, Any], raw_events: list[dict[str, Any]]) -> list[LiveEvent]:
+def normalize_live_events(
+    match: Match,
+    fixture: dict[str, Any],
+    raw_events: list[dict[str, Any]],
+    score: str | None = None,
+) -> list[LiveEvent]:
     indexed_events: list[tuple[int, LiveEvent]] = []
     substitution_groups: dict[tuple[str, str], tuple[int, list[dict[str, Any]]]] = {}
     for index, raw_event in enumerate(raw_events):
@@ -681,11 +782,11 @@ def normalize_live_events(match: Match, fixture: dict[str, Any], raw_events: lis
                 substitution_groups[group] = (index, [])
             substitution_groups[group][1].append(raw_event)
             continue
-        event = normalize_event(match, fixture, raw_event)
+        event = normalize_event(match, fixture, raw_event, score=score)
         if event:
             indexed_events.append((index, event))
 
-    score = fixture_score(fixture)
+    score = score if score is not None else fixture_score(fixture)
     for first_index, events in substitution_groups.values():
         if not events:
             continue
@@ -714,32 +815,43 @@ def fetch_live_events(matches: list[Match]) -> list[LiveEvent]:
         return []
 
     client = ApiFootballClient()
-    fixtures_by_id: dict[str, dict[str, Any]] = {}
+    fixtures_by_match: dict[str, dict[str, Any]] = {}
+    observed_fixtures = load_observed_fixture_ids()
 
     try:
-        for fixture in client.live_fixtures():
-            current_fixture_id = fixture_id(fixture)
-            if current_fixture_id and match_for_fixture(fixture, active_matches):
-                fixtures_by_id[current_fixture_id] = fixture
-
         for match in active_matches:
-            if any(match_for_fixture(fixture, [match]) for fixture in fixtures_by_id.values()):
+            observed_fixture_id = match.api_football_fixture_id or observed_fixtures.get(match.id, "")
+            if observed_fixture_id:
+                fixtures_by_match[match.id] = observed_fixture_shell(match, observed_fixture_id)
+
+        unresolved_matches = [match for match in active_matches if match.id not in fixtures_by_match]
+        if unresolved_matches:
+            for fixture in client.live_fixtures():
+                matched = match_for_fixture(fixture, unresolved_matches)
+                current_fixture_id = fixture_id(fixture)
+                if matched and current_fixture_id:
+                    fixtures_by_match[matched.id] = fixture
+
+        for match in unresolved_matches:
+            if match.id in fixtures_by_match:
                 continue
             fixture = fixture_for_match(client, match)
             current_fixture_id = fixture_id(fixture) if fixture else ""
             if fixture and current_fixture_id and fixture_active_enough(fixture):
-                fixtures_by_id[current_fixture_id] = fixture
+                fixtures_by_match[match.id] = fixture
 
         events: list[LiveEvent] = []
-        for fixture in fixtures_by_id.values():
-            match = match_for_fixture(fixture, active_matches)
-            if not match:
+        for match in active_matches:
+            fixture = fixtures_by_match.get(match.id)
+            if not fixture:
                 continue
             current_fixture_id = fixture_id(fixture)
             if not current_fixture_id:
                 continue
             remember_fixture_id(match, fixture)
-            events.extend(normalize_live_events(match, fixture, client.fixture_events(current_fixture_id)))
+            raw_events = client.fixture_events(current_fixture_id)
+            score = fixture_score(fixture) or score_from_events(match, raw_events)
+            events.extend(normalize_live_events(match, fixture, raw_events, score=score))
         return events
     except (requests.RequestException, ValueError, TypeError) as exc:
         logging.warning("Не удалось получить live-события API-FOOTBALL: %s", exc)
@@ -768,7 +880,7 @@ def fetch_confirmed_lineups(matches: list[Match]) -> list[ConfirmedLineup]:
                 if team_id != str(API_FOOTBALL_TEAM_ID) and not REAL_NAME_RE.search(team_label):
                     continue
                 starters = [
-                    str((entry.get("player") or {}).get("name") or "").strip()
+                    display_player_name(str((entry.get("player") or {}).get("name") or ""))
                     for entry in (row.get("startXI") or [])
                 ]
                 starters = [name for name in starters if name]
@@ -829,7 +941,7 @@ def fetch_final_results(matches: list[Match]) -> list[FinalResult]:
                 if team_id != str(API_FOOTBALL_TEAM_ID) and not REAL_NAME_RE.search(team_label):
                     continue
                 real_starters = [
-                    str((entry.get("player") or {}).get("name") or "").strip()
+                    display_player_name(str((entry.get("player") or {}).get("name") or ""))
                     for entry in (lineup.get("startXI") or [])
                 ]
                 real_starters = [name for name in real_starters if name]

@@ -41,9 +41,11 @@ from runtime_config import (
     MATCHDAY_POST_TOLERANCE_MINUTES,
     MATCHDAY_PREVIEW_MINUTES,
     MATCHDAY_LINEUP_ENABLED,
+    MATCHDAY_LINEUP_POLL_SECONDS,
     MATCHDAY_POSTMATCH_POLL_ENABLED,
     MATCHDAY_POSTMATCH_POLL_QUESTION,
     MATCHDAY_RESULT_ENABLED,
+    MATCHDAY_RESULT_POLL_SECONDS,
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_TIMEOUT_SECONDS,
     TARGET_CHAT_ID,
@@ -71,6 +73,8 @@ AUTO_PHASES = {
     "fulltime": MATCHDAY_FULLTIME_MINUTES,
 }
 last_live_check = 0.0
+last_lineup_check = 0.0
+last_result_check = 0.0
 stop_event = threading.Event()
 
 
@@ -543,6 +547,32 @@ def run_result_once() -> int:
     return sent
 
 
+def lineup_due(force: bool = False) -> bool:
+    global last_lineup_check
+    if force:
+        last_lineup_check = time.monotonic()
+        return True
+
+    now = time.monotonic()
+    if now - last_lineup_check >= MATCHDAY_LINEUP_POLL_SECONDS:
+        last_lineup_check = now
+        return True
+    return False
+
+
+def result_due(force: bool = False) -> bool:
+    global last_result_check
+    if force:
+        last_result_check = time.monotonic()
+        return True
+
+    now = time.monotonic()
+    if now - last_result_check >= MATCHDAY_RESULT_POLL_SECONDS:
+        last_result_check = now
+        return True
+    return False
+
+
 def live_due(force: bool = False) -> bool:
     global last_live_check
     if not MATCHDAY_LIVE_ENABLED:
@@ -565,7 +595,9 @@ def run_cycle(force_live: bool = False) -> int:
     sent = run_auto_once()
     if live_due(force=force_live):
         sent += run_live_once()
+    if lineup_due(force=force_live):
         sent += run_lineup_once()
+    if result_due(force=force_live):
         sent += run_result_once()
     elif not MATCHDAY_LIVE_ENABLED:
         record_status("live", "disabled", "MATCHDAY_LIVE_ENABLED=false")
