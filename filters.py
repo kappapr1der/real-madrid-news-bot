@@ -948,6 +948,10 @@ def is_low_value_feature(text: str) -> bool:
         any(marker in title for marker in ("mother of", "father of", "madre de", "padre de"))
         and any(marker in title for marker in ("anos", "años", "years old"))
     )
+    family_lifestyle_profile = (
+        any(marker in title for marker in ("mother", "father", "brother", "sister", "madre", "padre", "hermano", "hermana"))
+        and any(marker in title for marker in ("clean", "limpieza", "desorden", "childhood", "infancia", "home", "house", "casa"))
+    )
     external_historical_comparison = (
         "real madrid" in title
         and (
@@ -991,6 +995,7 @@ def is_low_value_feature(text: str) -> bool:
         or courtois_school_anecdote
         or mendes_zubimendi_teaser
         or family_profile
+        or family_lifestyle_profile
         or external_historical_comparison
         or generic_editorial_noise
         or aubameyang_depor_feature
@@ -1005,7 +1010,30 @@ def is_vague_status_headline(text: str) -> bool:
         r"\b(?:will stay|important role|amid uncertainty)\b",
         title,
     )
-    return bool(anonymous_status or "no despeja dudas" in title or "не развеивает сомнения" in title)
+    anonymous_hierarchy = re.search(
+        r"\b(?:mourinho|manager|coach)\b.*\b(?:informs?|tells?|sets?)\b.*"
+        r"\b(?:real madrid )?(?:midfielder|defender|forward|player|star)\b.*"
+        r"\b(?:pecking order|hierarchy|where exactly he stands|where he stands)\b",
+        title,
+    )
+    anonymous_exit = re.search(
+        r"\breal madrid\b.*\b(?:another|one more)\s+(?:talented )?"
+        r"(?:player|youngster|talent|prodigy)\b.*\b(?:leave|exit|loan|transfer)\b",
+        title,
+    )
+    anonymous_academy_move = re.search(
+        r"\breal madrid\b.*\b(?:youth\s+)?(?:prodigy|talent|youngster|academy player)\b.*"
+        r"\b(?:potential move|potential transfer|move .* falls through|transfer .* falls through)\b",
+        title,
+    )
+    return bool(
+        anonymous_status
+        or anonymous_hierarchy
+        or anonymous_exit
+        or anonymous_academy_move
+        or "no despeja dudas" in title
+        or "не развеивает сомнения" in title
+    )
 
 
 def is_rival_only_headline(text: str) -> bool:
@@ -1061,6 +1089,24 @@ def is_promotional_x_post(text: str, source: str) -> bool:
             "rm play",
             "entrevista completa",
             "video completo",
+        )
+    )
+
+
+def is_unnamed_official_x_highlight(text: str, source: str) -> bool:
+    """Skip generic highlight clips without a player or concrete club fact."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @realmadrid"):
+        return False
+
+    title = _normalize(text)
+    if _matches_any(title, DIRECT_REAL_MARKERS):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:assist|asistencia)\b.{0,35}\b(?:perfect|perfecta|perfecto)\b.{0,35}"
+            r"\b(?:finish|definition|definicion)\b",
+            title,
         )
     )
 
@@ -1139,6 +1185,10 @@ def passes_filters(
 
     if is_promotional_x_post(text, source):
         logger.info(f"[FILTERED: PROMOTIONAL X POST] {text[:90]}...")
+        return False
+
+    if is_unnamed_official_x_highlight(text, source):
+        logger.info(f"[FILTERED: UNNAMED OFFICIAL X HIGHLIGHT] {text[:90]}...")
         return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):

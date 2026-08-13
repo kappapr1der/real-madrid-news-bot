@@ -26,6 +26,7 @@ from filters import (
     is_non_football_sports_link,
     is_promotional_link,
     is_promotional_x_post,
+    is_unnamed_official_x_highlight,
     is_low_value_feature,
     is_rival_only_headline,
     is_speculative_editorial_headline,
@@ -1761,6 +1762,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     if is_speculative_editorial_headline(candidate.title):
         return True
     if is_promotional_x_post(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_unnamed_official_x_highlight(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_expired_match_guide(candidate.title):
         return True

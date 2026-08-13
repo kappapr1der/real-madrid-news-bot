@@ -153,6 +153,9 @@ def test_anonymous_status_and_vague_doubt_headlines_are_filtered():
     cases = [
         ("Real Madrid midfielder will stay amid uncertainty, set to have an important role", "Madrid Universal"),
         ("Camavinga no despeja dudas Real Madrid", "Mundo Deportivo - Real Madrid"),
+        ("Mourinho informs Real Madrid midfielder where exactly he stands in pecking order", "Madrid Universal"),
+        ("Real Madrid are going to let another talented player leave this summer", "The Real Champs"),
+        ("Real Madrid youth prodigy's potential move to French club falls through", "Madrid Universal"),
     ]
     for title, source in cases:
         assert is_vague_status_headline(title) is True
@@ -180,6 +183,7 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Luis Enrique pone Madrid en el punto de mira", "Mundo Deportivo - Real Madrid", ""),
         ("Miguel Munoz le dio al Madrid la primera Teresa Herrera", "Marca - Real Madrid", ""),
         ("Cintia Ramos, 45 anos, madre de Endrick: mi hijo lleva una carga muy pesada", "Defensa Central", ""),
+        ("Sahr Senesie, 40, brother of Rudiger: Antonio is obsessed with cleanliness and hates mess", "Defensa Central", ""),
         ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
     ]
     for title, source, link in cases:
@@ -191,6 +195,12 @@ def test_promotional_and_low_value_features_are_filtered():
 
     assert is_low_value_feature("Jude Bellingham, 23, on his childhood") is True
     assert is_promotional_link("https://www.sports.ru/fantasy/football/spain/") is True
+
+
+def test_named_official_x_highlight_remains_eligible():
+    title = "Kylian Mbappe: la asistencia perfecta y la definicion"
+
+    assert passes_filters(title, source="X - @realmadrid") is True
 
 
 def test_july_twenty_first_day_noise_is_filtered():
@@ -2433,6 +2443,11 @@ def test_august_13_morning_drops_rival_filler_and_unnamed_speculation():
         ),
         (
             "@AndreyLunin13: 'It is very useful for us at the start of La Liga' Full interview on RM Play",
+            "X - @realmadrid",
+            "",
+        ),
+        (
+            "La asistencia perfecta y la definicion",
             "X - @realmadrid",
             "",
         ),
