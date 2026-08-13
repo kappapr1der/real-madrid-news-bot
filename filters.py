@@ -811,6 +811,21 @@ _BLACKLIST = tuple(FILTERS["blacklist"])
 _REAL_SOURCE_MARKERS = tuple(REAL_SOURCE_MARKERS)
 _REAL_SOURCE_TOPIC_MARKERS = tuple(REAL_SOURCE_TOPIC_MARKERS)
 
+RIVAL_ONLY_MARKERS = (
+    "atletico", "atlético", "барселона", "barcelona", "chelsea",
+    "arsenal", "liverpool", "bayern", "psg", "juventus", "milan",
+    "inter", "napoli", "tottenham", "manchester city",
+)
+DIRECT_REAL_MARKERS = (
+    "real madrid", "rmcf", "los blancos", "la fabrica", "castilla",
+    "vinicius", "rodrygo", "mbappe", "bellingham", "endrick",
+    "gonzalo garcia", "nico paz", "mastantuono", "arda guler",
+    "valverde", "tchouameni", "camavinga", "modric", "kroos",
+    "ceballos", "brahim", "courtois", "lunin", "militao", "rudiger",
+    "carvajal", "trent", "huijsen", "asencio", "mendy", "fran garcia",
+    "carreras", "olise", "konate", "mourinho", "florentino perez",
+)
+
 MATCHUP_PATTERNS = [
     re.compile(r"(rm|rma|real madrid|реал)[\s\-:]*v[s]?[.\s\-:]*?(fcb|barcelona|барса|барселона)", re.IGNORECASE),
     re.compile(r"(rm|rma|real madrid|реал)[\s\-:]*v[s]?[.\s\-:]*?(atm|atl|atlético|атлетико|атлети)", re.IGNORECASE),
@@ -993,6 +1008,63 @@ def is_vague_status_headline(text: str) -> bool:
     return bool(anonymous_status or "no despeja dudas" in title or "не развеивает сомнения" in title)
 
 
+def is_rival_only_headline(text: str) -> bool:
+    """Reject rival-only facts even when a Real-focused source republishes them."""
+    title = _normalize(text)
+    return bool(
+        _matches_any(title, RIVAL_ONLY_MARKERS)
+        and not _matches_any(title, DIRECT_REAL_MARKERS)
+    )
+
+
+def is_unnamed_real_madrid_link_headline(text: str) -> bool:
+    """Reject transfer bait that never names the player or a concrete club action."""
+    title = _normalize(text)
+    return bool(
+        re.search(
+            r"(?:real madrid[- ]linked|linked with real madrid|vinculado al real madrid)"
+            r"\s+(?:midfielder|defender|forward|player|star)",
+            title,
+        )
+    )
+
+
+def is_speculative_editorial_headline(text: str) -> bool:
+    """Reject opinion hooks that frame a hypothetical career narrative as news."""
+    title = _normalize(text)
+    return bool(
+        (
+            "could hand" in title
+            and "career" in title
+            and ("real madrid" in title or _matches_any(title, DIRECT_REAL_MARKERS))
+        )
+        or (
+            "reacted to" in title
+            and any(marker in title for marker in ("super cup", "supercopa", "psg"))
+        )
+    )
+
+
+def is_promotional_x_post(text: str, source: str) -> bool:
+    """Keep official news, but skip promo links to long-form club content."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @realmadrid"):
+        return False
+
+    title = _normalize(text)
+    return any(
+        marker in title
+        for marker in (
+            "full interview",
+            "full video",
+            "watch the full",
+            "rm play",
+            "entrevista completa",
+            "video completo",
+        )
+    )
+
+
 def passes_filters(
     text: str,
     summary: Optional[str] = None,
@@ -1053,6 +1125,22 @@ def passes_filters(
         logger.info(f"[FILTERED: VAGUE STATUS] {text[:90]}...")
         return False
 
+    if is_rival_only_headline(text):
+        logger.info(f"[FILTERED: RIVAL ONLY] {text[:90]}...")
+        return False
+
+    if is_unnamed_real_madrid_link_headline(text):
+        logger.info(f"[FILTERED: UNNAMED REAL LINK] {text[:90]}...")
+        return False
+
+    if is_speculative_editorial_headline(text):
+        logger.info(f"[FILTERED: SPECULATIVE EDITORIAL] {text[:90]}...")
+        return False
+
+    if is_promotional_x_post(text, source):
+        logger.info(f"[FILTERED: PROMOTIONAL X POST] {text[:90]}...")
+        return False
+
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
         logger.info(f"[FILTERED: BLACKLIST] {text[:90]}...")
         return False
@@ -1084,12 +1172,12 @@ def passes_filters(
         logger.info(f"[PASSED: REAL IN UCL] {text[:90]}...")
         return True
 
-    if _matches_any(title, _WHITELIST) or (body and _matches_any(body, _WHITELIST)):
+    if _matches_any(title, _WHITELIST):
         logger.info(f"[PASSED: WHITELIST] {text[:90]}...")
         return True
 
-    if _matches_any(title, _GREYLIST) or (body and _matches_any(body, _GREYLIST)):
-        if "real madrid" in title or "реал" in title or ("real madrid" in body or "реал" in body):
+    if _matches_any(title, _GREYLIST):
+        if "real madrid" in title or "реал" in title:
             logger.info(f"[PASSED: GREYLIST+REAL] {text[:90]}...")
             return True
         logger.info(f"[FILTERED: GREYLIST w/o REAL] {text[:90]}...")

@@ -7,6 +7,7 @@ import logging
 import random
 import re
 import time
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -24,13 +25,17 @@ from filters import (
     is_managing_madrid_dated_general_thread,
     is_non_football_sports_link,
     is_promotional_link,
+    is_promotional_x_post,
     is_low_value_feature,
+    is_rival_only_headline,
+    is_speculative_editorial_headline,
+    is_unnamed_real_madrid_link_headline,
     is_vague_status_headline,
     is_truncated_x_title,
     passes_filters,
 )
 from feed_utils import is_repost_entry, parse_feed_url, source_is_x
-from match_calendar import digest_block_reason
+from match_calendar import Match, digest_block_reason, load_matches
 from news_fingerprint import load_news_keys, save_news_keys, semantic_news_key, ucl_draw_event_key
 from post_utils import append_hashtags
 from publication_registry import published_editorial_links
@@ -87,6 +92,18 @@ TEMPLATE_HISTORY_FILE = get_state_file("digest_template_history.json")
 QUARANTINE_LIMIT = 200
 TEMPLATE_HISTORY_LIMIT = 4
 TZ = ZoneInfo(DIGEST_TIMEZONE)
+MATCH_GUIDE_MARKERS = (
+    "where to watch",
+    "donde ver",
+    "horario y donde ver",
+    "como ver",
+    "как посмотреть",
+    "где посмотреть",
+    "где смотреть",
+    "en directo",
+    "live stream",
+)
+TEAM_NAME_FILLERS = {"fc", "cf", "cd", "ud", "club", "de", "la"}
 
 DIGEST_LLM_HARD_DENY_TERMS = (
     "francia gana",
@@ -1403,6 +1420,49 @@ def is_fresh(published_at: datetime | None, cutoff: datetime) -> bool:
     return published_at >= cutoff
 
 
+def normalized_match_text(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", str(value or "").casefold())
+    without_accents = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return re.sub(r"[^a-z0-9а-яё]+", " ", without_accents)
+
+
+def team_title_markers(team: str) -> tuple[str, ...]:
+    normalized = normalized_match_text(team)
+    tokens = [token for token in normalized.split() if token not in TEAM_NAME_FILLERS]
+    if not tokens:
+        return ()
+    full = " ".join(tokens)
+    markers = [full]
+    if len(tokens) > 1 and len(tokens[0]) >= 4:
+        markers.append(tokens[0])
+    return tuple(markers)
+
+
+def title_mentions_team(title: str, team: str) -> bool:
+    normalized = f" {normalized_match_text(title)} "
+    return any(f" {marker} " in normalized for marker in team_title_markers(team))
+
+
+def is_expired_match_guide(
+    title: str,
+    *,
+    now: datetime | None = None,
+    matches: list[Match] | None = None,
+) -> bool:
+    """Drop viewing guides once the named fixture has already kicked off."""
+    normalized_title = normalized_match_text(title)
+    if not any(marker in normalized_title for marker in MATCH_GUIDE_MARKERS):
+        return False
+
+    current = (now or datetime.now(TZ)).astimezone(TZ)
+    for match in matches if matches is not None else load_matches():
+        if match.kickoff.astimezone(TZ) > current:
+            continue
+        if title_mentions_team(title, match.home) and title_mentions_team(title, match.away):
+            return True
+    return False
+
+
 def polish_title(title: str) -> str:
     title = clean_text(translate_text(title))
 
@@ -1419,6 +1479,12 @@ def polish_title(title: str) -> str:
     }
     for bad, good in replacements.items():
         title = title.replace(bad, good)
+
+    title = title.replace("Ромаero", "Ромеро")
+    title = title.replace(
+        "Лунин: «Посещаемость была естественной»",
+        "Лунин: «Голевая передача получилась естественно»",
+    )
 
     return title.strip()
 
@@ -1584,6 +1650,9 @@ def collect_candidates(sources, cutoff: datetime):
 
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "")
+                if is_expired_match_guide(title):
+                    logging.info("[DIGEST SKIPPED: EXPIRED MATCH GUIDE] %s", title)
+                    continue
                 if not title or not passes_filters(title, summary=summary, source=label, link=link):
                     continue
 
@@ -1684,6 +1753,16 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     if is_low_value_feature(candidate.title):
         return True
     if is_vague_status_headline(candidate.title):
+        return True
+    if is_rival_only_headline(candidate.title):
+        return True
+    if is_unnamed_real_madrid_link_headline(candidate.title):
+        return True
+    if is_speculative_editorial_headline(candidate.title):
+        return True
+    if is_promotional_x_post(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_expired_match_guide(candidate.title):
         return True
     if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
         return True

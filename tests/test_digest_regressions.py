@@ -1,5 +1,8 @@
+from datetime import datetime
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
+import digest
 from digest import (
     SHORT_TEMPLATES,
     TEMPLATES,
@@ -8,9 +11,19 @@ from digest import (
     digest_semantic_keys,
     format_news_entry,
     digest_topic_hashtags,
+    is_expired_match_guide,
     pick_template_without_recent_repeats,
+    polish_title,
 )
-from filters import is_handle_only_x_title, is_low_value_feature, is_name_only_x_title, is_promotional_link, is_vague_status_headline, passes_filters
+from filters import (
+    is_handle_only_x_title,
+    is_low_value_feature,
+    is_name_only_x_title,
+    is_promotional_link,
+    is_vague_status_headline,
+    passes_filters,
+)
+from match_calendar import Match
 from content_quality import rank_digest_candidates
 from news_fingerprint import semantic_news_key
 from source_quality import source_provenance_label, source_quality_adjustment
@@ -2389,3 +2402,77 @@ def test_reporter_contract_claim_keeps_visible_attribution():
     rendered = format_news_entry(1, item, title_override="Винисиус продлил контракт до 2032 года")
 
     assert "По данным @JLSanchez78, Винисиус продлил контракт до 2032 года" in rendered
+
+
+def test_august_13_morning_drops_rival_filler_and_unnamed_speculation():
+    noise_cases = [
+        (
+            "Atletico Madrid agree deal for Tottenham's Cristian Romero",
+            "Guardian Football",
+            "Real Madrid had followed the defender earlier in the window.",
+        ),
+        (
+            "Atletico are the only Europa League champions to win the Super Cup since 2010",
+            "Marca - Real Madrid",
+            "",
+        ),
+        (
+            "Arsenal not ruling out departure of Real Madrid-linked midfielder",
+            "Madrid Universal",
+            "",
+        ),
+        (
+            "Manchester United could hand Eduardo Camavinga the career he is trying to build at Real Madrid",
+            "The Real Champs",
+            "",
+        ),
+        (
+            "Real Madrid reacted to PSG's win in the 2026 UEFA Super Cup",
+            "Чемпионат - Футбол",
+            "",
+        ),
+        (
+            "@AndreyLunin13: 'It is very useful for us at the start of La Liga' Full interview on RM Play",
+            "X - @realmadrid",
+            "",
+        ),
+    ]
+    for title, source, summary in noise_cases:
+        assert passes_filters(title, summary=summary, source=source) is False
+        item = _item(title, summary)
+        item.candidate.source = source
+        assert digest_llm_hard_deny(item, title) is True
+
+
+def test_expired_match_guides_do_not_fill_the_morning_digest(monkeypatch):
+    match = Match(
+        id="deportivo-real",
+        competition="Trofeo Teresa Herrera",
+        home="Deportivo La Coruna",
+        away="Real Madrid",
+        kickoff=datetime(2026, 8, 12, 22, 0, tzinfo=ZoneInfo("Europe/Moscow")),
+    )
+    title = "Where to watch Deportivo-Real Madrid Teresa Herrera today for free on TV"
+
+    assert is_expired_match_guide(
+        title,
+        now=datetime(2026, 8, 12, 22, 1, tzinfo=ZoneInfo("Europe/Moscow")),
+        matches=[match],
+    ) is True
+    assert is_expired_match_guide(
+        title,
+        now=datetime(2026, 8, 12, 21, 59, tzinfo=ZoneInfo("Europe/Moscow")),
+        matches=[match],
+    ) is False
+
+    monkeypatch.setattr(digest, "load_matches", lambda: [match])
+    item = _item(title)
+    assert digest_llm_hard_deny(item, title) is True
+
+
+def test_august_13_headline_polish_fixes_names_and_football_context(monkeypatch):
+    monkeypatch.setattr(digest, "translate_text", lambda title: title)
+    assert polish_title("Ромаero: «Реал» ищет новых защитников") == "Ромеро: «Реал» ищет новых защитников"
+    assert polish_title("Лунин: «Посещаемость была естественной»") == (
+        "Лунин: «Голевая передача получилась естественно»"
+    )
