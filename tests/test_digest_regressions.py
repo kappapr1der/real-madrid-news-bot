@@ -156,6 +156,7 @@ def test_anonymous_status_and_vague_doubt_headlines_are_filtered():
         ("Mourinho informs Real Madrid midfielder where exactly he stands in pecking order", "Madrid Universal"),
         ("Real Madrid are going to let another talented player leave this summer", "The Real Champs"),
         ("Real Madrid youth prodigy's potential move to French club falls through", "Madrid Universal"),
+        ("Real Madrid youth prospect on the verge of a club-record move to French outfit", "Madrid Universal"),
     ]
     for title, source in cases:
         assert is_vague_status_headline(title) is True
@@ -181,6 +182,8 @@ def test_promotional_and_low_value_features_are_filtered():
         ("The ball is in Real Madrid's court to keep their unbreakable Champions League record intact", "The Real Champs", ""),
         ("Aubameyang no esta solo en el Depor", "Marca - Real Madrid", ""),
         ("Luis Enrique pone Madrid en el punto de mira", "Mundo Deportivo - Real Madrid", ""),
+        ("Luis Enrique and the PSG era with Real Madrid in their sights", "Marca - Real Madrid", ""),
+        ("After 2 years, Real Madrid finally have their Luka Modric replacement", "The Real Champs", ""),
         ("Miguel Munoz le dio al Madrid la primera Teresa Herrera", "Marca - Real Madrid", ""),
         ("Cintia Ramos, 45 anos, madre de Endrick: mi hijo lleva una carga muy pesada", "Defensa Central", ""),
         ("Sahr Senesie, 40, brother of Rudiger: Antonio is obsessed with cleanliness and hates mess", "Defensa Central", ""),
@@ -201,6 +204,17 @@ def test_named_official_x_highlight_remains_eligible():
     title = "Kylian Mbappe: la asistencia perfecta y la definicion"
 
     assert passes_filters(title, source="X - @realmadrid") is True
+
+
+def test_real_source_requires_a_madrid_subject_in_the_headline():
+    assert passes_filters(
+        "The 2027 Spanish Super Cup will have a new home",
+        source="Managing Madrid",
+    ) is False
+    assert passes_filters(
+        "Mourinho plans Bernardo Silva role in Real Madrid midfield",
+        source="Marca - Real Madrid",
+    ) is True
 
 
 def test_july_twenty_first_day_noise_is_filtered():
@@ -2456,6 +2470,21 @@ def test_august_13_morning_drops_rival_filler_and_unnamed_speculation():
         assert passes_filters(title, summary=summary, source=source) is False
         item = _item(title, summary)
         item.candidate.source = source
+        assert digest_llm_hard_deny(item, title) is True
+
+
+def test_august_13_evening_drops_off_topic_reporter_and_rival_roundups():
+    noise_cases = [
+        ("Newcastle United working on deal to sign Benfica right-back Amar Dedic", "X - @MarioCortegana"),
+        ("Chelsea interested in Zubimendi, Arsenal ready to sell World Cup winner for EUR90m", "Чемпионат – Футбол"),
+        ("Fiorentina loan out forward Piccoli and sign Parma striker", "Чемпионат – Футбол"),
+        ("Челси интересен Субименди, Арсенал готов продать чемпиона мира за 90 млн евро", "Чемпионат – Футбол"),
+        ("Фиорентина отдала в аренду нападающего Пикколи и подписала форварда из Пармы", "Чемпионат – Футбол"),
+    ]
+    for title, source in noise_cases:
+        item = _item(title)
+        item.candidate.source = source
+        assert passes_filters(title, source=source) is False
         assert digest_llm_hard_deny(item, title) is True
 
 

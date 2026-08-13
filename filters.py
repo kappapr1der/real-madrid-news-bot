@@ -812,18 +812,20 @@ _REAL_SOURCE_MARKERS = tuple(REAL_SOURCE_MARKERS)
 _REAL_SOURCE_TOPIC_MARKERS = tuple(REAL_SOURCE_TOPIC_MARKERS)
 
 RIVAL_ONLY_MARKERS = (
-    "atletico", "atlético", "барселона", "barcelona", "chelsea",
-    "arsenal", "liverpool", "bayern", "psg", "juventus", "milan",
-    "inter", "napoli", "tottenham", "manchester city",
+    "atletico", "atlético", "атлетико", "барселона", "barcelona", "chelsea", "челси",
+    "arsenal", "арсенал", "liverpool", "ливерпуль", "bayern", "бавария", "psg", "псж",
+    "juventus", "ювентус", "milan", "милан", "inter", "интер", "napoli", "наполи",
+    "tottenham", "тоттенхэм", "manchester city", "манчестер сити", "newcastle", "ньюкасл",
+    "fiorentina", "фиорентина", "parma", "парма",
 )
 DIRECT_REAL_MARKERS = (
-    "real madrid", "rmcf", "los blancos", "la fabrica", "castilla",
-    "vinicius", "rodrygo", "mbappe", "bellingham", "endrick",
-    "gonzalo garcia", "nico paz", "mastantuono", "arda guler",
-    "valverde", "tchouameni", "camavinga", "modric", "kroos",
-    "ceballos", "brahim", "courtois", "lunin", "militao", "rudiger",
-    "carvajal", "trent", "huijsen", "asencio", "mendy", "fran garcia",
-    "carreras", "olise", "konate", "mourinho", "florentino perez",
+    "real madrid", "реал мадрид", "rmcf", "los blancos", "la fabrica", "la fábrica", "фабрика", "castilla", "кастилья",
+    "vinicius", "винисиус", "rodrygo", "родриго", "mbappe", "mbappé", "мбаппе", "bellingham", "беллингем", "endrick", "эндрик",
+    "gonzalo garcia", "гонсало гарсия", "nico paz", "нико пас", "mastantuono", "мастантуоно", "arda guler", "arda güler", "арда гюлер",
+    "valverde", "вальверде", "tchouameni", "tchouaméni", "тчуамени", "camavinga", "камавинга", "modric", "modrić", "модрич", "kroos", "кроос",
+    "ceballos", "себальос", "brahim", "брахим", "courtois", "куртуа", "lunin", "лунин", "militao", "militão", "милитао", "rudiger", "rüdiger", "рюдигер",
+    "carvajal", "карвахаль", "trent", "трент", "huijsen", "хуисен", "asencio", "асенсио", "mendy", "менди", "fran garcia", "фран гарсия",
+    "carreras", "каррерас", "olise", "олисе", "konate", "konaté", "конате", "mourinho", "моуринью", "florentino perez", "florentino pérez", "флорентино перес",
 )
 
 MATCHUP_PATTERNS = [
@@ -857,12 +859,23 @@ def _matches_any(haystack: str, needles: tuple) -> bool:
     return any(n in haystack for n in needles)
 
 
+def _matches_direct_real_marker(text: str) -> bool:
+    """Match club people as whole words so one surname cannot match another."""
+    title = _normalize(text)
+    return any(
+        re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", title)
+        for marker in DIRECT_REAL_MARKERS
+    )
+
+
 def _real_source_has_topic_signal(title: str, body: str) -> bool:
+    """A Real-only feed still needs a concrete Madrid subject in its headline."""
     return (
         _matches_any(title, _WHITELIST)
-        or (body and _matches_any(body, _WHITELIST))
-        or _matches_any(title, _REAL_SOURCE_TOPIC_MARKERS)
-        or (body and _matches_any(body, _REAL_SOURCE_TOPIC_MARKERS))
+        or (
+            _matches_any(title, _REAL_SOURCE_TOPIC_MARKERS)
+            and _matches_direct_real_marker(title)
+        )
     )
 
 
@@ -968,6 +981,16 @@ def is_low_value_feature(text: str) -> bool:
             "miguel munoz le dio al madrid la primera teresa herrera",
         )
     )
+    luis_enrique_psg_hook = (
+        "luis enrique" in title
+        and "psg" in title
+        and ("real madrid" in title or "madrid" in title)
+    )
+    modric_replacement_hook = (
+        "modric" in title
+        and "replacement" in title
+        and any(marker in title for marker in ("finally have", "finally found", "al fin tiene"))
+    )
     aubameyang_depor_feature = "aubameyang" in title and "depor" in title
     personal_markers = (
         "sobre su infancia",
@@ -998,6 +1021,8 @@ def is_low_value_feature(text: str) -> bool:
         or family_lifestyle_profile
         or external_historical_comparison
         or generic_editorial_noise
+        or luis_enrique_psg_hook
+        or modric_replacement_hook
         or aubameyang_depor_feature
     )
 
@@ -1022,8 +1047,8 @@ def is_vague_status_headline(text: str) -> bool:
         title,
     )
     anonymous_academy_move = re.search(
-        r"\breal madrid\b.*\b(?:youth\s+)?(?:prodigy|talent|youngster|academy player)\b.*"
-        r"\b(?:potential move|potential transfer|move .* falls through|transfer .* falls through)\b",
+        r"\breal madrid\b.*\b(?:youth\s+)?(?:prodigy|prospect|talent|youngster|academy player)\b.*"
+        r"\b(?:potential move|potential transfer|move .* falls through|transfer .* falls through|on the verge|close to|record move)\b",
         title,
     )
     return bool(
@@ -1041,7 +1066,7 @@ def is_rival_only_headline(text: str) -> bool:
     title = _normalize(text)
     return bool(
         _matches_any(title, RIVAL_ONLY_MARKERS)
-        and not _matches_any(title, DIRECT_REAL_MARKERS)
+        and not _matches_direct_real_marker(title)
     )
 
 
@@ -1064,7 +1089,7 @@ def is_speculative_editorial_headline(text: str) -> bool:
         (
             "could hand" in title
             and "career" in title
-            and ("real madrid" in title or _matches_any(title, DIRECT_REAL_MARKERS))
+            and ("real madrid" in title or _matches_direct_real_marker(title))
         )
         or (
             "reacted to" in title
@@ -1100,7 +1125,7 @@ def is_unnamed_official_x_highlight(text: str, source: str) -> bool:
         return False
 
     title = _normalize(text)
-    if _matches_any(title, DIRECT_REAL_MARKERS):
+    if _matches_direct_real_marker(title):
         return False
     return bool(
         re.search(
@@ -1108,6 +1133,25 @@ def is_unnamed_official_x_highlight(text: str, source: str) -> bool:
             r"\b(?:finish|definition|definicion)\b",
             title,
         )
+    )
+
+
+def is_off_topic_reporter_x_post(text: str, source: str) -> bool:
+    """Reporter feeds are useful only when the post itself names a Madrid subject."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @") or source_name.startswith("x - @realmadrid"):
+        return False
+    return not _matches_direct_real_marker(text)
+
+
+def is_generic_competition_logistics(text: str) -> bool:
+    """Skip tournament administration unless the title directly concerns Real."""
+    title = _normalize(text)
+    if _matches_direct_real_marker(title):
+        return False
+    return bool(
+        any(marker in title for marker in ("spanish super cup", "supercopa de espana", "supercopa espana"))
+        and any(marker in title for marker in ("new home", "new host", "new venue", "nueva sede", "new location"))
     )
 
 
@@ -1189,6 +1233,14 @@ def passes_filters(
 
     if is_unnamed_official_x_highlight(text, source):
         logger.info(f"[FILTERED: UNNAMED OFFICIAL X HIGHLIGHT] {text[:90]}...")
+        return False
+
+    if is_off_topic_reporter_x_post(text, source):
+        logger.info(f"[FILTERED: OFF-TOPIC REPORTER X] {text[:90]}...")
+        return False
+
+    if is_generic_competition_logistics(text):
+        logger.info(f"[FILTERED: GENERIC COMPETITION LOGISTICS] {text[:90]}...")
         return False
 
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
