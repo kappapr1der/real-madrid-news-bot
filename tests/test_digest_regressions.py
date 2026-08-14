@@ -157,6 +157,8 @@ def test_anonymous_status_and_vague_doubt_headlines_are_filtered():
         ("Real Madrid are going to let another talented player leave this summer", "The Real Champs"),
         ("Real Madrid youth prodigy's potential move to French club falls through", "Madrid Universal"),
         ("Real Madrid youth prospect on the verge of a club-record move to French outfit", "Madrid Universal"),
+        ("Real Madrid youngster set to become the club's starting centre-back after impressive display vs Deportivo", "Madrid Universal"),
+        ("Real Madrid walks away from a transfer but adds an injured player", "Bernabeu Digital"),
     ]
     for title, source in cases:
         assert is_vague_status_headline(title) is True
@@ -188,6 +190,7 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Miguel Munoz le dio al Madrid la primera Teresa Herrera", "Marca - Real Madrid", ""),
         ("Cintia Ramos, 45 anos, madre de Endrick: mi hijo lleva una carga muy pesada", "Defensa Central", ""),
         ("Sahr Senesie, 40, brother of Rudiger: Antonio is obsessed with cleanliness and hates mess", "Defensa Central", ""),
+        ("Thibaut Courtois, 34: my father keeps track of my clean sheets", "Defensa Central", ""),
         ("Cucurella answers: hidden talent, favourite food and favourite singer", "Marca - Real Madrid", ""),
         ("Five bullet points from Real Madrid's win over Deportivo", "Managing Madrid", "https://www.managingmadrid.com/kiyans-observations/111280/five-bullet-points-from-real-madrids-win-over-deportivo-la-coruna"),
         ("3 burning questions from Real Madrid's friendly win vs Deportivo", "The Real Champs", "https://therealchamps.com/3-burning-questions-from-real-madrid-s-friendly-win-vs-deportivo"),
@@ -202,6 +205,7 @@ def test_promotional_and_low_value_features_are_filtered():
 
     assert is_low_value_feature("Jude Bellingham, 23, on his childhood") is True
     assert is_low_value_feature("Cucurella answers: hidden talent, favourite food and favourite singer") is True
+    assert is_low_value_feature("Thibaut Courtois, 34: my father keeps track of my clean sheets") is True
     assert is_promotional_link("https://www.sports.ru/fantasy/football/spain/") is True
 
 

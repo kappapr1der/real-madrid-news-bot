@@ -1028,6 +1028,23 @@ def is_low_value_feature(text: str) -> bool:
         )
     )
     aubameyang_depor_feature = "aubameyang" in title and "depor" in title
+    family_match_tally = (
+        any(marker in title for marker in ("father", "mother", "padre", "madre"))
+        and any(
+            marker in title
+            for marker in (
+                "clean sheet",
+                "clean sheets",
+                "porterias cero",
+                "porterías cero",
+                "porterias a cero",
+                "porterías a cero",
+                "porteria a cero",
+                "portería a cero",
+                "resultados",
+            )
+        )
+    )
     personal_qa = any(
         marker in title
         for marker in (
@@ -1074,6 +1091,7 @@ def is_low_value_feature(text: str) -> bool:
         or modric_replacement_hook
         or relationship_editorial
         or aubameyang_depor_feature
+        or family_match_tally
         or personal_qa
     )
 
@@ -1102,11 +1120,25 @@ def is_vague_status_headline(text: str) -> bool:
         r"\b(?:potential move|potential transfer|move .* falls through|transfer .* falls through|on the verge|close to|record move)\b",
         title,
     )
+    anonymous_starting_role = re.search(
+        r"\breal madrid\b.*\b(?:youngster|youth player|academy player|canterano)\b.*"
+        r"\b(?:set to become|to become|become)\b.*\b(?:starting|first-choice)\b.*"
+        r"\b(?:centre-back|center-back|central defender)\b",
+        title,
+    )
+    unnamed_transfer_injury_teaser = re.search(
+        r"\breal madrid\b.*\b(?:walks away from|abandons|drops|aleja|descarta)\b.*"
+        r"\b(?:a |the )?(?:transfer|fichaje)\b.*\b(?:adds|suma)\b.*"
+        r"\b(?:an )?(?:injured player|injury|lesionado|lesion)\b",
+        title,
+    )
     return bool(
         anonymous_status
         or anonymous_hierarchy
         or anonymous_exit
         or anonymous_academy_move
+        or anonymous_starting_role
+        or unnamed_transfer_injury_teaser
         or "no despeja dudas" in title
         or "не развеивает сомнения" in title
     )
