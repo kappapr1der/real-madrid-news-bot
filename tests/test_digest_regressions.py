@@ -184,9 +184,12 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Luis Enrique pone Madrid en el punto de mira", "Mundo Deportivo - Real Madrid", ""),
         ("Luis Enrique and the PSG era with Real Madrid in their sights", "Marca - Real Madrid", ""),
         ("After 2 years, Real Madrid finally have their Luka Modric replacement", "The Real Champs", ""),
+        ("Mourinho and Bellingham must find common ground", "Mundo Deportivo - Real Madrid", ""),
         ("Miguel Munoz le dio al Madrid la primera Teresa Herrera", "Marca - Real Madrid", ""),
         ("Cintia Ramos, 45 anos, madre de Endrick: mi hijo lleva una carga muy pesada", "Defensa Central", ""),
         ("Sahr Senesie, 40, brother of Rudiger: Antonio is obsessed with cleanliness and hates mess", "Defensa Central", ""),
+        ("Five bullet points from Real Madrid's win over Deportivo", "Managing Madrid", "https://www.managingmadrid.com/kiyans-observations/111280/five-bullet-points-from-real-madrids-win-over-deportivo-la-coruna"),
+        ("3 burning questions from Real Madrid's friendly win vs Deportivo", "The Real Champs", "https://therealchamps.com/3-burning-questions-from-real-madrid-s-friendly-win-vs-deportivo"),
         ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
     ]
     for title, source, link in cases:
@@ -204,6 +207,20 @@ def test_named_official_x_highlight_remains_eligible():
     title = "Kylian Mbappe: la asistencia perfecta y la definicion"
 
     assert passes_filters(title, source="X - @realmadrid") is True
+
+    assert passes_filters(
+        "Kylian Mbappe returns to Real Madrid training after injury",
+        source="X - @realmadrid",
+    ) is True
+
+
+def test_generic_official_x_training_photo_is_not_a_digest_item():
+    title = "Training day with Kylian Mbappe"
+    item = _item(title)
+    item.candidate.source = "X - @realmadrid"
+
+    assert passes_filters(title, source=item.candidate.source) is False
+    assert digest_llm_hard_deny(item, title) is True
 
 
 def test_real_source_requires_a_madrid_subject_in_the_headline():
@@ -2442,6 +2459,11 @@ def test_august_13_morning_drops_rival_filler_and_unnamed_speculation():
         ),
         (
             "Arsenal not ruling out departure of Real Madrid-linked midfielder",
+            "Madrid Universal",
+            "",
+        ),
+        (
+            "Real Madrid's links to Arsenal midfielder have no basis",
             "Madrid Universal",
             "",
         ),

@@ -943,6 +943,16 @@ def is_promotional_link(link: str = "") -> bool:
     return "/fantasy/" in lower_link or "utm_campaign=fantasy" in lower_link
 
 
+def is_editorial_analysis_link(text: str, link: str = "") -> bool:
+    """Keep reports, not generic observation columns or post-match listicles."""
+    title = _normalize(text)
+    lower_link = str(link or "").casefold()
+    return bool(
+        "managingmadrid.com/kiyans-observations/" in lower_link
+        or any(marker in title for marker in ("five bullet points from", "burning questions from"))
+    )
+
+
 def is_low_value_feature(text: str) -> bool:
     """Reject personal anecdotes, stale controversy and unsupported opinion hooks."""
     title = _normalize(text)
@@ -991,6 +1001,19 @@ def is_low_value_feature(text: str) -> bool:
         and "replacement" in title
         and any(marker in title for marker in ("finally have", "finally found", "al fin tiene"))
     )
+    relationship_editorial = (
+        "mourinho" in title
+        and "bellingham" in title
+        and any(
+            marker in title
+            for marker in (
+                "condenados a entenderse",
+                "must find common ground",
+                "need to find common ground",
+                "should find common ground",
+            )
+        )
+    )
     aubameyang_depor_feature = "aubameyang" in title and "depor" in title
     personal_markers = (
         "sobre su infancia",
@@ -1023,6 +1046,7 @@ def is_low_value_feature(text: str) -> bool:
         or generic_editorial_noise
         or luis_enrique_psg_hook
         or modric_replacement_hook
+        or relationship_editorial
         or aubameyang_depor_feature
     )
 
@@ -1073,13 +1097,17 @@ def is_rival_only_headline(text: str) -> bool:
 def is_unnamed_real_madrid_link_headline(text: str) -> bool:
     """Reject transfer bait that never names the player or a concrete club action."""
     title = _normalize(text)
-    return bool(
-        re.search(
+    direct_link_bait = re.search(
             r"(?:real madrid[- ]linked|linked with real madrid|vinculado al real madrid)"
             r"\s+(?:midfielder|defender|forward|player|star)",
             title,
-        )
     )
+    unnamed_denial = re.search(
+        r"\breal madrid(?:'s)? links? to (?:an? )?(?:[a-z]+ )?"
+        r"(?:midfielder|defender|forward|player|star)\b.*\b(?:no basis|no foundation|baseless)\b",
+        title,
+    )
+    return bool(direct_link_bait or unnamed_denial)
 
 
 def is_speculative_editorial_headline(text: str) -> bool:
@@ -1134,6 +1162,15 @@ def is_unnamed_official_x_highlight(text: str, source: str) -> bool:
             title,
         )
     )
+
+
+def is_generic_official_x_training_post(text: str, source: str) -> bool:
+    """Training photos belong to the visual rubric, not a text digest."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @realmadrid"):
+        return False
+    title = _normalize(text)
+    return title.startswith(("training day with", "day of training with", "dia de entrenamiento con"))
 
 
 def is_off_topic_reporter_x_post(text: str, source: str) -> bool:
@@ -1207,6 +1244,10 @@ def passes_filters(
         logger.info(f"[FILTERED: PROMOTIONAL LINK] {text[:90]}...")
         return False
 
+    if is_editorial_analysis_link(text, link):
+        logger.info(f"[FILTERED: EDITORIAL ANALYSIS] {text[:90]}...")
+        return False
+
     if is_low_value_feature(text):
         logger.info(f"[FILTERED: LOW-VALUE FEATURE] {text[:90]}...")
         return False
@@ -1233,6 +1274,10 @@ def passes_filters(
 
     if is_unnamed_official_x_highlight(text, source):
         logger.info(f"[FILTERED: UNNAMED OFFICIAL X HIGHLIGHT] {text[:90]}...")
+        return False
+
+    if is_generic_official_x_training_post(text, source):
+        logger.info(f"[FILTERED: GENERIC OFFICIAL X TRAINING] {text[:90]}...")
         return False
 
     if is_off_topic_reporter_x_post(text, source):

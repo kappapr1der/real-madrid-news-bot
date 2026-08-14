@@ -25,8 +25,10 @@ from filters import (
     is_managing_madrid_dated_general_thread,
     is_non_football_sports_link,
     is_promotional_link,
+    is_editorial_analysis_link,
     is_promotional_x_post,
     is_unnamed_official_x_highlight,
+    is_generic_official_x_training_post,
     is_off_topic_reporter_x_post,
     is_generic_competition_logistics,
     is_low_value_feature,
@@ -1753,6 +1755,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
         return True
     if is_promotional_link(getattr(candidate, "link", "")):
         return True
+    if is_editorial_analysis_link(candidate.title, getattr(candidate, "link", "")):
+        return True
     if is_low_value_feature(candidate.title):
         return True
     if is_vague_status_headline(candidate.title):
@@ -1766,6 +1770,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     if is_promotional_x_post(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_unnamed_official_x_highlight(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_generic_official_x_training_post(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_off_topic_reporter_x_post(candidate.title, getattr(candidate, "source", "")):
         return True
