@@ -188,6 +188,7 @@ def test_promotional_and_low_value_features_are_filtered():
         ("Miguel Munoz le dio al Madrid la primera Teresa Herrera", "Marca - Real Madrid", ""),
         ("Cintia Ramos, 45 anos, madre de Endrick: mi hijo lleva una carga muy pesada", "Defensa Central", ""),
         ("Sahr Senesie, 40, brother of Rudiger: Antonio is obsessed with cleanliness and hates mess", "Defensa Central", ""),
+        ("Cucurella answers: hidden talent, favourite food and favourite singer", "Marca - Real Madrid", ""),
         ("Five bullet points from Real Madrid's win over Deportivo", "Managing Madrid", "https://www.managingmadrid.com/kiyans-observations/111280/five-bullet-points-from-real-madrids-win-over-deportivo-la-coruna"),
         ("3 burning questions from Real Madrid's friendly win vs Deportivo", "The Real Champs", "https://therealchamps.com/3-burning-questions-from-real-madrid-s-friendly-win-vs-deportivo"),
         ("Build your La Liga Fantasy squad", "Sports.ru", "https://www.sports.ru/fantasy/football/spain/"),
@@ -200,7 +201,22 @@ def test_promotional_and_low_value_features_are_filtered():
         assert digest_llm_hard_deny(item, title) is True
 
     assert is_low_value_feature("Jude Bellingham, 23, on his childhood") is True
+    assert is_low_value_feature("Cucurella answers: hidden talent, favourite food and favourite singer") is True
     assert is_promotional_link("https://www.sports.ru/fantasy/football/spain/") is True
+
+
+def test_general_football_whitelist_requires_a_direct_madrid_subject():
+    title = "Maresca refuses to comment on possible Enzo Fernandez negotiations"
+    item = _item(title)
+    item.candidate.source = "Championat - Football"
+
+    assert passes_filters(title, source=item.candidate.source) is False
+    assert digest_llm_hard_deny(item, title) is True
+
+    assert passes_filters(
+        "Courtois discusses working with Mourinho at Real Madrid",
+        source="Championat - Football",
+    ) is True
 
 
 def test_named_official_x_highlight_remains_eligible():

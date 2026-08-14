@@ -815,7 +815,7 @@ RIVAL_ONLY_MARKERS = (
     "atletico", "atlético", "атлетико", "барселона", "barcelona", "chelsea", "челси",
     "arsenal", "арсенал", "liverpool", "ливерпуль", "bayern", "бавария", "psg", "псж",
     "juventus", "ювентус", "milan", "милан", "inter", "интер", "napoli", "наполи",
-    "tottenham", "тоттенхэм", "manchester city", "манчестер сити", "newcastle", "ньюкасл",
+    "tottenham", "тоттенхэм", "manchester city", "манчестер сити", "ман сити", "newcastle", "ньюкасл",
     "fiorentina", "фиорентина", "parma", "парма",
 )
 DIRECT_REAL_MARKERS = (
@@ -825,7 +825,8 @@ DIRECT_REAL_MARKERS = (
     "valverde", "вальверде", "tchouameni", "tchouaméni", "тчуамени", "camavinga", "камавинга", "modric", "modrić", "модрич", "kroos", "кроос",
     "ceballos", "себальос", "brahim", "брахим", "courtois", "куртуа", "lunin", "лунин", "militao", "militão", "милитао", "rudiger", "rüdiger", "рюдигер",
     "carvajal", "карвахаль", "trent", "трент", "huijsen", "хуисен", "asencio", "асенсио", "mendy", "менди", "fran garcia", "фран гарсия",
-    "carreras", "каррерас", "olise", "олисе", "konate", "konaté", "конате", "mourinho", "моуринью", "florentino perez", "florentino pérez", "флорентино перес",
+    "carreras", "каррерас", "olise", "олисе", "konate", "konaté", "конате", "bernardo silva", "бернарду сильва",
+    "cucurella", "кукурелья", "carlos espi", "карлос эспи", "mourinho", "моуринью", "florentino perez", "florentino pérez", "флорентино перес",
 )
 
 MATCHUP_PATTERNS = [
@@ -865,6 +866,18 @@ def _matches_direct_real_marker(text: str) -> bool:
     return any(
         re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", title)
         for marker in DIRECT_REAL_MARKERS
+    )
+
+
+def is_off_topic_whitelist_headline(text: str, source: str = "") -> bool:
+    """Require a direct Madrid subject when a broad football source hits a name keyword."""
+    title = _normalize(text)
+    source_name = _normalize(source)
+    return bool(
+        source_name
+        and not _matches_any(source_name, _REAL_SOURCE_MARKERS)
+        and _matches_any(title, _WHITELIST)
+        and not _matches_direct_real_marker(title)
     )
 
 
@@ -1015,6 +1028,19 @@ def is_low_value_feature(text: str) -> bool:
         )
     )
     aubameyang_depor_feature = "aubameyang" in title and "depor" in title
+    personal_qa = any(
+        marker in title
+        for marker in (
+            "hidden talent",
+            "talento oculto",
+            "favorite food",
+            "favourite food",
+            "comida favorita",
+            "favorite singer",
+            "favourite singer",
+            "cantante favorito",
+        )
+    )
     personal_markers = (
         "sobre su infancia",
         "on his childhood",
@@ -1048,6 +1074,7 @@ def is_low_value_feature(text: str) -> bool:
         or modric_replacement_hook
         or relationship_editorial
         or aubameyang_depor_feature
+        or personal_qa
     )
 
 
@@ -1288,6 +1315,10 @@ def passes_filters(
         logger.info(f"[FILTERED: GENERIC COMPETITION LOGISTICS] {text[:90]}...")
         return False
 
+    if is_off_topic_whitelist_headline(text, source):
+        logger.info(f"[FILTERED: WHITELIST WITHOUT DIRECT REAL] {source}: {text[:90]}...")
+        return False
+
     if _matches_any(title, _BLACKLIST) or (body and _matches_any(body, _BLACKLIST)):
         logger.info(f"[FILTERED: BLACKLIST] {text[:90]}...")
         return False
@@ -1320,8 +1351,11 @@ def passes_filters(
         return True
 
     if _matches_any(title, _WHITELIST):
-        logger.info(f"[PASSED: WHITELIST] {text[:90]}...")
-        return True
+        if _matches_direct_real_marker(title):
+            logger.info(f"[PASSED: WHITELIST+DIRECT REAL] {text[:90]}...")
+            return True
+        logger.info(f"[FILTERED: WHITELIST WITHOUT DIRECT REAL] {text[:90]}...")
+        return False
 
     if _matches_any(title, _GREYLIST):
         if "real madrid" in title or "реал" in title:

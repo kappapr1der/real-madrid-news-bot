@@ -32,6 +32,7 @@ from filters import (
     is_off_topic_reporter_x_post,
     is_generic_competition_logistics,
     is_low_value_feature,
+    is_off_topic_whitelist_headline,
     is_rival_only_headline,
     is_speculative_editorial_headline,
     is_unnamed_real_madrid_link_headline,
@@ -1758,6 +1759,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     if is_editorial_analysis_link(candidate.title, getattr(candidate, "link", "")):
         return True
     if is_low_value_feature(candidate.title):
+        return True
+    if is_off_topic_whitelist_headline(candidate.title, getattr(candidate, "source", "")):
         return True
     if is_vague_status_headline(candidate.title):
         return True
