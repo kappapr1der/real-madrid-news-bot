@@ -7,6 +7,7 @@ Use this when the current VPS or region is unavailable for long enough to miss T
 - Run only one live bot at a time. If the old VPS comes back after failover, stop one of the services before both can post.
 - Never commit `.env`, `state/`, `logs/`, `config/matches.json`, or sent-link files.
 - Prefer a new VPS outside the failed region/provider.
+- Run bot Python commands as `coffee`, not as `root`. Root-owned files inside `state/` block the systemd service from updating dedupe and lifecycle data.
 
 ## New VPS bootstrap
 
@@ -40,6 +41,10 @@ scp -r root@OLD_SERVER:/opt/coffee-bot/state/* /opt/coffee-bot/state/
 scp root@OLD_SERVER:/opt/coffee-bot/config/matches.json /opt/coffee-bot/config/matches.json
 chown -R coffee:coffee /opt/coffee-bot
 chmod 600 /opt/coffee-bot/.env
+sudo -u coffee test -w /opt/coffee-bot/state
+if [ -e /opt/coffee-bot/state/story_lifecycle.json ]; then
+  sudo -u coffee test -w /opt/coffee-bot/state/story_lifecycle.json
+fi
 ```
 
 If the old VPS is not reachable, recreate `/opt/coffee-bot/.env` from `.env.example` and fill at least:
