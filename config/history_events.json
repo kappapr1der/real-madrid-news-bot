@@ -1,0 +1,114 @@
+{
+  "events": [
+    {
+      "id": "club-founded-1902",
+      "month": 3,
+      "day": 6,
+      "year": 1902,
+      "title": "Рождение мадридской легенды",
+      "description": "6 марта 1902 года была официально избрана первая дирекция Madrid Foot Ball Club. С этого дня началась история «Реала».",
+      "source_name": "Real Madrid",
+      "source_url": "https://www.realmadrid.com/static/en/about-real-madrid/history/football/1902-1910/",
+      "priority": 100
+    },
+    {
+      "id": "salgado-presentation-1999",
+      "month": 7,
+      "day": 19,
+      "year": 1999,
+      "title": "Мичел Сальгадо представлен в «Реале»",
+      "description": "19 июля 1999 года правый защитник Мичел Сальгадо был представлен как игрок «Реала». В белой футболке он проведет десять сезонов и выиграет 11 трофеев.",
+      "source_name": "El País",
+      "source_url": "https://elpais.com/diario/1999/07/20/deportes/932421607_850215.html",
+      "priority": 90
+    },
+    {
+      "id": "seventh-european-cup-1998",
+      "month": 5,
+      "day": 20,
+      "year": 1998,
+      "title": "Седьмой Кубок Европы",
+      "description": "20 мая 1998 года «Реал» обыграл «Ювентус» в финале Лиги чемпионов и взял Седьмой Кубок Европы, прервав 32-летнее ожидание.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    },
+    {
+      "id": "eighth-european-cup-2000",
+      "month": 5,
+      "day": 24,
+      "year": 2000,
+      "title": "Восьмой Кубок Европы",
+      "description": "24 мая 2000 года «Реал» разгромил «Валенсию» в первом в истории испанском финале Кубка Европы и поднял Восьмой.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    },
+    {
+      "id": "ninth-european-cup-2002",
+      "month": 5,
+      "day": 15,
+      "year": 2002,
+      "title": "Зидан и Девятая",
+      "description": "15 мая 2002 года победный удар Зинедина Зидана принес «Реалу» Девятый Кубок Европы в финале против «Байера».",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    },
+    {
+      "id": "la-decima-2014",
+      "month": 5,
+      "day": 24,
+      "year": 2014,
+      "title": "La Decima",
+      "description": "24 мая 2014 года гол Серхио Рамоса на 92:48 перевел финал с «Атлетико» в дополнительное время. «Реал» победил 4:1 и взял Десятую.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    },
+    {
+      "id": "undecima-2016",
+      "month": 5,
+      "day": 28,
+      "year": 2016,
+      "title": "Undecima в Милане",
+      "description": "28 мая 2016 года «Реал» обыграл «Атлетико» по пенальти в Милане и завоевал Одиннадцатый Кубок Европы.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    },
+    {
+      "id": "decimotercera-2018",
+      "month": 5,
+      "day": 26,
+      "year": 2018,
+      "title": "Три подряд и Тринадцатая",
+      "description": "26 мая 2018 года «Реал» победил «Ливерпуль» в Киеве и первым в эпоху Лиги чемпионов выиграл турнир три раза подряд.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    },
+    {
+      "id": "decimocuarta-2022",
+      "month": 5,
+      "day": 28,
+      "year": 2022,
+      "title": "Винисиус приносит Четырнадцатую",
+      "description": "28 мая 2022 года гол Винисиуса в финале против «Ливерпуля» принес «Реалу» Четырнадцатый Кубок Европы.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/news/0275-154155ec760b-9eb63f36153c-1000--el-real-madrid-campeon-de-europa/",
+      "priority": 100
+    },
+    {
+      "id": "decimoquinta-2024",
+      "month": 6,
+      "day": 1,
+      "year": 2024,
+      "title": "Пятнадцатая в Лондоне",
+      "description": "1 июня 2024 года «Реал» обыграл «Боруссию» Дортмунд в финале на «Уэмбли» и завоевал Пятнадцатый Кубок Европы.",
+      "source_name": "UEFA",
+      "source_url": "https://www.uefa.com/uefachampionsleague/history/winners/",
+      "priority": 100
+    }
+  ]
+}

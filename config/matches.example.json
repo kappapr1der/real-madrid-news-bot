@@ -1,0 +1,24 @@
+[
+  {
+    "id": "laliga-2026-08-23-real-madrid-opponent",
+    "competition": "La Liga",
+    "round": "Matchday 1",
+    "home": "Real Madrid",
+    "away": "Opponent",
+    "kickoff": "2026-08-23T21:00:00+02:00",
+    "venue": "Santiago Bernabeu",
+    "broadcast": "",
+    "api_football_fixture_id": ""
+  },
+  {
+    "id": "ucl-2026-09-15-real-madrid-opponent",
+    "competition": "UEFA Champions League",
+    "round": "League phase",
+    "home": "Real Madrid",
+    "away": "Opponent",
+    "kickoff": "2026-09-15T21:00:00+02:00",
+    "venue": "Santiago Bernabeu",
+    "broadcast": "",
+    "api_football_fixture_id": ""
+  }
+]
