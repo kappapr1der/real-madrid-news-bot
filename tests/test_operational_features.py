@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 import breaking_confirmation
+from scripts import preflight as deploy_preflight
 import story_lifecycle
 from calendar_refresh import merge_api_football_fixtures
 from editorial_report import format_editorial_report
@@ -69,6 +71,50 @@ def test_story_lifecycle_only_changes_when_status_changes(monkeypatch, tmp_path)
     assert first.relevant and first.changed
     assert repeated.relevant and repeated.changed is False
     assert official.relevant and official.changed
+
+
+def test_story_lifecycle_uses_atomic_replace(monkeypatch, tmp_path):
+    lifecycle_path = tmp_path / "lifecycle.json"
+    monkeypatch.setattr(story_lifecycle, "LIFECYCLE_FILE", lifecycle_path)
+    original_replace = story_lifecycle.os.replace
+    replacements = []
+
+    def capture_replace(source, target):
+        replacements.append((Path(source), Path(target)))
+        return original_replace(source, target)
+
+    monkeypatch.setattr(story_lifecycle.os, "replace", capture_replace)
+    story_lifecycle.record_lifecycle(
+        "Real Madrid hold talks for Michael Olise",
+        source="Marca - Real Madrid",
+        fingerprint="transfer:olise-real",
+    )
+
+    assert len(replacements) == 1
+    assert replacements[0][1] == lifecycle_path
+    assert replacements[0][0].name.startswith(".lifecycle.json.")
+    assert not list(tmp_path.glob(".lifecycle.json.*.tmp"))
+    assert lifecycle_path.exists()
+
+
+def test_preflight_detects_existing_unwritable_state_file(monkeypatch, tmp_path):
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    blocked_file = state_dir / "story_lifecycle.json"
+    blocked_file.write_text("{}", encoding="utf-8")
+
+    real_access = deploy_preflight.os.access
+
+    def fake_access(path, mode):
+        if Path(path) == blocked_file:
+            return False
+        return real_access(path, mode)
+
+    monkeypatch.setattr(deploy_preflight.os, "access", fake_access)
+    errors = []
+    deploy_preflight.check_state_writable({"STATE_DIR": str(state_dir)}, errors)
+
+    assert errors == [f"state file is not writable by the effective user: {blocked_file}"]
 
 
 def test_calendar_refresh_updates_only_known_fixture_in_its_date_window():

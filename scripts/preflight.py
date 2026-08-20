@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import importlib.util
+import os
 import re
 import py_compile
 from pathlib import Path
@@ -126,6 +127,19 @@ def validate_int_list(config: dict, name: str, default: str, errors: list[str]) 
 def resolve_repo_path(value: str) -> Path:
     path = Path(value)
     return path if path.is_absolute() else ROOT / path
+
+
+def check_state_writable(config: dict, errors: list[str]) -> None:
+    state_dir = resolve_repo_path(config.get("STATE_DIR") or "state")
+    if not state_dir.exists():
+        return
+    if not os.access(state_dir, os.W_OK | os.X_OK):
+        errors.append(f"STATE_DIR is not writable by the effective user: {state_dir}")
+        return
+
+    for path in sorted(state_dir.rglob("*")):
+        if path.is_file() and not os.access(path, os.W_OK):
+            errors.append(f"state file is not writable by the effective user: {path}")
 
 
 def check_env():
@@ -256,6 +270,8 @@ def check_env():
         errors.append("YANDEX_LLM_API_KEY, YANDEX_TRANSLATE_API_KEY or YANDEX_API_KEY is required for YANDEX_LLM_ENABLED=true")
     if llm_enabled and not llm_folder:
         errors.append("YANDEX_LLM_FOLDER_ID or YANDEX_FOLDER_ID is required for YANDEX_LLM_ENABLED=true")
+
+    check_state_writable(config, errors)
 
     if errors:
         joined = "\n- ".join(errors)

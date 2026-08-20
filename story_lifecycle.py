@@ -1,7 +1,10 @@
 import json
+import os
 import re
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 
 from runtime_config import STORY_LIFECYCLE_ENABLED, get_state_file
 from transfer_tracker import STATUS_WEIGHT, classify_status, extract_subject, is_transfer_story
@@ -43,7 +46,21 @@ def _load() -> dict:
 
 def _save(data: dict) -> None:
     LIFECYCLE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    LIFECYCLE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{LIFECYCLE_FILE.name}.",
+        suffix=".tmp",
+        dir=LIFECYCLE_FILE.parent,
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, LIFECYCLE_FILE)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _normal(text: str) -> str:
