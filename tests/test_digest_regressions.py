@@ -223,6 +223,30 @@ def test_general_football_whitelist_requires_a_direct_madrid_subject():
     ) is True
 
 
+def test_august_digest_noise_is_filtered_by_genre_not_exact_title():
+    cases = [
+        ("The 5 best players Real Madrid never signed but should have", "The Real Champs", ""),
+        ("Three former players Real Madrid would still welcome back", "The Real Champs", ""),
+        ("Real Madrid's midfield problem does not stop", "Mundo Deportivo - Real Madrid", ""),
+        ("R to @AranchaMOBILE: Endrick has a specific muscle-injury plan", "X - @AranchaMOBILE", ""),
+        ("Buy tickets to watch Betis vs Real Madrid", "Marca - Real Madrid", ""),
+        ("Mbappe tops EA SPORTS LALIGA ratings in EA SPORTS FC 27", "Marca - Real Madrid", ""),
+        ("Follow BERNABEU DIGITAL on social media", "Bernabeu Digital", ""),
+        ("Real Madrid have a giant thermometer that helps air conditioning", "Defensa Central", ""),
+        ("Real Madrid midfield mainstay will be available vs Espanyol", "Madrid Universal", ""),
+        ("Tchouameni's role in Mourinho system may change", "Defensa Central", ""),
+        ("Bernardo Silva will displace Tchouameni from Real Madrid's starting lineup", "Bernabeu Digital", ""),
+        ("Real Madrid midfield needs after Kroos", "Managing Madrid", "https://www.managingmadrid.com/formations-and-tactics/111418/test"),
+        ("16 years since Ozil's Real Madrid transfer", "Bernabeu Digital", ""),
+    ]
+    for title, source, link in cases:
+        item = _item(title)
+        item.candidate.source = source
+        item.candidate.link = link
+        assert passes_filters(title, source=source, link=link) is False
+        assert digest_llm_hard_deny(item, title) is True
+
+
 def test_named_official_x_highlight_remains_eligible():
     title = "Kylian Mbappe: la asistencia perfecta y la definicion"
 
@@ -352,6 +376,27 @@ def test_rodri_interest_reports_share_a_semantic_key():
 
     assert semantic_news_key(first_title) == semantic_news_key(second_title)
     assert semantic_news_key(first_title) == "transfer:rumour:rodri"
+
+
+def test_sergio_martinez_transfer_reports_share_a_semantic_key_and_group():
+    titles = [
+        "Detalles del fichaje de Sergio Martinez por el Real Madrid: posible cesion",
+        "El Real Madrid ata a Sergio Martinez",
+        "Real Madrid set to sign Sergio Martinez",
+        "Real Madrid aceleró por Sergio Martinez",
+        "Real Madrid aprieta por Sergio Martinez",
+    ]
+    assert {semantic_news_key(title) for title in titles} == {"transfer:rumour:sergio-martinez"}
+
+    ranked = rank_digest_candidates(
+        [
+            _candidate(title, f"Source {index}", f"https://example.com/sergio-{index}")
+            for index, title in enumerate(titles)
+        ],
+        limit=10,
+    )
+    assert len(ranked) == 1
+    assert len(ranked[0].grouped_links) == len(titles)
 
 
 def test_digest_topic_hashtags_skip_generic_preseason_schedule():

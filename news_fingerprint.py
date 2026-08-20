@@ -18,6 +18,7 @@ PLAYER_ALIASES = {
     "olise": ("olise", "олисе", "michael olise", "майкл олисе", "михаэль олисе"),
     "enzo-fernandez": ("enzo fernandez", "enzo fernández", "энцо фернандес"),
     "bernardo-silva": ("bernardo silva", "бернардо сильва"),
+    "sergio-martinez": ("sergio martinez", "sergio martínez", "серхио мартинес", "серджио мартинес"),
     "felicia-schroder": ("felicia schroder", "felicia schröder", "фелисия шредер", "фелиция шредер"),
     "nico-paz": ("nico paz", "paz", "нико пас"),
     "ceballos": ("ceballos", "себальос"),
@@ -950,6 +951,28 @@ def is_fran_lapiedra_analyst_text(text: str) -> bool:
     )
 
 
+def is_sergio_martinez_real_transfer_text(text: str) -> bool:
+    return (
+        contains_any(text, ("sergio martinez", "серхио мартинес", "серджио мартинес"))
+        and contains_any(text, ("real madrid", "реал мадрид"))
+        and contains_any(
+            text,
+            (
+                "fich",
+                "transfer",
+                "sign",
+                "cesion",
+                "loan",
+                "interes",
+                "interés",
+                "aceler",
+                "aprieta",
+                "ata a",
+            ),
+        )
+    )
+
+
 def is_mourinho_documentary_text(text: str) -> bool:
     """Keep trailers and write-ups about the same Mourinho documentary together."""
     return (
@@ -1308,6 +1331,9 @@ def semantic_news_key(title: str, summary: str = "") -> str:
     if is_joan_martinez_valencia_text(text):
         return "transfer:loan:joan-martinez-valencia"
 
+    if is_sergio_martinez_real_transfer_text(text):
+        return "transfer:rumour:sergio-martinez"
+
     if is_laliga_rfef_meeting_text(text):
         return "club:laliga-rfef-meeting-skip"
 
@@ -1360,6 +1386,7 @@ def semantic_news_key(title: str, summary: str = "") -> str:
         "fichaje", "transfer", "signing", "подпис", "трансфер", "переход",
         "contactado", "contactos", "contact", "contacts", "контакт", "связался",
         "chelsea", "челси", "enreda", "enredo", "interes", "interés", "интерес",
+        "pursuit", "accelerat", "acelera", "aprieta", "avanza", "close to", "близок", "готов",
     )
     if player and contains_any(text, departure_terms) and not contains_any(text, rumour_terms):
         return f"departure:{player}"

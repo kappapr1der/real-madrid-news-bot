@@ -929,6 +929,15 @@ def is_truncated_x_title(text: str, source: str = "") -> bool:
     )
 
 
+def is_reply_context_x_title(text: str, source: str = "") -> bool:
+    """Reject reply chains when Nitter exposes a conversation fragment as a headline."""
+    source_name = _normalize(source)
+    if not source_name.startswith("x - @"):
+        return False
+    title = _normalize(text)
+    return any(marker in title for marker in ("reply to @", "r to @", "respuesta a @", "ответ @"))
+
+
 def is_managing_madrid_dated_general_thread(text: str, source: str = "", link: str = "") -> bool:
     """Reject the source's dated /general/ discussion threads from news selection."""
     if _normalize(source) != "managing madrid" or "/general/" not in str(link or "").casefold():
@@ -956,13 +965,40 @@ def is_promotional_link(link: str = "") -> bool:
     return "/fantasy/" in lower_link or "utm_campaign=fantasy" in lower_link
 
 
+def is_promotional_headline(text: str) -> bool:
+    """Keep commercial, audience-growth and game marketing out of editorial digests."""
+    title = _normalize(text)
+    social_follow = (
+        any(marker in title for marker in ("follow", "sigue", "sigan", "следите"))
+        and any(marker in title for marker in ("social", "redes", "социальн"))
+    )
+    ticket_sales = any(
+        marker in title
+        for marker in ("buy tickets", "compra tus entradas", "buy your tickets", "купите билеты")
+    )
+    video_game_marketing = "ea sports fc" in title or "fc 27" in title or "fc27" in title
+    return social_follow or ticket_sales or video_game_marketing
+
+
 def is_editorial_analysis_link(text: str, link: str = "") -> bool:
     """Keep reports, not generic observation columns or post-match listicles."""
     title = _normalize(text)
     lower_link = str(link or "").casefold()
+    historical_anniversary = re.search(
+        r"\b\d+\s+(?:years?|anos|años)\b.*\b(?:debut|fichaje|transfer)\b",
+        title,
+    )
+    ranked_listicle = re.search(
+        r"\b(?:three|five|[3-9])\s+(?:best|former)\s+(?:players|successors)\b",
+        title,
+    )
     return bool(
         "managingmadrid.com/kiyans-observations/" in lower_link
+        or "managingmadrid.com/formations-and-tactics/" in lower_link
+        or "managingmadrid.com/managing-madrid-editorials/" in lower_link
         or any(marker in title for marker in ("five bullet points from", "burning questions from"))
+        or historical_anniversary
+        or ranked_listicle
     )
 
 
@@ -972,6 +1008,10 @@ def is_low_value_feature(text: str) -> bool:
     domestic_clickbait = (
         any(marker in title for marker in ("climatizacion", "aire acondicionado"))
         and any(marker in title for marker in ("piscina", "casa", "mando", "boton", "button", "remote"))
+    )
+    training_facility_climate_trivia = (
+        any(marker in title for marker in ("termometro", "thermometer"))
+        and any(marker in title for marker in ("climatizacion", "aire acondicionado", "air conditioning"))
     )
     pundit_transfer_opinion = (
         "michael owen" in title
@@ -1080,6 +1120,7 @@ def is_low_value_feature(text: str) -> bool:
         or any(marker in title for marker in personal_markers)
         or any(marker in title for marker in clickbait_opinions)
         or domestic_clickbait
+        or training_facility_climate_trivia
         or pundit_transfer_opinion
         or courtois_school_anecdote
         or mendes_zubimendi_teaser
@@ -1132,6 +1173,16 @@ def is_vague_status_headline(text: str) -> bool:
         r"\b(?:an )?(?:injured player|injury|lesionado|lesion)\b",
         title,
     )
+    anonymous_availability_or_contract = re.search(
+        r"\b(?:real madrid )?(?:midfield mainstay|key midfielder|teenage prodigy|teenage winger|academy defender|academy player)\b.*"
+        r"\b(?:will be available|available vs|signs? (?:a |new )?(?:first-team )?contract|wanted by)\b",
+        title,
+    )
+    persistent_unnamed_problem = re.search(
+        r"\b(?:problem|problema)\b.*\b(?:does not stop|continues|no cesa|no se detiene)\b.*\b(?:real madrid|madrid)\b"
+        r"|\b(?:real madrid|madrid)\b.*\b(?:problem|problema)\b.*\b(?:does not stop|continues|no cesa|no se detiene)\b",
+        title,
+    )
     return bool(
         anonymous_status
         or anonymous_hierarchy
@@ -1139,6 +1190,8 @@ def is_vague_status_headline(text: str) -> bool:
         or anonymous_academy_move
         or anonymous_starting_role
         or unnamed_transfer_injury_teaser
+        or anonymous_availability_or_contract
+        or persistent_unnamed_problem
         or "no despeja dudas" in title
         or "не развеивает сомнения" in title
     )
@@ -1181,6 +1234,14 @@ def is_speculative_editorial_headline(text: str) -> bool:
         or (
             "reacted to" in title
             and any(marker in title for marker in ("super cup", "supercopa", "psg"))
+        )
+        or (
+            any(marker in title for marker in ("role", "rol", "papel"))
+            and any(marker in title for marker in ("could change", "may change", "podria cambiar", "puede cambiar"))
+        )
+        or any(
+            marker in title
+            for marker in ("will displace", "will replace", "desplaza", "saca del once")
         )
     )
 
@@ -1291,6 +1352,10 @@ def passes_filters(
         logger.info(f"[FILTERED: X TRUNCATED] {source}: {text[:90]}...")
         return False
 
+    if is_reply_context_x_title(text, source):
+        logger.info(f"[FILTERED: X REPLY CONTEXT] {source}: {text[:90]}...")
+        return False
+
     if is_managing_madrid_dated_general_thread(text, source, link):
         logger.info(f"[FILTERED: MANAGING MADRID GENERAL THREAD] {text[:90]}...")
         return False
@@ -1301,6 +1366,10 @@ def passes_filters(
 
     if is_promotional_link(link):
         logger.info(f"[FILTERED: PROMOTIONAL LINK] {text[:90]}...")
+        return False
+
+    if is_promotional_headline(text):
+        logger.info(f"[FILTERED: PROMOTIONAL HEADLINE] {text[:90]}...")
         return False
 
     if is_editorial_analysis_link(text, link):

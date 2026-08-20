@@ -25,6 +25,7 @@ from filters import (
     is_managing_madrid_dated_general_thread,
     is_non_football_sports_link,
     is_promotional_link,
+    is_promotional_headline,
     is_editorial_analysis_link,
     is_promotional_x_post,
     is_unnamed_official_x_highlight,
@@ -38,6 +39,7 @@ from filters import (
     is_unnamed_real_madrid_link_headline,
     is_vague_status_headline,
     is_truncated_x_title,
+    is_reply_context_x_title,
     passes_filters,
 )
 from feed_utils import is_repost_entry, parse_feed_url, source_is_x
@@ -1756,6 +1758,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
         return True
     if is_promotional_link(getattr(candidate, "link", "")):
         return True
+    if is_promotional_headline(candidate.title):
+        return True
     if is_editorial_analysis_link(candidate.title, getattr(candidate, "link", "")):
         return True
     if is_low_value_feature(candidate.title):
@@ -1783,6 +1787,8 @@ def digest_llm_hard_deny(item: RankedDigestItem, headline: str = "") -> bool:
     if is_expired_match_guide(candidate.title):
         return True
     if is_truncated_x_title(candidate.title, getattr(candidate, "source", "")):
+        return True
+    if is_reply_context_x_title(candidate.title, getattr(candidate, "source", "")):
         return True
     link = str(getattr(candidate, "link", "")).casefold()
     if ("marca.com" in link and "/opinion/" in link) or (
